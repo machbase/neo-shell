@@ -50,20 +50,24 @@ func (cli *client) doPrompt() {
 		if line == "" {
 			continue
 		}
-		if line == "exit" || line == "exit;" {
-			goto exit
-		} else if strings.HasPrefix(line, "help") {
-			if !strings.HasSuffix(line, ";") {
-				line = line + ";"
+		if len(parts) == 0 {
+			if line == "exit" || line == "exit;" {
+				goto exit
+			} else if strings.HasPrefix(line, "help") {
+				goto madeline
+			} else if line == "set" || strings.HasPrefix(line, "set ") {
+				goto madeline
 			}
 		}
+
 		parts = append(parts, line)
 		if !strings.HasSuffix(line, ";") {
 			rl.SetPrompt("         ")
 			continue
 		}
-
 		line = strings.Join(parts, " ")
+
+	madeline:
 		rl.SaveHistory(line)
 
 		line = strings.TrimSuffix(line, ";")
@@ -99,37 +103,19 @@ func (cli *client) completer() *readline.PrefixCompleter {
 	return completer
 }
 
-/*
-// Function constructor - constructs new function for listing given directory
-func listFiles(path string) func(string) []string {
-	return func(line string) []string {
-		names := make([]string, 0)
-		files, _ := os.ReadDir(path)
-		for _, f := range files {
-			names = append(names, f.Name())
-		}
-		return names
-	}
-}
-*/
-
 func (cli *client) listTables() func(string) []string {
 	return func(line string) []string {
 		rows, err := cli.db.Query("select NAME, TYPE, FLAG from M$SYS_TABLES order by NAME")
 		if err != nil {
-			// sess.log.Errorf("select m$sys_tables fail; %s", err.Error())
 			return nil
 		}
 		defer rows.Close()
-		// rt := []prompt.Suggest{}
 		rt := []string{}
 		for rows.Next() {
 			var name string
 			var typ int
 			var flg int
 			rows.Scan(&name, &typ, &flg)
-			//desc := tableTypeDesc(typ, flg)
-			// rt = append(rt, prompt.Suggest{Text: name, Description: desc})
 			rt = append(rt, name)
 		}
 		return rt

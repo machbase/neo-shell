@@ -24,6 +24,7 @@ type Config struct {
 	Stderr       io.Writer
 	VimMode      bool
 	Heading      bool
+	LocalTime    bool
 	QueryTimeout time.Duration
 }
 
@@ -105,7 +106,7 @@ func (cli *client) Run(line string, interactive bool) {
 	case "chart":
 		cli.doChart(fields[1:])
 	case "set":
-		cli.doSet(fields...)
+		cli.doSet(fields[1:])
 	case "sql":
 		sql := strings.TrimSpace(line[3:])
 		cli.doSql(sql)

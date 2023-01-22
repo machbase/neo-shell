@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -22,7 +23,7 @@ func (cli *client) doWalk(sqlText string) {
 		return
 	}
 
-	walker, err := NewWalker(sqlText, cli.db)
+	walker, err := NewWalker(sqlText, cli.db, cli.conf.LocalTime)
 	if err != nil {
 		cli.Writeln("ERR", err.Error())
 		return
@@ -53,9 +54,10 @@ type Walker struct {
 	values    [][]string
 	eof       bool
 	fetchSize int
+	localtime bool
 }
 
-func NewWalker(sqlText string, client *machrpc.Client) (*Walker, error) {
+func NewWalker(sqlText string, client *machrpc.Client, localtime bool) (*Walker, error) {
 	rows, err := client.Query(sqlText)
 	if err != nil {
 		return nil, err
@@ -71,7 +73,15 @@ func NewWalker(sqlText string, client *machrpc.Client) (*Walker, error) {
 	values[0] = make([]string, len(cols)+1)
 	values[0][0] = "#"
 	for i := range cols {
-		values[0][i+1] = cols[i].Name
+		if cols[i].Type == "datetime" {
+			tz := "UTC"
+			if localtime {
+				tz = "LOCAL"
+			}
+			values[0][i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, tz)
+		} else {
+			values[0][i+1] = cols[i].Name
+		}
 	}
 
 	return &Walker{
@@ -80,6 +90,7 @@ func NewWalker(sqlText string, client *machrpc.Client) (*Walker, error) {
 		cols:      cols,
 		values:    values,
 		fetchSize: 400,
+		localtime: localtime,
 	}, nil
 }
 
@@ -131,7 +142,7 @@ func (w *Walker) fetchMore() {
 			return
 		}
 
-		values := makeValues(buffer)
+		values := makeValues(buffer, w.localtime)
 		w.values = append(w.values, append([]string{strconv.Itoa(nrows + count)}, values...))
 
 		count++

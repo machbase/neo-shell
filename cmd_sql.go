@@ -63,7 +63,7 @@ func (cli *client) doSql(sqlText string) {
 			return
 		}
 		nrow++
-		chunk.rows = append(chunk.rows, makeValues(rec))
+		chunk.rows = append(chunk.rows, makeValues(rec, cli.conf.LocalTime))
 
 		if chunk.windowHeight > 0 && nrow%height == 0 {
 			chunk = cli.display(chunk)
@@ -90,7 +90,7 @@ func (cli *client) doSql(sqlText string) {
 	}
 }
 
-func makeValues(rec []any) []string {
+func makeValues(rec []any, localtime bool) []string {
 	cols := make([]string, len(rec))
 	for i, r := range rec {
 		if r == nil {
@@ -101,7 +101,12 @@ func makeValues(rec []any) []string {
 		case *string:
 			cols[i] = *v
 		case *time.Time:
-			cols[i] = v.UTC().Format("2006-01-02 15:04:05.000000")
+			timeformat := "2006-01-02 15:04:05.000000"
+			if localtime {
+				cols[i] = v.Local().Format(timeformat)
+			} else {
+				cols[i] = v.UTC().Format(timeformat)
+			}
 		case *float64:
 			cols[i] = fmt.Sprintf("%f", *v)
 		case *int:

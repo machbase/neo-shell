@@ -59,8 +59,16 @@ func (cli *client) doChart(args []string) {
 	}
 
 	var timestamp time.Time
-	if cmd.Timestamp != "now" {
-		timestamp, err = time.Parse("2006-01-02 15:04:05", cmd.Timestamp)
+	if cmd.Timestamp == "now" {
+		timestamp = time.Now()
+	} else {
+		timeformat := "2006-01-02 15:04:05"
+		if cli.conf.LocalTime {
+			timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, time.Local)
+			timestamp = timestamp.UTC()
+		} else {
+			timestamp, err = time.Parse(timeformat, cmd.Timestamp)
+		}
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -70,10 +78,6 @@ func (cli *client) doChart(args []string) {
 	for i := range cmd.Tags {
 		queries[i] = &DataQuery{}
 		queries[i].table = cmd.TableName
-		if cmd.Timestamp == "now" {
-			timestamp = time.Now()
-		}
-		timestamp = timestamp.UTC()
 		queries[i].rangeTo = timestamp
 		queries[i].rangeFrom = timestamp.Add(-1 * cmd.Range)
 
@@ -86,14 +90,6 @@ func (cli *client) doChart(args []string) {
 			queries[i].field = "VALUE"
 		}
 	}
-
-	/*
-		cli.Writeln("table:", cmd.TableName, "tags:", strings.Join(cmd.Tags, ","))
-		for _, q := range queries {
-			sqlText := q.makeQuery()
-			fmt.Println("sql:", sqlText)
-		}
-	*/
 
 	// context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -151,6 +147,9 @@ func (cli *client) doChart(args []string) {
 				if err != nil {
 					fmt.Println(err.Error())
 					return
+				}
+				if cli.conf.LocalTime {
+					ts = ts.Local()
 				}
 				times = append(times, ts.Format("15:04:05"))
 				values = append(values, value)

@@ -62,7 +62,7 @@ func (cli *client) doShowInfo() {
 		cli.Writeln("ERR", err.Error())
 		return
 	}
-	width := 15
+	width := 18
 
 	cli.Writef("%-*s v%d.%d.%d #%s", width, "Server", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch, nfo.Version.GitSHA)
 	cli.Writef("%-*s %s", width, "Engine", nfo.Version.Engine)
@@ -72,14 +72,13 @@ func (cli *client) doShowInfo() {
 	cli.Writef("%-*s %d", width, "pid", nfo.Runtime.Pid)
 	cli.Writef("%-*s %s", width, "uptime", util.HumanizeDuration(time.Duration(nfo.Runtime.UptimeInSecond*int64(time.Second))))
 	cli.Writef("%-*s %d", width, "goroutines", nfo.Runtime.Goroutines)
-	// sess.Printf("%-*s %d", width, "mem alloc", mem.Alloc)
-	// sess.Printf("%-*s %d", width, "mem frees", mem.Frees)
-	cli.Writef("%-*s %d", width, "mem in-use span", nfo.Runtime.HeapInUse/1024/1024)
-	cli.Writef("%-*s %d", width, "mem idle span", nfo.Runtime.HeapIdle/1024/1024)
 	// total bytes of memory obtained from the OS
 	// Sys measures the virtual address space reserved
 	// by the Go runtime for the heap, stacks, and other internal data structures.
 	cli.Writef("%-*s %d MB", width, "mem sys", nfo.Runtime.MemSys/1024/1024)
-	// bytes of allocated for heap objects.
+	cli.Writef("%-*s %d MB", width, "mem heap sys", nfo.Runtime.MemHeapSys/1024/1024)
 	cli.Writef("%-*s %d MB", width, "mem heap alloc", nfo.Runtime.MemHeapAlloc/1024/1024)
+	cli.Writef("%-*s %d MB", width, "mem heap in-use", nfo.Runtime.MemHeapInUse/1024/1024)
+	cli.Writef("%-*s %d KB", width, "mem stack sys", nfo.Runtime.MemStackSys/1024)
+	cli.Writef("%-*s %d KB", width, "mem stack in-use", nfo.Runtime.MemStackInUse/1024)
 }
