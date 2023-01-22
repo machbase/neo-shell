@@ -32,7 +32,7 @@ func (cli *client) doSql(sqlText string) {
 	rec := makeBuffer(cols)
 
 	chunk := &ResultChunk{}
-	chunk.heading = true
+	chunk.heading = cli.conf.Heading
 	chunk.cols = names
 
 	if term.IsTerminal(0) {
@@ -101,7 +101,7 @@ func makeValues(rec []any) []string {
 		case *string:
 			cols[i] = *v
 		case *time.Time:
-			cols[i] = v.Format("2006-01-02 15:04:05.000000")
+			cols[i] = v.UTC().Format("2006-01-02 15:04:05.000000")
 		case *float64:
 			cols[i] = fmt.Sprintf("%f", *v)
 		case *int:

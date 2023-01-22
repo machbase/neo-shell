@@ -4,19 +4,17 @@ import (
 	"io"
 	"log"
 	"strings"
-	"unicode"
 
 	"github.com/chzyer/readline"
 )
 
 func (cli *client) doPrompt() {
-	completer := cli.completer()
 	prompt := "\033[31mmachsql»\033[0m "
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:                 prompt,
 		HistoryFile:            "/tmp/readline.tmp",
 		DisableAutoSaveHistory: true,
-		AutoComplete:           completer,
+		AutoComplete:           cli.completer(),
 		InterruptPrompt:        "^C",
 		EOFPrompt:              "exit",
 		Stdin:                  cli.conf.Stdin,
@@ -71,47 +69,9 @@ func (cli *client) doPrompt() {
 		line = strings.TrimSuffix(line, ";")
 		parts = parts[:0]
 		rl.SetPrompt(prompt)
-
-		fields := splitFields(line)
-		if len(fields) == 0 {
-			continue
-		}
-		switch strings.ToLower(fields[0]) {
-		case "help":
-			cmd := strings.TrimSpace(strings.ToLower(line[4:]))
-			usage(cli.conf.Stdout, completer, cmd)
-		case "show":
-			obj := strings.TrimSpace(strings.ToLower(line[4:]))
-			cli.doShow(obj)
-		case "explain":
-			sql := line[7:]
-			cli.doExplain(sql)
-		case "set":
-			cli.doSet(fields...)
-		default:
-			cli.doSql(line)
-		}
+		cli.Run(line)
 	}
 exit:
-}
-
-func splitFields(line string) []string {
-	lastQuote := rune(0)
-	f := func(c rune) bool {
-		switch {
-		case c == lastQuote:
-			lastQuote = rune(0)
-			return false
-		case lastQuote != rune(0):
-			return false
-		case unicode.In(c, unicode.Quotation_Mark):
-			lastQuote = c
-			return false
-		default:
-			return unicode.IsSpace(c)
-		}
-	}
-	return strings.FieldsFunc(strings.ToLower(line), f)
 }
 
 func usage(w io.Writer, completer *readline.PrefixCompleter, cmd string) {
@@ -130,8 +90,9 @@ func filterInput(r rune) (rune, bool) {
 func (cli *client) completer() *readline.PrefixCompleter {
 	var completer = readline.NewPrefixCompleter(
 		cli.pcShow(),
-		cli.pcExplain(),
+		cli.pcChart(),
 		cli.pcSet(),
+		cli.pcExplain(),
 		// readline.PcItem("from",
 		// 	readline.PcItemDynamic(cli.listTables()),
 		// ),

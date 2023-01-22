@@ -12,6 +12,10 @@ func (cli *client) pcSet() *readline.PrefixCompleter {
 			readline.PcItem("vi"),
 			readline.PcItem("emacs"),
 		),
+		readline.PcItem("heading",
+			readline.PcItem("on"),
+			readline.PcItem("off"),
+		),
 	)
 }
 
@@ -23,8 +27,18 @@ func (cli *client) doSet(args ...string) {
 	case "key":
 		if strings.ToLower(args[2]) == "vi" {
 			cli.conf.VimMode = true
+			cli.Println("vi key mode")
 		} else {
 			cli.conf.VimMode = false
+			cli.Println("emacs key mode")
+		}
+	case "heading":
+		if strings.ToLower(args[2]) == "on" {
+			cli.conf.Heading = true
+			cli.Println("heading on")
+		} else {
+			cli.conf.Heading = false
+			cli.Println("heading off")
 		}
 	}
 }
