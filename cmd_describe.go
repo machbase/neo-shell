@@ -45,6 +45,11 @@ func (cli *client) doDescribe(object string) {
 	for i, l := range labels {
 		table.SetCell(0, i, tview.NewTableCell(l).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter))
 	}
+	table.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyESC {
+			app.Stop()
+		}
+	})
 
 	rows, err := cli.db.Query("select name, type, length from M$SYS_COLUMNS where table_id = ? order by id", tableId)
 	if err != nil {
@@ -70,9 +75,6 @@ func (cli *client) doDescribe(object string) {
 		table.SetCell(nrow, 2, tview.NewTableCell(strconv.Itoa(colLen)))
 	}
 
-	table.SetDoneFunc(func(key tcell.Key) {
-		app.Stop()
-	})
 	if err := app.SetRoot(table, true).SetFocus(table).Run(); err != nil {
 		cli.Writeln("ERR", err.Error())
 		return

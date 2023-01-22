@@ -97,8 +97,11 @@ func (cli *client) Run(line string) {
 	case "explain":
 		sql := strings.TrimSpace(line[7:])
 		cli.doExplain(sql)
-	case "describe", "desc":
+	case "describe":
 		object := strings.TrimSpace(line[8:])
+		cli.doDescribe(object)
+	case "desc":
+		object := strings.TrimSpace(line[4:])
 		cli.doDescribe(object)
 	case "chart":
 		cli.doChart(fields[1:])

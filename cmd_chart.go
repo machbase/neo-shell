@@ -11,6 +11,7 @@ import (
 	"github.com/mum4k/termdash"
 	"github.com/mum4k/termdash/cell"
 	"github.com/mum4k/termdash/container"
+	"github.com/mum4k/termdash/keyboard"
 	"github.com/mum4k/termdash/linestyle"
 	"github.com/mum4k/termdash/terminal/tcell"
 	"github.com/mum4k/termdash/terminal/terminalapi"
@@ -121,7 +122,7 @@ func (cli *client) doChart(args []string) {
 	cont, err := container.New(
 		term,
 		container.Border(linestyle.Light),
-		container.BorderTitle("PRESS Q TO QUIT"),
+		container.BorderTitle("ESC to quit"),
 		container.PlaceWidget(lchart),
 	)
 	if err != nil {
@@ -182,7 +183,7 @@ func (cli *client) doChart(args []string) {
 	}
 
 	quitter := func(k *terminalapi.Keyboard) {
-		if k.Key == 'q' || k.Key == 'Q' {
+		if k.Key == 'q' || k.Key == 'Q' || k.Key == keyboard.KeyEsc {
 			// stop scheduler
 			if scheduler != nil {
 				scheduler.Stop()
