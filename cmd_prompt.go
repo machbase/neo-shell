@@ -93,6 +93,7 @@ func (cli *client) completer() *readline.PrefixCompleter {
 		cli.pcChart(),
 		cli.pcSet(),
 		cli.pcExplain(),
+		cli.pcDescribe(),
 		// readline.PcItem("from",
 		// 	readline.PcItemDynamic(cli.listTables()),
 		// ),
@@ -137,6 +138,7 @@ func listFiles(path string) func(string) []string {
 		return names
 	}
 }
+*/
 
 func (cli *client) listTables() func(string) []string {
 	return func(line string) []string {
@@ -160,4 +162,3 @@ func (cli *client) listTables() func(string) []string {
 		return rt
 	}
 }
-*/
