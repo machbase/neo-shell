@@ -2,15 +2,16 @@ package shell
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/cemlib/util"
 )
 
 func (cli *client) pcShow() *readline.PrefixCompleter {
 	return readline.PcItem("show",
 		readline.PcItem("tables"),
-		readline.PcItem("runtime"),
-		readline.PcItem("version"),
+		readline.PcItem("info"),
 		readline.PcItem("table",
 			readline.PcItemDynamic(cli.listTables()),
 		),
@@ -19,8 +20,8 @@ func (cli *client) pcShow() *readline.PrefixCompleter {
 
 func (cli *client) doShow(args []string) {
 	switch args[0] {
-	case "version":
-		cli.doShowVersion()
+	case "info":
+		cli.doShowInfo()
 	case "tables":
 		cli.doShowTables()
 	case "table":
@@ -29,8 +30,6 @@ func (cli *client) doShow(args []string) {
 		} else {
 			cli.Writeln("Usage: show table <table_name>")
 		}
-	case "runtime":
-		cli.doShowRuntime()
 	default:
 		cli.Writef("unknown show '%s'", args[0])
 	}
@@ -57,31 +56,30 @@ func (cli *client) doShowTables() {
 	}
 }
 
-func (cli *client) doShowVersion() {
-	// v := mods.GetVersion()
-	// cli.Printf("Server v%d.%d.%d #%s\r\n", v.Major, v.Minor, v.Patch, v.GitSHA)
-	// cli.Printf("Engine %s\r\n", mods.EngineInfoString())
-}
+func (cli *client) doShowInfo() {
+	nfo, err := cli.db.GetServerInfo()
+	if err != nil {
+		cli.Writeln("ERR", err.Error())
+		return
+	}
+	width := 15
 
-func (cli *client) doShowRuntime() {
-	/*
-		width := 15
-		cli.Writef("%-*s %s %s", width, "os", runtime.GOOS, runtime.GOARCH)
-		cli.Writef("%-*s %s", width, "version", mods.VersionString())
-		cli.Writef("%-*s %s", width, "engine", mods.EngineInfoString())
-		cli.Writef("%-*s %d", width, "processes", runtime.GOMAXPROCS(-1))
+	cli.Writef("%-*s v%d.%d.%d #%s", width, "Server", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch, nfo.Version.GitSHA)
+	cli.Writef("%-*s %s", width, "Engine", nfo.Version.Engine)
 
-		mem := runtime.MemStats{}
-		runtime.ReadMemStats(&mem)
-		// sess.Printf("%-*s %d", width, "mem alloc", mem.Alloc)
-		// sess.Printf("%-*s %d", width, "mem frees", mem.Frees)
-		cli.Writef("%-*s %d", width, "mem in-use span", mem.HeapInuse/1024/1024)
-		cli.Writef("%-*s %d", width, "mem idle span", mem.HeapIdle/1024/1024)
-		// total bytes of memory obtained from the OS
-		// Sys measures the virtual address space reserved
-		// by the Go runtime for the heap, stacks, and other internal data structures.
-		cli.Writef("%-*s %d MB", width, "mem sys", mem.Sys/1024/1024)
-		// bytes of allocated for heap objects.
-		cli.Writef("%-*s %d MB", width, "mem heap alloc", mem.HeapAlloc/1024/1024)
-	*/
+	cli.Writef("%-*s %s %s", width, "os", nfo.Runtime.OS, nfo.Runtime.Arch)
+	cli.Writef("%-*s %d", width, "processes", nfo.Runtime.Processes)
+	cli.Writef("%-*s %d", width, "pid", nfo.Runtime.Pid)
+	cli.Writef("%-*s %s", width, "uptime", util.HumanizeDuration(time.Duration(nfo.Runtime.UptimeInSecond*int64(time.Second))))
+	cli.Writef("%-*s %d", width, "goroutines", nfo.Runtime.Goroutines)
+	// sess.Printf("%-*s %d", width, "mem alloc", mem.Alloc)
+	// sess.Printf("%-*s %d", width, "mem frees", mem.Frees)
+	cli.Writef("%-*s %d", width, "mem in-use span", nfo.Runtime.HeapInUse/1024/1024)
+	cli.Writef("%-*s %d", width, "mem idle span", nfo.Runtime.HeapIdle/1024/1024)
+	// total bytes of memory obtained from the OS
+	// Sys measures the virtual address space reserved
+	// by the Go runtime for the heap, stacks, and other internal data structures.
+	cli.Writef("%-*s %d MB", width, "mem sys", nfo.Runtime.MemSys/1024/1024)
+	// bytes of allocated for heap objects.
+	cli.Writef("%-*s %d MB", width, "mem heap alloc", nfo.Runtime.MemHeapAlloc/1024/1024)
 }
