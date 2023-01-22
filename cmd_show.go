@@ -1,6 +1,8 @@
 package shell
 
 import (
+	"fmt"
+
 	"github.com/chzyer/readline"
 )
 
@@ -9,20 +11,33 @@ func (cli *client) pcShow() *readline.PrefixCompleter {
 		readline.PcItem("tables"),
 		readline.PcItem("runtime"),
 		readline.PcItem("version"),
+		readline.PcItem("table",
+			readline.PcItemDynamic(cli.listTables()),
+		),
 	)
 }
 
-func (cli *client) doShow(obj string) {
-	switch obj {
+func (cli *client) doShow(args []string) {
+	switch args[0] {
 	case "version":
 		cli.doShowVersion()
 	case "tables":
 		cli.doShowTables()
+	case "table":
+		if len(args) == 2 {
+			cli.doShowTable(args[1])
+		} else {
+			cli.Writeln("Usage: show table <table_name>")
+		}
 	case "runtime":
 		cli.doShowRuntime()
 	default:
-		cli.Writef("unknown show '%s'", obj)
+		cli.Writef("unknown show '%s'", args[0])
 	}
+}
+
+func (cli *client) doShowTable(table string) {
+	cli.doWalk(fmt.Sprintf("select * from %s", table))
 }
 
 func (cli *client) doShowTables() {

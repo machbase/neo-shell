@@ -13,8 +13,8 @@ import (
 
 type Client interface {
 	Close()
-	RunInteractive()
-	Run(command string)
+	Run(command string, interactive bool)
+	RunPrompt()
 }
 
 type Config struct {
@@ -82,7 +82,7 @@ func (cli *client) Writef(format string, args ...any) {
 	fmt.Fprintf(cli.conf.Stdout, format+"\r\n", args...)
 }
 
-func (cli *client) Run(line string) {
+func (cli *client) Run(line string, interactive bool) {
 	fields := splitFields(line)
 	if len(fields) == 0 {
 		return
@@ -92,8 +92,7 @@ func (cli *client) Run(line string) {
 		cmd := strings.TrimSpace(strings.ToLower(line[4:]))
 		usage(cli.conf.Stdout, cli.completer(), cmd)
 	case "show":
-		obj := strings.TrimSpace(strings.ToLower(line[4:]))
-		cli.doShow(obj)
+		cli.doShow(fields[1:])
 	case "explain":
 		sql := strings.TrimSpace(line[7:])
 		cli.doExplain(sql)
@@ -107,12 +106,22 @@ func (cli *client) Run(line string) {
 		cli.doChart(fields[1:])
 	case "set":
 		cli.doSet(fields...)
+	case "sql":
+		sql := strings.TrimSpace(line[3:])
+		cli.doSql(sql)
+	case "walk":
+		sql := strings.TrimSpace(line[4:])
+		cli.doWalk(sql)
 	default:
-		cli.doSql(line)
+		if interactive {
+			cli.doWalk(line)
+		} else {
+			cli.doSql(line)
+		}
 	}
 }
 
-func (cli *client) RunInteractive() {
+func (cli *client) RunPrompt() {
 	cli.doPrompt()
 }
 

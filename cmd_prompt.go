@@ -69,7 +69,7 @@ func (cli *client) doPrompt() {
 		line = strings.TrimSuffix(line, ";")
 		parts = parts[:0]
 		rl.SetPrompt(prompt)
-		cli.Run(line)
+		cli.Run(line, true)
 	}
 exit:
 }
@@ -94,34 +94,7 @@ func (cli *client) completer() *readline.PrefixCompleter {
 		cli.pcSet(),
 		cli.pcExplain(),
 		cli.pcDescribe(),
-		// readline.PcItem("from",
-		// 	readline.PcItemDynamic(cli.listTables()),
-		// ),
-		// readline.PcItem("login"),
-		// readline.PcItem("say",
-		// 	readline.PcItemDynamic(listFiles("./"),
-		// 		readline.PcItem("with",
-		// 			readline.PcItem("following"),
-		// 			readline.PcItem("items"),
-		// 		),
-		// 	),
-		// 	readline.PcItem("hello"),
-		// 	readline.PcItem("bye"),
-		// ),
-		// readline.PcItem("setprompt"),
-		// readline.PcItem("setpassword"),
-		// readline.PcItem("bye"),
-		// readline.PcItem("help"),
-		// readline.PcItem("go",
-		// 	readline.PcItem("build", readline.PcItem("-o"), readline.PcItem("-v")),
-		// 	readline.PcItem("install",
-		// 		readline.PcItem("-v"),
-		// 		readline.PcItem("-vv"),
-		// 		readline.PcItem("-vvv"),
-		// 	),
-		// 	readline.PcItem("test"),
-		// ),
-		// readline.PcItem("sleep"),
+		cli.pcWalk(),
 	)
 	return completer
 }
