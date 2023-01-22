@@ -19,13 +19,13 @@ func (cli *client) pcWalk() *readline.PrefixCompleter {
 func (cli *client) doWalk(sqlText string) {
 	sqlText = strings.TrimSpace(sqlText)
 	if len(sqlText) == 0 {
-		cli.Writeln("Usage: walk <sql query>")
+		cli.Println("Usage: walk <sql query>")
 		return
 	}
 
 	walker, err := NewWalker(sqlText, cli.db, cli.conf.LocalTime)
 	if err != nil {
-		cli.Writeln("ERR", err.Error())
+		cli.Println("ERR", err.Error())
 		return
 	}
 	defer walker.Close()
@@ -41,7 +41,7 @@ func (cli *client) doWalk(sqlText string) {
 		}
 	})
 	if err := app.SetRoot(table, true).SetFocus(table).Run(); err != nil {
-		cli.Writeln("ERR", err.Error())
+		cli.Println("ERR", err.Error())
 		return
 	}
 }

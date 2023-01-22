@@ -19,7 +19,7 @@ func (cli *client) pcDescribe() *readline.PrefixCompleter {
 func (cli *client) doDescribe(object string) {
 	object = strings.TrimSpace(object)
 	if len(object) == 0 {
-		cli.Writeln("Usage: describe <table_name>")
+		cli.Println("Usage: describe <table_name>")
 		return
 	}
 
@@ -31,7 +31,7 @@ func (cli *client) doDescribe(object string) {
 
 	r := cli.db.QueryRow("select name, type, flag, id, colcount from M$SYS_TABLES where name = ?", strings.ToUpper(object))
 	if err := r.Scan(&tableName, &tableType, &tableFlag, &tableId, &colCount); err != nil {
-		cli.Writeln("unable to describe", object)
+		cli.Println("unable to describe", object)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (cli *client) doDescribe(object string) {
 
 	rows, err := cli.db.Query("select name, type, length from M$SYS_COLUMNS where table_id = ? order by id", tableId)
 	if err != nil {
-		cli.Writeln("ERR", err.Error())
+		cli.Println("ERR", err.Error())
 		return
 	}
 	defer rows.Close()
@@ -65,7 +65,7 @@ func (cli *client) doDescribe(object string) {
 		var colLen int
 		err = rows.Scan(&colName, &colType, &colLen)
 		if err != nil {
-			cli.Writeln("ERR", err.Error())
+			cli.Println("ERR", err.Error())
 			return
 		}
 		nrow++
@@ -76,7 +76,7 @@ func (cli *client) doDescribe(object string) {
 	}
 
 	if err := app.SetRoot(table, true).SetFocus(table).Run(); err != nil {
-		cli.Writeln("ERR", err.Error())
+		cli.Println("ERR", err.Error())
 		return
 	}
 }

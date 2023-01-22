@@ -67,19 +67,23 @@ func (cli *client) Config() *Config {
 	return cli.conf
 }
 
-func (cli *client) Println(args ...any) {
-	fmt.Fprintln(cli.conf.Stdout, args...)
+func (cli *client) Write(p []byte) (int, error) {
+	return cli.conf.Stdout.Write(p)
+}
+
+func (cli *client) Print(args ...any) {
+	fmt.Fprint(cli.conf.Stdout, args...)
 }
 
 func (cli *client) Printf(format string, args ...any) {
 	fmt.Fprintf(cli.conf.Stdout, format, args...)
 }
 
-func (cli *client) Writeln(args ...any) {
+func (cli *client) Println(args ...any) {
 	fmt.Fprintln(cli.conf.Stdout, args...)
 }
 
-func (cli *client) Writef(format string, args ...any) {
+func (cli *client) Printfln(format string, args ...any) {
 	fmt.Fprintf(cli.conf.Stdout, format+"\r\n", args...)
 }
 

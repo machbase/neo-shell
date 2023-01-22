@@ -14,14 +14,14 @@ import (
 func (cli *client) doSql(sqlText string) {
 	rows, err := cli.db.Query(sqlText)
 	if err != nil {
-		cli.Writeln("ERR>", err.Error())
+		cli.Println("ERR>", err.Error())
 		return
 	}
 	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {
-		cli.Writeln("ERR>", err.Error())
+		cli.Println("ERR>", err.Error())
 		return
 	}
 
@@ -54,12 +54,12 @@ func (cli *client) doSql(sqlText string) {
 				cli.display(chunk)
 			}
 			// rows.ResultString(nrow)
-			cli.Writef("%d rows selected", nrow)
+			cli.Printfln("%d rows selected", nrow)
 			return
 		}
 		err := rows.Scan(rec...)
 		if err != nil {
-			cli.Writeln("ERR>", err.Error())
+			cli.Println("ERR>", err.Error())
 			return
 		}
 		nrow++
@@ -67,7 +67,7 @@ func (cli *client) doSql(sqlText string) {
 
 		if chunk.windowHeight > 0 && nrow%height == 0 {
 			chunk = cli.display(chunk)
-			cli.Printf(":")
+			cli.Print(":")
 
 			// switch stdin into 'raw' mode
 			if oldState, err := term.MakeRaw(int(os.Stdin.Fd())); err == nil {
@@ -188,7 +188,7 @@ func (cli *client) display(chunk *ResultChunk) *ResultChunk {
 			line = line[0 : chunk.windowWidth-4]
 			line = line + "..."
 		}
-		cli.Writeln(line)
+		cli.Println(line)
 	}
 	for r, row := range chunk.rows {
 		for c := range chunk.cols {
@@ -199,7 +199,7 @@ func (cli *client) display(chunk *ResultChunk) *ResultChunk {
 			line = line[0 : chunk.windowWidth-4]
 			line = line + "..."
 		}
-		cli.Writeln(line)
+		cli.Println(line)
 	}
 
 	return &ResultChunk{

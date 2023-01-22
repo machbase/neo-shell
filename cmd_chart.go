@@ -36,12 +36,12 @@ func (cli *client) doChart(args []string) {
 	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}))
 	parser.Model.Name = "chart"
 	if err != nil {
-		cli.Writeln(err.Error())
+		cli.Println(err.Error())
 		return
 	}
 	_, err = parser.Parse(args)
 	if err != nil {
-		cli.Writeln(err.Error())
+		cli.Println(err.Error())
 		return
 	}
 
@@ -98,7 +98,7 @@ func (cli *client) doChart(args []string) {
 	// make terminal interface
 	term, err := tcell.New()
 	if err != nil {
-		cli.Writeln(err.Error())
+		cli.Println(err.Error())
 		return
 	}
 	defer term.Close()
@@ -110,7 +110,7 @@ func (cli *client) doChart(args []string) {
 		linechart.XLabelCellOpts(cell.FgColor(cell.ColorCyan)),
 	)
 	if err != nil {
-		cli.Writeln(err.Error())
+		cli.Println(err.Error())
 		return
 	}
 
@@ -122,7 +122,7 @@ func (cli *client) doChart(args []string) {
 		container.PlaceWidget(lchart),
 	)
 	if err != nil {
-		cli.Writeln(err.Error())
+		cli.Println(err.Error())
 		return
 	}
 
@@ -197,7 +197,7 @@ func (cli *client) doChart(args []string) {
 		termdash.RedrawInterval(cmd.Refresh),
 	}
 	if err := termdash.Run(ctx, term, cont, termOpts...); err != nil {
-		cli.Writeln(err.Error())
+		cli.Println(err.Error())
 		return
 	}
 }

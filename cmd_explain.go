@@ -9,8 +9,8 @@ func (cli *client) pcExplain() *readline.PrefixCompleter {
 func (cli *client) doExplain(sqlText string) {
 	plan, err := cli.db.Explain(sqlText)
 	if err != nil {
-		cli.Writeln(err.Error())
+		cli.Println(err.Error())
 		return
 	}
-	cli.Writeln(plan)
+	cli.Println(plan)
 }

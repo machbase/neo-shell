@@ -41,13 +41,13 @@ func (cli *client) doSet(args []string) {
 		} else if b == "off" {
 			*flag = false
 		}
-		cli.Writeln(args[0], onoff(*flag))
+		cli.Println(args[0], onoff(*flag))
 	}
 
 	if len(args) == 0 {
-		cli.Writeln("local-time", onoff(cli.conf.LocalTime))
-		cli.Writeln("vi-mode   ", onoff(cli.conf.VimMode))
-		cli.Writeln("heading   ", onoff(cli.conf.Heading))
+		cli.Println("local-time", onoff(cli.conf.LocalTime))
+		cli.Println("vi-mode   ", onoff(cli.conf.VimMode))
+		cli.Println("heading   ", onoff(cli.conf.Heading))
 		return
 	}
 	switch strings.ToLower(args[0]) {
