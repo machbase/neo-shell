@@ -53,8 +53,9 @@ type Config struct {
 	Heading      bool
 	LocalTime    bool
 	Format       string
+	BoxStyle     string
 	QueryTimeout time.Duration
-	lang         language.Tag
+	Lang         language.Tag
 }
 
 type client struct {
@@ -70,7 +71,7 @@ func DefaultConfig() *Config {
 		VimMode:      false,
 		Heading:      true,
 		QueryTimeout: 30 * time.Second,
-		lang:         language.English,
+		Lang:         language.English,
 	}
 }
 
@@ -296,7 +297,7 @@ func splitFields(line string) []string {
 }
 
 func (cli *client) bytesUnit(v uint64) string {
-	p := message.NewPrinter(cli.conf.lang)
+	p := message.NewPrinter(cli.conf.Lang)
 	f := float64(v)
 	u := ""
 	switch {
@@ -314,5 +315,5 @@ func (cli *client) bytesUnit(v uint64) string {
 }
 
 func (cli *client) Printer() *message.Printer {
-	return message.NewPrinter(cli.conf.lang)
+	return message.NewPrinter(cli.conf.Lang)
 }

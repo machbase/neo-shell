@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 func init() {
@@ -51,7 +50,7 @@ func doDescribe(c Client, line string, interactive bool) {
 	cli.Println("COLUMNS ", colCount)
 	if tableType == 6 {
 		tags := []string{}
-		rows, err := cli.db.Query(fmt.Sprintf("select name from _%s_META", strings.ToUpper(object)))
+		rows, err := cli.db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(object)))
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
@@ -74,11 +73,7 @@ func doDescribe(c Client, line string, interactive bool) {
 	}
 	defer rows.Close()
 
-	t := table.NewWriter()
-	t.SetOutputMirror(cli.conf.Stdout)
-	t.SetStyle(table.StyleLight)
-	t.AppendHeader(table.Row{"#", "NAME", "TYPE", "LENGTH"})
-
+	box := cli.NewBox([]any{"#", "NAME", "TYPE", "LENGTH"})
 	nrow := 0
 	for rows.Next() {
 		var nam string
@@ -91,12 +86,12 @@ func doDescribe(c Client, line string, interactive bool) {
 			return
 		}
 		nrow++
-		t.AppendRow([]any{nrow, nam, typ, len})
+		box.AppendRow([]any{nrow, nam, typ, len})
 	}
 
 	if cli.conf.Format == Formats.CSV {
-		t.RenderCSV()
+		box.RenderCSV()
 	} else {
-		t.Render()
+		box.Render()
 	}
 }

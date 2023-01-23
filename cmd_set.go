@@ -23,6 +23,13 @@ func pcSet(c Client) readline.PrefixCompleterInterface {
 			readline.PcItem("on"),
 			readline.PcItem("off"),
 		),
+		readline.PcItem("box-style",
+			readline.PcItem("default"),
+			readline.PcItem("bold"),
+			readline.PcItem("double"),
+			readline.PcItem("light"),
+			readline.PcItem("round"),
+		),
 		readline.PcItem("vi-mode",
 			readline.PcItem("on"),
 			readline.PcItem("off"),
@@ -64,6 +71,7 @@ func doSet(c Client, line string, interactive bool) {
 	if len(args) == 0 {
 		cli.Println("local-time", onoff(cli.conf.LocalTime))
 		cli.Println("vi-mode   ", onoff(cli.conf.VimMode))
+		cli.Println("box-style ", cli.conf.BoxStyle)
 		cli.Println("heading   ", onoff(cli.conf.Heading))
 		cli.Println("format    ", cli.conf.Format)
 		return
@@ -75,8 +83,20 @@ func doSet(c Client, line string, interactive bool) {
 		parseflag(&cli.conf.VimMode)
 	case "heading":
 		parseflag(&cli.conf.Heading)
+	case "box-style":
+		cli.conf.BoxStyle = parseBoxStyle(args[1])
+		cli.Println("box-style", cli.conf.BoxStyle)
 	case "format":
 		cli.conf.Format = Formats.Parse(args[1])
 		cli.Println("format", cli.conf.Format)
+	}
+}
+
+func parseBoxStyle(s string) string {
+	switch s {
+	case "bold", "double", "light", "round":
+		return s
+	default:
+		return "default"
 	}
 }

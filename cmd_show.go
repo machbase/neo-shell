@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/machbase/cemlib/util"
 )
 
@@ -62,10 +61,7 @@ func (cli *client) doShowTables() {
 	}
 	defer rows.Close()
 
-	t := table.NewWriter()
-	t.SetOutputMirror(cli.conf.Stdout)
-	t.SetStyle(table.StyleLight)
-	t.AppendHeader(table.Row{"#", "NAME", "TYPE", "DESC"})
+	t := cli.NewBox([]any{"#", "NAME", "TYPE", "DESC"})
 
 	nrow := 0
 	for rows.Next() {
@@ -92,34 +88,29 @@ func (cli *client) doShowInfo() {
 		return
 	}
 
-	t := table.NewWriter()
-	t.SetOutputMirror(cli.conf.Stdout)
-	t.SetStyle(table.StyleLight)
-	if cli.conf.Heading {
-		t.AppendHeader(table.Row{"NAME", "VALUE"})
-	}
+	box := cli.NewBox([]any{"NAME", "VALUE"})
 
-	t.AppendRow([]any{"build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch)})
-	t.AppendRow([]any{"build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA)})
-	t.AppendRow([]any{"build.timestamp", nfo.Version.BuildTimestamp})
-	t.AppendRow([]any{"build.engine", nfo.Version.Engine})
+	box.AppendRow([]any{"build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch)})
+	box.AppendRow([]any{"build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA)})
+	box.AppendRow([]any{"build.timestamp", nfo.Version.BuildTimestamp})
+	box.AppendRow([]any{"build.engine", nfo.Version.Engine})
 
-	t.AppendRow([]any{"runtime.os", nfo.Runtime.OS})
-	t.AppendRow([]any{"runtime.arch", nfo.Runtime.Arch})
-	t.AppendRow([]any{"runtime.pid", nfo.Runtime.Pid})
-	t.AppendRow([]any{"runtime.uptime", util.HumanizeDuration(time.Duration(nfo.Runtime.UptimeInSecond * int64(time.Second)))})
-	t.AppendRow([]any{"runtime.goroutines", nfo.Runtime.Goroutines})
+	box.AppendRow([]any{"runtime.os", nfo.Runtime.OS})
+	box.AppendRow([]any{"runtime.arch", nfo.Runtime.Arch})
+	box.AppendRow([]any{"runtime.pid", nfo.Runtime.Pid})
+	box.AppendRow([]any{"runtime.uptime", util.HumanizeDuration(time.Duration(nfo.Runtime.UptimeInSecond * int64(time.Second)))})
+	box.AppendRow([]any{"runtime.goroutines", nfo.Runtime.Goroutines})
 
-	t.AppendRow([]any{"mem.sys", cli.bytesUnit(nfo.Runtime.MemSys)})
-	t.AppendRow([]any{"mem.heap.sys", cli.bytesUnit(nfo.Runtime.MemHeapSys)})
-	t.AppendRow([]any{"mem.heap.alloc", cli.bytesUnit(nfo.Runtime.MemHeapAlloc)})
-	t.AppendRow([]any{"mem.heap.in-use", cli.bytesUnit(nfo.Runtime.MemHeapInUse)})
-	t.AppendRow([]any{"mem.stack.sys", cli.bytesUnit(nfo.Runtime.MemStackSys)})
-	t.AppendRow([]any{"mem.stack.in-use", cli.bytesUnit(nfo.Runtime.MemStackInUse)})
+	box.AppendRow([]any{"mem.sys", cli.bytesUnit(nfo.Runtime.MemSys)})
+	box.AppendRow([]any{"mem.heap.sys", cli.bytesUnit(nfo.Runtime.MemHeapSys)})
+	box.AppendRow([]any{"mem.heap.alloc", cli.bytesUnit(nfo.Runtime.MemHeapAlloc)})
+	box.AppendRow([]any{"mem.heap.in-use", cli.bytesUnit(nfo.Runtime.MemHeapInUse)})
+	box.AppendRow([]any{"mem.stack.sys", cli.bytesUnit(nfo.Runtime.MemStackSys)})
+	box.AppendRow([]any{"mem.stack.in-use", cli.bytesUnit(nfo.Runtime.MemStackInUse)})
 
 	if cli.conf.Format == Formats.CSV {
-		t.RenderCSV()
+		box.RenderCSV()
 	} else {
-		t.Render()
+		box.Render()
 	}
 }

@@ -13,6 +13,7 @@ type ShellCmd struct {
 	Heading    bool     `name:"heading" negatable:"" default:"true"`
 	LocalTime  bool     `name:"local-time" default:"false" help:"use locatime instead of UTC"`
 	Format     string   `name:"format" default:"-" enum:"-,csv" help:"outout format"`
+	BoxStyle   string   `name:"box-style" default:"default" enum:"default,bold,double,light,round" help:"box table style [default|bold|double|light|round]"`
 }
 
 func Shell(cmd *ShellCmd) {
@@ -21,6 +22,7 @@ func Shell(cmd *ShellCmd) {
 	clientConf.Heading = cmd.Heading
 	clientConf.Format = cmd.Format
 	clientConf.LocalTime = cmd.LocalTime
+	clientConf.BoxStyle = cmd.BoxStyle
 
 	client, err := New(clientConf)
 	if err != nil {
