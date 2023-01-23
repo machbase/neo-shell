@@ -10,15 +10,28 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (cli *client) pcDescribe() *readline.PrefixCompleter {
+func init() {
+	RegisterCmd(&Cmd{
+		Name:    "describe",
+		Aliases: []string{"desc"},
+		PcFunc:  pcDescribe,
+		Action:  doDescribe,
+		Usage:   "describe <table_name>",
+		Desc:    "display table structure",
+	})
+}
+
+func pcDescribe(c Client) readline.PrefixCompleterInterface {
+	cli := c.(*client)
 	return readline.PcItem("describe",
 		readline.PcItemDynamic(cli.listTables()),
 	)
 }
 
-func (cli *client) doDescribe(object string) {
-	object = strings.TrimSpace(object)
-	if len(object) == 0 {
+func doDescribe(c Client, line string, interactive bool) {
+	object := line
+	cli := c.(*client)
+	if len(line) == 0 {
 		cli.Println("Usage: describe <table_name>")
 		return
 	}

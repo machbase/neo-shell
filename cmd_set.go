@@ -6,7 +6,18 @@ import (
 	"github.com/chzyer/readline"
 )
 
-func (cli *client) pcSet() *readline.PrefixCompleter {
+func init() {
+	RegisterCmd(&Cmd{
+		Name:    "set",
+		Aliases: []string{},
+		PcFunc:  pcSet,
+		Action:  doSet,
+		Desc:    "show/set machsql shell settings",
+		Usage:   "set [local-time | vi-mode | heading] [on|off]",
+	})
+}
+
+func pcSet(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("set",
 		readline.PcItem("local-time",
 			readline.PcItem("on"),
@@ -23,7 +34,9 @@ func (cli *client) pcSet() *readline.PrefixCompleter {
 	)
 }
 
-func (cli *client) doSet(args []string) {
+func doSet(c Client, line string, interactive bool) {
+	cli := c.(*client)
+	args := splitFields(line)
 	onoff := func(t bool) string {
 		if t {
 			return "on"

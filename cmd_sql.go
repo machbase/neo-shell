@@ -11,7 +11,19 @@ import (
 	"golang.org/x/term"
 )
 
-func (cli *client) doSql(sqlText string) {
+func init() {
+	RegisterCmd(&Cmd{
+		Name:    "sql",
+		Aliases: []string{"\\s"},
+		PcFunc:  nil,
+		Action:  doSql,
+		Desc:    "run sql query",
+		Usage:   "sql <sql query>",
+	})
+}
+
+func doSql(c Client, sqlText string, interactive bool) {
+	cli := c.(*client)
 	rows, err := cli.db.Query(sqlText)
 	if err != nil {
 		cli.Println("ERR>", err.Error())

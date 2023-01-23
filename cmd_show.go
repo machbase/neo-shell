@@ -8,7 +8,19 @@ import (
 	"github.com/machbase/cemlib/util"
 )
 
-func (cli *client) pcShow() *readline.PrefixCompleter {
+func init() {
+	RegisterCmd(&Cmd{
+		Name:    "show",
+		Aliases: []string{},
+		PcFunc:  pcShow,
+		Action:  doShow,
+		Desc:    "display information",
+		Usage:   "show [tables | info | table <table_name>]",
+	})
+}
+
+func pcShow(c Client) readline.PrefixCompleterInterface {
+	cli := c.(*client)
 	return readline.PcItem("show",
 		readline.PcItem("tables"),
 		readline.PcItem("info"),
@@ -18,7 +30,9 @@ func (cli *client) pcShow() *readline.PrefixCompleter {
 	)
 }
 
-func (cli *client) doShow(args []string) {
+func doShow(c Client, line string, interactive bool) {
+	cli := c.(*client)
+	args := splitFields(line)
 	switch args[0] {
 	case "info":
 		cli.doShowInfo()
@@ -26,7 +40,7 @@ func (cli *client) doShow(args []string) {
 		cli.doShowTables()
 	case "table":
 		if len(args) == 2 {
-			cli.doShowTable(args[1])
+			doShowTable(c, args[1], interactive)
 		} else {
 			cli.Println("Usage: show table <table_name>")
 		}
@@ -35,8 +49,8 @@ func (cli *client) doShow(args []string) {
 	}
 }
 
-func (cli *client) doShowTable(table string) {
-	cli.doWalk(fmt.Sprintf("select * from %s", table))
+func doShowTable(c Client, table string, interactive bool) {
+	doWalk(c, fmt.Sprintf("select * from %s", table), interactive)
 }
 
 func (cli *client) doShowTables() {

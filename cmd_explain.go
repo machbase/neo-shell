@@ -2,12 +2,24 @@ package shell
 
 import "github.com/chzyer/readline"
 
-func (cli *client) pcExplain() *readline.PrefixCompleter {
+func init() {
+	RegisterCmd(&Cmd{
+		Name:    "explain",
+		Aliases: []string{},
+		PcFunc:  pcExplain,
+		Action:  doExplain,
+		Desc:    "resolve sql execution plan.",
+		Usage:   "explain <sql>",
+	})
+}
+
+func pcExplain(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("explain")
 }
 
-func (cli *client) doExplain(sqlText string) {
-	plan, err := cli.db.Explain(sqlText)
+func doExplain(c Client, line string, interactive bool) {
+	cli := c.(*client)
+	plan, err := cli.db.Explain(line)
 	if err != nil {
 		cli.Println(err.Error())
 		return

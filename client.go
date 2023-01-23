@@ -3,11 +3,13 @@ package shell
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 )
 
@@ -15,6 +17,12 @@ type Client interface {
 	Close()
 	Run(command string, interactive bool)
 	RunPrompt()
+
+	Write(p []byte) (int, error)
+	Print(args ...any)
+	Printf(format string, args ...any)
+	Println(args ...any)
+	Printfln(format string, args ...any)
 }
 
 type Config struct {
@@ -76,7 +84,8 @@ func (cli *client) Print(args ...any) {
 }
 
 func (cli *client) Printf(format string, args ...any) {
-	fmt.Fprintf(cli.conf.Stdout, format, args...)
+	str := fmt.Sprintf(format, args...)
+	fmt.Fprint(cli.conf.Stdout, str)
 }
 
 func (cli *client) Println(args ...any) {
@@ -87,47 +96,158 @@ func (cli *client) Printfln(format string, args ...any) {
 	fmt.Fprintf(cli.conf.Stdout, format+"\r\n", args...)
 }
 
+type Cmd struct {
+	Name    string
+	Aliases []string
+	PcFunc  func(cli Client) readline.PrefixCompleterInterface
+	Action  func(cli Client, line string, interactive bool)
+	Desc    string
+	Usage   string
+}
+
+var commands = make(map[string]*Cmd)
+var aliases = make(map[string]*Cmd)
+
+func RegisterCmd(cmd *Cmd) {
+	commands[cmd.Name] = cmd
+	for _, a := range cmd.Aliases {
+		aliases[a] = cmd
+	}
+}
+
+func (cli *client) completer() readline.PrefixCompleterInterface {
+	pc := make([]readline.PrefixCompleterInterface, 0)
+	for _, cmd := range commands {
+		if cmd.PcFunc != nil {
+			pc = append(pc, cmd.PcFunc(cli))
+		}
+	}
+	return readline.NewPrefixCompleter(pc...)
+}
+
 func (cli *client) Run(line string, interactive bool) {
 	fields := splitFields(line)
 	if len(fields) == 0 {
 		return
 	}
-	switch strings.ToLower(fields[0]) {
-	case "help":
-		cmd := strings.TrimSpace(strings.ToLower(line[4:]))
-		usage(cli.conf.Stdout, cli.completer(), cmd)
-	case "show":
-		cli.doShow(fields[1:])
-	case "explain":
-		sql := strings.TrimSpace(line[7:])
-		cli.doExplain(sql)
-	case "describe":
-		object := strings.TrimSpace(line[8:])
-		cli.doDescribe(object)
-	case "desc":
-		object := strings.TrimSpace(line[4:])
-		cli.doDescribe(object)
-	case "chart":
-		cli.doChart(fields[1:])
-	case "set":
-		cli.doSet(fields[1:])
-	case "sql":
-		sql := strings.TrimSpace(line[3:])
-		cli.doSql(sql)
-	case "walk":
-		sql := strings.TrimSpace(line[4:])
-		cli.doWalk(sql)
-	default:
+
+	cmdName := fields[0]
+	cmd, ok := commands[cmdName]
+	if !ok {
+		cmd = aliases[cmdName]
+	}
+
+	if cmd != nil {
+		line = strings.TrimSpace(line[len(cmdName):])
+		cmd.Action(cli, line, interactive)
+	} else {
 		if interactive {
-			cli.doWalk(line)
+			doWalk(cli, line, interactive)
 		} else {
-			cli.doSql(line)
+			doSql(cli, line, interactive)
 		}
 	}
 }
 
 func (cli *client) RunPrompt() {
-	cli.doPrompt()
+	cli.Prompt()
+}
+
+func (cli *client) Prompt() {
+	prompt := "\033[31mmachsql»\033[0m "
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:                 prompt,
+		HistoryFile:            "/tmp/readline.tmp",
+		DisableAutoSaveHistory: true,
+		AutoComplete:           cli.completer(),
+		InterruptPrompt:        "^C",
+		EOFPrompt:              "exit",
+		Stdin:                  cli.conf.Stdin,
+		Stdout:                 cli.conf.Stdout,
+		Stderr:                 cli.conf.Stderr,
+		HistorySearchFold:      true,
+		FuncFilterInputRune:    filterInput,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer rl.Close()
+
+	rl.CaptureExitSignal()
+	rl.SetVimMode(cli.conf.VimMode)
+
+	log.SetOutput(rl.Stderr())
+
+	var parts []string
+	for {
+		line, err := rl.Readline()
+		if err == readline.ErrInterrupt {
+			if len(line) == 0 {
+				break
+			} else {
+				continue
+			}
+		} else if err == io.EOF {
+			break
+		}
+
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if len(parts) == 0 {
+			if line == "exit" || line == "exit;" {
+				goto exit
+			} else if strings.HasPrefix(line, "help") {
+				goto madeline
+			} else if line == "set" || strings.HasPrefix(line, "set ") {
+				goto madeline
+			}
+		}
+
+		parts = append(parts, line)
+		if !strings.HasSuffix(line, ";") {
+			rl.SetPrompt("         ")
+			continue
+		}
+		line = strings.Join(parts, " ")
+
+	madeline:
+		rl.SaveHistory(line)
+
+		line = strings.TrimSuffix(line, ";")
+		parts = parts[:0]
+		rl.SetPrompt(prompt)
+		cli.Run(line, true)
+	}
+exit:
+}
+
+func filterInput(r rune) (rune, bool) {
+	switch r {
+	case readline.CharCtrlZ: // block CtrlZ feature
+		return r, false
+	}
+	return r, true
+}
+
+func (cli *client) listTables() func(string) []string {
+	return func(line string) []string {
+		rows, err := cli.db.Query("select NAME, TYPE, FLAG from M$SYS_TABLES order by NAME")
+		if err != nil {
+			return nil
+		}
+		defer rows.Close()
+		rt := []string{}
+		for rows.Next() {
+			var name string
+			var typ int
+			var flg int
+			rows.Scan(&name, &typ, &flg)
+			rt = append(rt, name)
+		}
+		return rt
+	}
 }
 
 func splitFields(line string) []string {

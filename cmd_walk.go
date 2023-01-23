@@ -12,11 +12,23 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (cli *client) pcWalk() *readline.PrefixCompleter {
+func init() {
+	RegisterCmd(&Cmd{
+		Name:    "walk",
+		Aliases: []string{"\\w"},
+		PcFunc:  pcWalk,
+		Action:  doWalk,
+		Desc:    "execute query then walk-through the results",
+		Usage:   "walk <sql query>",
+	})
+}
+
+func pcWalk(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("walk")
 }
 
-func (cli *client) doWalk(sqlText string) {
+func doWalk(cc Client, sqlText string, interactive bool) {
+	cli := cc.(*client)
 	sqlText = strings.TrimSpace(sqlText)
 	if len(sqlText) == 0 {
 		cli.Println("Usage: walk <sql query>")

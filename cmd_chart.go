@@ -19,19 +19,36 @@ import (
 	"github.com/robfig/cron"
 )
 
+func init() {
+	RegisterCmd(&Cmd{
+		Name:    "chart",
+		Aliases: []string{},
+		PcFunc:  pcChart,
+		Action:  doChart,
+		Desc:    "draw graph",
+		Usage: `chart [options] <table_name> <tag> ...
+    --time         base time, now or time string in format "2023-02-03 13:20:30" (default: now)
+    --range        time range of data, from time specified by '--time'
+    --refresh, -r  refresh period, effective only if time is "now" (default: 1s)`,
+	})
+}
+
 type ChartCmd struct {
 	TableName string        `arg:"" name:"table" help:"table name"`
 	Tags      []string      `arg:"" name:"tags" help:"tags with column name. ex) tag1 tag2.columnA tag3.columnB"`
 	Range     time.Duration `name:"range" default:"5m" help:"time range of data, from now() - range to now()"`
 	Timestamp string        `name:"time" default:"now" help:"time ex) now or \"2023-02-03 13:20:30\""`
-	Refresh   time.Duration `name:"refresh" short:"r" default:"3s" help:"refresh period, effective only if time is \"now\""`
+	Refresh   time.Duration `name:"refresh" short:"r" default:"1s" help:"refresh period, effective only if time is \"now\""`
 }
 
-func (cli *client) pcChart() *readline.PrefixCompleter {
+func pcChart(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("chart")
 }
 
-func (cli *client) doChart(args []string) {
+func doChart(c Client, line string, interactive bool) {
+	cli := c.(*client)
+	args := splitFields(line)
+
 	cmd := &ChartCmd{}
 	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}))
 	parser.Model.Name = "chart"
