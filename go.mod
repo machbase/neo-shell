@@ -6,12 +6,14 @@ require (
 	github.com/alecthomas/kong v0.7.1
 	github.com/chzyer/readline v1.5.1
 	github.com/gdamore/tcell/v2 v2.5.4
+	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/cemlib v0.0.0-20230119232328-dfbd55a9c863
 	github.com/machbase/neo-grpc v0.0.5-0.20230122083535-1975dc93d143
 	github.com/mum4k/termdash v0.17.0
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
 	github.com/robfig/cron v1.2.0
 	golang.org/x/term v0.4.0
+	golang.org/x/text v0.6.0
 )
 
 require (
@@ -35,7 +37,6 @@ require (
 	github.com/zclconf/go-cty v1.11.0 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20220805133916-01dd62135a58 // indirect
 	google.golang.org/grpc v1.51.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect

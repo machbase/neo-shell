@@ -11,18 +11,37 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 type Client interface {
 	Close()
 	Run(command string, interactive bool)
-	RunPrompt()
+	Prompt()
 
 	Write(p []byte) (int, error)
 	Print(args ...any)
 	Printf(format string, args ...any)
 	Println(args ...any)
 	Printfln(format string, args ...any)
+}
+
+var Formats = struct {
+	Default string
+	CSV     string
+	Parse   func(string) string
+}{
+	Default: "-",
+	CSV:     "csv",
+	Parse: func(str string) string {
+		switch str {
+		default:
+			return "-"
+		case "csv":
+			return "csv"
+		}
+	},
 }
 
 type Config struct {
@@ -33,7 +52,9 @@ type Config struct {
 	VimMode      bool
 	Heading      bool
 	LocalTime    bool
+	Format       string
 	QueryTimeout time.Duration
+	lang         language.Tag
 }
 
 type client struct {
@@ -49,6 +70,7 @@ func DefaultConfig() *Config {
 		VimMode:      false,
 		Heading:      true,
 		QueryTimeout: 30 * time.Second,
+		lang:         language.English,
 	}
 }
 
@@ -147,10 +169,6 @@ func (cli *client) Run(line string, interactive bool) {
 			doSql(cli, line, interactive)
 		}
 	}
-}
-
-func (cli *client) RunPrompt() {
-	cli.Prompt()
 }
 
 func (cli *client) Prompt() {
@@ -275,4 +293,26 @@ func splitFields(line string) []string {
 		}
 	}
 	return fields
+}
+
+func (cli *client) bytesUnit(v uint64) string {
+	p := message.NewPrinter(cli.conf.lang)
+	f := float64(v)
+	u := ""
+	switch {
+	case v > 1024*1024*1024:
+		f = f / (1024 * 1024 * 1024)
+		u = "GB"
+	case v > 1024*1024:
+		f = f / (1024 * 1024)
+		u = "MB"
+	case v > 1024:
+		f = f / 1024
+		u = "KB"
+	}
+	return p.Sprintf("%.1f %s", f, u)
+}
+
+func (cli *client) Printer() *message.Printer {
+	return message.NewPrinter(cli.conf.lang)
 }

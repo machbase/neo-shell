@@ -22,18 +22,18 @@ func init() {
 	})
 }
 
-func doSql(c Client, sqlText string, interactive bool) {
-	cli := c.(*client)
+func doSql(cc Client, sqlText string, interactive bool) {
+	cli := cc.(*client)
 	rows, err := cli.db.Query(sqlText)
 	if err != nil {
-		cli.Println("ERR>", err.Error())
+		cli.Println("ERR", err.Error())
 		return
 	}
 	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {
-		cli.Println("ERR>", err.Error())
+		cli.Println("ERR", err.Error())
 		return
 	}
 
@@ -63,10 +63,9 @@ func doSql(c Client, sqlText string, interactive bool) {
 	for {
 		if !rows.Next() {
 			if len(chunk.rows) > 0 {
-				cli.display(chunk)
+				cli.display(chunk, interactive)
 			}
-			// rows.ResultString(nrow)
-			cli.Printfln("%d rows selected", nrow)
+			cli.Printfln(cli.Printer().Sprintf("%d rows selected", nrow))
 			return
 		}
 		err := rows.Scan(rec...)
@@ -78,24 +77,25 @@ func doSql(c Client, sqlText string, interactive bool) {
 		chunk.rows = append(chunk.rows, makeValues(rec, cli.conf.LocalTime))
 
 		if chunk.windowHeight > 0 && nrow%height == 0 {
-			chunk = cli.display(chunk)
-			cli.Print(":")
-
-			// switch stdin into 'raw' mode
-			if oldState, err := term.MakeRaw(int(os.Stdin.Fd())); err == nil {
-				b := make([]byte, 3)
-				if _, err = os.Stdin.Read(b); err == nil {
-					term.Restore(int(os.Stdin.Fd()), oldState)
-					switch b[0] {
-					case 'q', 'Q':
-						return
-					default:
+			chunk = cli.display(chunk, interactive)
+			if interactive {
+				cli.Print(":")
+				// switch stdin into 'raw' mode
+				if oldState, err := term.MakeRaw(int(os.Stdin.Fd())); err == nil {
+					b := make([]byte, 3)
+					if _, err = os.Stdin.Read(b); err == nil {
+						term.Restore(int(os.Stdin.Fd()), oldState)
+						switch b[0] {
+						case 'q', 'Q':
+							return
+						default:
+						}
+						// ':' prompt를 삭제한다.
+						// erase line
+						fmt.Fprintf(os.Stdout, "%s%s", "\x1b", "[2K")
+						// cursor backward
+						fmt.Fprintf(os.Stdout, "%s%s", "\x1b", "[1D")
 					}
-					// ':' prompt를 삭제한다.
-					// erase line
-					fmt.Fprintf(os.Stdout, "%s%s", "\x1b", "[2K")
-					// cursor backward
-					fmt.Fprintf(os.Stdout, "%s%s", "\x1b", "[1D")
 				}
 			}
 		}
@@ -173,7 +173,22 @@ type ResultChunk struct {
 	windowHeight int
 }
 
-func (cli *client) display(chunk *ResultChunk) *ResultChunk {
+func (cli *client) display(chunk *ResultChunk, interactive bool) *ResultChunk {
+	if cli.conf.Format == Formats.CSV {
+		chunk.displayCSV(cli, interactive)
+	} else {
+		chunk.displayDefault(cli, interactive)
+	}
+	return &ResultChunk{
+		heading:      chunk.heading,
+		width:        chunk.width,
+		cols:         chunk.cols,
+		windowWidth:  chunk.windowWidth,
+		windowHeight: chunk.windowHeight,
+	}
+}
+
+func (chunk *ResultChunk) displayDefault(cli *client, interactive bool) {
 	if len(chunk.width) == 0 {
 		chunk.width = make([]int, len(chunk.cols))
 		// 각 컬럼의 폭을 계산한다.
@@ -194,7 +209,7 @@ func (cli *client) display(chunk *ResultChunk) *ResultChunk {
 		}
 	}
 
-	if chunk.heading {
+	if chunk.heading && interactive {
 		line := strings.Join(chunk.cols, " | ")
 		if chunk.windowWidth > 0 && len(line) > chunk.windowWidth {
 			line = line[0 : chunk.windowWidth-4]
@@ -213,13 +228,30 @@ func (cli *client) display(chunk *ResultChunk) *ResultChunk {
 		}
 		cli.Println(line)
 	}
+}
 
-	return &ResultChunk{
-		heading:      chunk.heading,
-		width:        chunk.width,
-		cols:         chunk.cols,
-		windowWidth:  chunk.windowWidth,
-		windowHeight: chunk.windowHeight,
+func (chunk *ResultChunk) displayCSV(cli *client, interactive bool) {
+	if len(chunk.width) == 0 {
+		chunk.width = make([]int, len(chunk.cols))
+		// CSV header 출력
+		cli.Println(strings.Join(chunk.cols, ","))
+	}
+
+	for r, row := range chunk.rows {
+		var line string
+		if cli.conf.Format == Formats.CSV {
+			line = strings.Join(row, ",")
+		} else {
+			for c := range chunk.cols {
+				chunk.rows[r][c] = fmt.Sprintf("%-*s", chunk.width[c], row[c])
+			}
+			line = strings.Join(row, "   ")
+			if chunk.windowWidth > 0 && len(line) > chunk.windowWidth {
+				line = line[0 : chunk.windowWidth-4]
+				line = line + "..."
+			}
+		}
+		cli.Println(line)
 	}
 }
 

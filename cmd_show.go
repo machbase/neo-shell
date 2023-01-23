@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/machbase/cemlib/util"
 )
 
@@ -60,14 +61,28 @@ func (cli *client) doShowTables() {
 		return
 	}
 	defer rows.Close()
+
+	t := table.NewWriter()
+	t.SetOutputMirror(cli.conf.Stdout)
+	t.SetStyle(table.StyleLight)
+	t.AppendHeader(table.Row{"#", "NAME", "TYPE", "DESC"})
+
+	nrow := 0
 	for rows.Next() {
 		var name string
 		var typ int
 		var flg int
-		rows.Scan(&name, &typ, &flg)
+		err := rows.Scan(&name, &typ, &flg)
+		if err != nil {
+			cli.Println("ERR", err.Error())
+			return
+		}
+		nrow++
+
 		desc := tableTypeDesc(typ, flg)
-		cli.Printfln("%-24s %s", name, desc)
+		t.AppendRow([]any{nrow, name, typ, desc})
 	}
+	t.Render()
 }
 
 func (cli *client) doShowInfo() {
@@ -76,23 +91,35 @@ func (cli *client) doShowInfo() {
 		cli.Println("ERR", err.Error())
 		return
 	}
-	width := 18
 
-	cli.Printfln("%-*s v%d.%d.%d #%s", width, "Server", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch, nfo.Version.GitSHA)
-	cli.Printfln("%-*s %s", width, "Engine", nfo.Version.Engine)
+	t := table.NewWriter()
+	t.SetOutputMirror(cli.conf.Stdout)
+	t.SetStyle(table.StyleLight)
+	if cli.conf.Heading {
+		t.AppendHeader(table.Row{"NAME", "VALUE"})
+	}
 
-	cli.Printfln("%-*s %s %s", width, "os", nfo.Runtime.OS, nfo.Runtime.Arch)
-	cli.Printfln("%-*s %d", width, "processes", nfo.Runtime.Processes)
-	cli.Printfln("%-*s %d", width, "pid", nfo.Runtime.Pid)
-	cli.Printfln("%-*s %s", width, "uptime", util.HumanizeDuration(time.Duration(nfo.Runtime.UptimeInSecond*int64(time.Second))))
-	cli.Printfln("%-*s %d", width, "goroutines", nfo.Runtime.Goroutines)
-	// total bytes of memory obtained from the OS
-	// Sys measures the virtual address space reserved
-	// by the Go runtime for the heap, stacks, and other internal data structures.
-	cli.Printfln("%-*s %d MB", width, "mem sys", nfo.Runtime.MemSys/1024/1024)
-	cli.Printfln("%-*s %d MB", width, "mem heap sys", nfo.Runtime.MemHeapSys/1024/1024)
-	cli.Printfln("%-*s %d MB", width, "mem heap alloc", nfo.Runtime.MemHeapAlloc/1024/1024)
-	cli.Printfln("%-*s %d MB", width, "mem heap in-use", nfo.Runtime.MemHeapInUse/1024/1024)
-	cli.Printfln("%-*s %d KB", width, "mem stack sys", nfo.Runtime.MemStackSys/1024)
-	cli.Printfln("%-*s %d KB", width, "mem stack in-use", nfo.Runtime.MemStackInUse/1024)
+	t.AppendRow([]any{"build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch)})
+	t.AppendRow([]any{"build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA)})
+	t.AppendRow([]any{"build.timestamp", nfo.Version.BuildTimestamp})
+	t.AppendRow([]any{"build.engine", nfo.Version.Engine})
+
+	t.AppendRow([]any{"runtime.os", nfo.Runtime.OS})
+	t.AppendRow([]any{"runtime.arch", nfo.Runtime.Arch})
+	t.AppendRow([]any{"runtime.pid", nfo.Runtime.Pid})
+	t.AppendRow([]any{"runtime.uptime", util.HumanizeDuration(time.Duration(nfo.Runtime.UptimeInSecond * int64(time.Second)))})
+	t.AppendRow([]any{"runtime.goroutines", nfo.Runtime.Goroutines})
+
+	t.AppendRow([]any{"mem.sys", cli.bytesUnit(nfo.Runtime.MemSys)})
+	t.AppendRow([]any{"mem.heap.sys", cli.bytesUnit(nfo.Runtime.MemHeapSys)})
+	t.AppendRow([]any{"mem.heap.alloc", cli.bytesUnit(nfo.Runtime.MemHeapAlloc)})
+	t.AppendRow([]any{"mem.heap.in-use", cli.bytesUnit(nfo.Runtime.MemHeapInUse)})
+	t.AppendRow([]any{"mem.stack.sys", cli.bytesUnit(nfo.Runtime.MemStackSys)})
+	t.AppendRow([]any{"mem.stack.in-use", cli.bytesUnit(nfo.Runtime.MemStackInUse)})
+
+	if cli.conf.Format == Formats.CSV {
+		t.RenderCSV()
+	} else {
+		t.Render()
+	}
 }

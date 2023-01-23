@@ -1,13 +1,10 @@
 package shell
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 func init() {
@@ -48,22 +45,6 @@ func doDescribe(c Client, line string, interactive bool) {
 		return
 	}
 
-	title := fmt.Sprintf(" %s (%s) - ESC to quit ", tableName, tableTypeDesc(tableType, tableFlag))
-	labels := []string{"NAME", "TYPE", "LENGTH"}
-
-	app := tview.NewApplication()
-	table := tview.NewTable()
-	table.SetBorder(true).SetTitle(title).SetTitleAlign(tview.AlignLeft)
-	table.SetFixed(1, 1)
-	for i, l := range labels {
-		table.SetCell(0, i, tview.NewTableCell(l).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter))
-	}
-	table.SetDoneFunc(func(key tcell.Key) {
-		if key == tcell.KeyESC {
-			app.Stop()
-		}
-	})
-
 	rows, err := cli.db.Query("select name, type, length from M$SYS_COLUMNS where table_id = ? order by id", tableId)
 	if err != nil {
 		cli.Println("ERR", err.Error())
@@ -71,25 +52,29 @@ func doDescribe(c Client, line string, interactive bool) {
 	}
 	defer rows.Close()
 
+	t := table.NewWriter()
+	t.SetOutputMirror(cli.conf.Stdout)
+	t.SetStyle(table.StyleLight)
+	t.AppendHeader(table.Row{"#", "NAME", "TYPE", "LENGTH"})
+
 	nrow := 0
 	for rows.Next() {
-		var colName string
-		var colType int
-		var colLen int
-		err = rows.Scan(&colName, &colType, &colLen)
+		var nam string
+		var typ int
+		var len int
+
+		err = rows.Scan(&nam, &typ, &len)
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
 		}
 		nrow++
-
-		table.SetCell(nrow, 0, tview.NewTableCell(colName))
-		table.SetCell(nrow, 1, tview.NewTableCell(strconv.Itoa(colType)))
-		table.SetCell(nrow, 2, tview.NewTableCell(strconv.Itoa(colLen)))
+		t.AppendRow([]any{nrow, nam, typ, len})
 	}
 
-	if err := app.SetRoot(table, true).SetFocus(table).Run(); err != nil {
-		cli.Println("ERR", err.Error())
-		return
+	if cli.conf.Format == Formats.CSV {
+		t.RenderCSV()
+	} else {
+		t.Render()
 	}
 }

@@ -31,6 +31,10 @@ func pcSet(c Client) readline.PrefixCompleterInterface {
 			readline.PcItem("on"),
 			readline.PcItem("off"),
 		),
+		readline.PcItem("format",
+			readline.PcItem(Formats.Default),
+			readline.PcItem(Formats.CSV),
+		),
 	)
 }
 
@@ -61,6 +65,7 @@ func doSet(c Client, line string, interactive bool) {
 		cli.Println("local-time", onoff(cli.conf.LocalTime))
 		cli.Println("vi-mode   ", onoff(cli.conf.VimMode))
 		cli.Println("heading   ", onoff(cli.conf.Heading))
+		cli.Println("format    ", cli.conf.Format)
 		return
 	}
 	switch strings.ToLower(args[0]) {
@@ -70,5 +75,8 @@ func doSet(c Client, line string, interactive bool) {
 		parseflag(&cli.conf.VimMode)
 	case "heading":
 		parseflag(&cli.conf.Heading)
+	case "format":
+		cli.conf.Format = Formats.Parse(args[1])
+		cli.Println("format", cli.conf.Format)
 	}
 }
