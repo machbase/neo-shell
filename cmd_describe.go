@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -45,6 +46,27 @@ func doDescribe(c Client, line string, interactive bool) {
 		return
 	}
 
+	cli.Println("TABLE   ", tableName)
+	cli.Println("TYPE    ", tableTypeDesc(tableType, tableFlag))
+	cli.Println("COLUMNS ", colCount)
+	if tableType == 6 {
+		tags := []string{}
+		rows, err := cli.db.Query(fmt.Sprintf("select name from _%s_META", strings.ToUpper(object)))
+		if err != nil {
+			cli.Println("ERR", err.Error())
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				cli.Println("ERR", err.Error())
+				return
+			}
+			tags = append(tags, name)
+		}
+		cli.Println("TAGS    ", strings.Join(tags, ", "))
+	}
 	rows, err := cli.db.Query("select name, type, length from M$SYS_COLUMNS where table_id = ? order by id", tableId)
 	if err != nil {
 		cli.Println("ERR", err.Error())
