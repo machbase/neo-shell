@@ -26,7 +26,7 @@ func init() {
 		PcFunc:  pcChart,
 		Action:  doChart,
 		Desc:    "draw graph",
-		Usage: `chart [options] <table_name> <tag> ...
+		Usage: `chart [options] <tag_path> ...
     --time         base time, now or time string in format "2023-02-03 13:20:30" (default: now)
     --range        time range of data, from time specified by '--time'
     --refresh, -r  refresh period, effective only if time is "now" (default: 1s)`,
@@ -34,8 +34,7 @@ func init() {
 }
 
 type ChartCmd struct {
-	TableName string        `arg:"" name:"table" help:"table name"`
-	Tags      []string      `arg:"" name:"tags" help:"tags with column name. ex) tag1 tag2.columnA tag3.columnB"`
+	TagPaths  []string      `arg:"" name:"tags" help:"tag path forms as <table>/<tag>#<column>. ex) mytable/the.tag1#column"`
 	Range     time.Duration `name:"range" default:"5m" help:"time range of data, from now() - range to now()"`
 	Timestamp string        `name:"time" default:"now" help:"time ex) now or \"2023-02-03 13:20:30\""`
 	Refresh   time.Duration `name:"refresh" short:"r" default:"1s" help:"refresh period, effective only if time is \"now\""`
@@ -62,12 +61,8 @@ func doChart(c Client, line string, interactive bool) {
 		return
 	}
 
-	if len(cmd.TableName) == 0 {
-		fmt.Println("no table is specified")
-		return
-	}
-	if len(cmd.Tags) == 0 {
-		fmt.Println("at least one tag should specified")
+	if len(cmd.TagPaths) == 0 {
+		cli.Println("at least one tag should be specified")
 		return
 	}
 
@@ -75,36 +70,43 @@ func doChart(c Client, line string, interactive bool) {
 		cmd.Timestamp = "now"
 	}
 
-	var timestamp time.Time
-	if cmd.Timestamp == "now" {
-		timestamp = time.Now()
-	} else {
-		timeformat := "2006-01-02 15:04:05"
-		if cli.conf.LocalTime {
-			timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, time.Local)
-			timestamp = timestamp.UTC()
+	queries := make([]*DataQuery, len(cmd.TagPaths))
+	for i, path := range cmd.TagPaths {
+		// path는 <table>/<tag>#<column> 형식으로 구성된다.
+		toks := strings.SplitN(path, "/", 2)
+		if len(toks) == 2 {
+			queries[i] = &DataQuery{}
+			queries[i].table = toks[0]
 		} else {
-			timestamp, err = time.Parse(timeformat, cmd.Timestamp)
+			cli.Printfln("table name not found in '%s'", path)
+			return
 		}
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-	}
-
-	queries := make([]*DataQuery, len(cmd.Tags))
-	for i := range cmd.Tags {
-		queries[i] = &DataQuery{}
-		queries[i].table = cmd.TableName
-		queries[i].rangeTo = timestamp
-		queries[i].rangeFrom = timestamp.Add(-1 * cmd.Range)
-
-		toks := strings.SplitN(cmd.Tags[i], ".", 2)
+		toks = strings.SplitN(toks[1], "#", 2)
 		if len(toks) == 2 {
 			queries[i].tag = toks[0]
 			queries[i].field = toks[1]
 		} else {
 			queries[i].tag = toks[0]
 			queries[i].field = "VALUE"
+		}
+
+		queries[i].rangeFunc = func() (time.Time, time.Time) {
+			var timestamp time.Time
+			if cmd.Timestamp == "now" {
+				timestamp = time.Now()
+			} else {
+				timeformat := "2006-01-02 15:04:05"
+				if cli.conf.LocalTime {
+					timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, time.Local)
+					timestamp = timestamp.UTC()
+				} else {
+					timestamp, err = time.Parse(timeformat, cmd.Timestamp)
+				}
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+			}
+			return timestamp.Add(-1 * cmd.Range), timestamp
 		}
 	}
 
@@ -143,20 +145,29 @@ func doChart(c Client, line string, interactive bool) {
 		return
 	}
 
-	// feed receiver
 	runner := func() {
 		// query
 		for _, dq := range queries {
-			rows, err := cli.db.Query(dq.makeQuery())
+			if strings.ToUpper(dq.field) == "VALUE" {
+				dq.label = strings.ToLower(dq.tag)
+			} else {
+				dq.label = strings.ToLower(fmt.Sprintf("%s-%s", dq.tag, dq.field))
+			}
+			rangeFrom, rangeTo := dq.rangeFunc()
+
+			lastSql := fmt.Sprintf(`select TIME, %s from %s where NAME = ? AND TIME between ? AND ? order by time`, dq.field, dq.table)
+
+			rows, err := cli.db.Query(lastSql, dq.tag, rangeFrom, rangeTo)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
 			defer rows.Close()
 
-			times := make([]string, 0)
 			values := make([]float64, 0)
+			xlabels := make(map[int]string)
 
+			idx := 0
 			for rows.Next() {
 				var ts time.Time
 				var value float64
@@ -165,17 +176,17 @@ func doChart(c Client, line string, interactive bool) {
 					fmt.Println(err.Error())
 					return
 				}
+				var label string
 				if cli.conf.LocalTime {
-					ts = ts.Local()
+					label = ts.Local().Format("15:04:05")
+				} else {
+					label = ts.Format("15:04:05")
 				}
-				times = append(times, ts.Format("15:04:05"))
 				values = append(values, value)
+				xlabels[idx] = label
+				idx++
 			}
 
-			xlabels := make(map[int]string)
-			for i, s := range times {
-				xlabels[i] = s
-			}
 			err = lchart.Series(
 				dq.label,
 				values,
@@ -192,7 +203,10 @@ func doChart(c Client, line string, interactive bool) {
 	var scheduler *cron.Cron
 	if cmd.Timestamp == "now" {
 		scheduler = cron.New()
-		scheduler.AddFunc(fmt.Sprintf("@every %s", cmd.Refresh.String()), runner)
+		err := scheduler.AddFunc(fmt.Sprintf("@every %s", cmd.Refresh.String()), runner)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 		go scheduler.Run()
 	} else {
 		runner()
@@ -239,17 +253,6 @@ type DataQuery struct {
 	table     string
 	tag       string
 	field     string
-	rangeFrom time.Time
-	rangeTo   time.Time
+	rangeFunc func() (time.Time, time.Time)
 	label     string
-}
-
-func (dq *DataQuery) makeQuery() string {
-	if strings.ToUpper(dq.field) == "VALUE" {
-		dq.label = strings.ToLower(dq.tag)
-	} else {
-		dq.label = strings.ToLower(fmt.Sprintf("%s-%s", dq.tag, dq.field))
-	}
-	return fmt.Sprintf(`select TIME, %s from %s where TIME between %d and %d AND name = '%s'`,
-		dq.field, dq.table, dq.rangeFrom.UnixNano(), dq.rangeTo.UnixNano(), dq.tag)
 }

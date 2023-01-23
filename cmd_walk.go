@@ -5,6 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/gdamore/tcell/v2"
@@ -89,6 +90,7 @@ func NewWalker(sqlText string, client *machrpc.Client, localtime bool) (*Walker,
 			tz := "UTC"
 			if localtime {
 				tz = "LOCAL"
+				tz, _ = time.Now().Zone()
 			}
 			values[0][i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, tz)
 		} else {

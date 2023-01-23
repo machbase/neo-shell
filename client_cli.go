@@ -11,6 +11,7 @@ type ShellCmd struct {
 	ServerAddr string   `name:"server" short:"s" default:"tcp://127.0.0.1:5655" help:"server address"`
 	User       string   `name:"user" short:"u" default:"sys"`
 	Heading    bool     `name:"heading" negatable:"" default:"true"`
+	LocalTime  bool     `name:"local-time" default:"false" help:"use locatime instead of UTC"`
 	Format     string   `name:"format" default:"-" enum:"-,csv" help:"outout format"`
 }
 
@@ -19,6 +20,7 @@ func Shell(cmd *ShellCmd) {
 	clientConf.ServerAddr = cmd.ServerAddr
 	clientConf.Heading = cmd.Heading
 	clientConf.Format = cmd.Format
+	clientConf.LocalTime = cmd.LocalTime
 
 	client, err := New(clientConf)
 	if err != nil {
