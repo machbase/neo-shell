@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/machbase/neo-grpc/machrpc"
@@ -37,35 +36,44 @@ func doSql(cc Client, sqlText string, interactive bool) {
 		return
 	}
 
-	names := make([]string, len(cols))
+	names := make([]any, len(cols)+1)
+	names[0] = "#"
 	for i := range cols {
-		names[i] = cols[i].Name
-	}
-	rec := makeBuffer(cols)
-
-	chunk := &ResultChunk{}
-	chunk.heading = cli.conf.Heading
-	chunk.cols = names
-
-	if term.IsTerminal(0) {
-		if width, height, err := term.GetSize(0); err == nil {
-			chunk.windowHeight = height
-			chunk.windowWidth = width
+		if cols[i].Type == "datetime" {
+			tz := "UTC"
+			if cli.conf.LocalTime {
+				tz = "LOCAL"
+				tz, _ = time.Now().Zone()
+			}
+			names[i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, tz)
+		} else {
+			names[i+1] = cols[i].Name
 		}
 	}
 
-	height := chunk.windowHeight - 1
-	if chunk.heading {
+	rec := makeBuffer(cols)
+
+	box := cli.NewBox(names, !interactive)
+
+	windowHeight := 0
+	//windowWidth := 0
+	if term.IsTerminal(0) {
+		if _, height, err := term.GetSize(0); err == nil {
+			windowHeight = height
+			//windowWidth = width
+		}
+	}
+
+	height := windowHeight - 4
+	if cli.conf.Heading {
 		height--
 	}
 
 	nrow := 0
 	for {
 		if !rows.Next() {
-			if len(chunk.rows) > 0 {
-				cli.display(chunk, interactive)
-			}
-			cli.Printfln(cli.Printer().Sprintf("%d rows selected", nrow))
+			box.Render()
+			box.ResetRows()
 			return
 		}
 		err := rows.Scan(rec...)
@@ -74,10 +82,17 @@ func doSql(cc Client, sqlText string, interactive bool) {
 			return
 		}
 		nrow++
-		chunk.rows = append(chunk.rows, makeValues(rec, cli.conf.LocalTime))
+		vs := makeValues(rec, cli.conf.LocalTime)
+		values := make([]any, len(vs)+1)
+		values[0] = nrow
+		for i := range vs {
+			values[i+1] = vs[i]
+		}
+		box.AppendRow(values)
 
-		if chunk.windowHeight > 0 && nrow%height == 0 {
-			chunk = cli.display(chunk, interactive)
+		if windowHeight > 0 && nrow%height == 0 {
+			box.Render()
+			box.ResetRows()
 			if interactive {
 				cli.Print(":")
 				// switch stdin into 'raw' mode
@@ -97,6 +112,8 @@ func doSql(cc Client, sqlText string, interactive bool) {
 						fmt.Fprintf(os.Stdout, "%s%s", "\x1b", "[1D")
 					}
 				}
+			} else {
+				box.ResetHeaders()
 			}
 		}
 	}
@@ -161,125 +178,4 @@ func makeBuffer(cols []*machrpc.Column) []any {
 		}
 	}
 	return rec
-}
-
-type ResultChunk struct {
-	heading bool
-	width   []int
-	cols    []string
-	rows    [][]string
-
-	windowWidth  int
-	windowHeight int
-}
-
-func (cli *client) display(chunk *ResultChunk, interactive bool) *ResultChunk {
-	if cli.conf.Format == Formats.CSV {
-		chunk.displayCSV(cli, interactive)
-	} else {
-		chunk.displayDefault(cli, interactive)
-	}
-	return &ResultChunk{
-		heading:      chunk.heading,
-		width:        chunk.width,
-		cols:         chunk.cols,
-		windowWidth:  chunk.windowWidth,
-		windowHeight: chunk.windowHeight,
-	}
-}
-
-func (chunk *ResultChunk) displayDefault(cli *client, interactive bool) {
-	if len(chunk.width) == 0 {
-		chunk.width = make([]int, len(chunk.cols))
-		// 각 컬럼의 폭을 계산한다.
-		for c := range chunk.cols {
-			// 컬럼 명의 길이를 최소 폭으로 한다.
-			max := len(chunk.cols[c])
-			// 각 rows를 순회하며 해당 column 값의 폭 중에서 가장 긴 값을 찾는다.
-			for r := range chunk.rows {
-				v := chunk.rows[r][c]
-				if len(v) > max {
-					max = len(v)
-				}
-			}
-			chunk.width[c] = max
-		}
-		for c := range chunk.cols {
-			chunk.cols[c] = fmt.Sprintf("%-*s", chunk.width[c], chunk.cols[c])
-		}
-	}
-
-	if chunk.heading && interactive {
-		line := strings.Join(chunk.cols, " | ")
-		if chunk.windowWidth > 0 && len(line) > chunk.windowWidth {
-			line = line[0 : chunk.windowWidth-4]
-			line = line + "..."
-		}
-		cli.Println(line)
-	}
-	for r, row := range chunk.rows {
-		for c := range chunk.cols {
-			chunk.rows[r][c] = fmt.Sprintf("%-*s", chunk.width[c], row[c])
-		}
-		line := strings.Join(row, "   ")
-		if chunk.windowWidth > 0 && len(line) > chunk.windowWidth {
-			line = line[0 : chunk.windowWidth-4]
-			line = line + "..."
-		}
-		cli.Println(line)
-	}
-}
-
-func (chunk *ResultChunk) displayCSV(cli *client, interactive bool) {
-	if len(chunk.width) == 0 {
-		chunk.width = make([]int, len(chunk.cols))
-		// CSV header 출력
-		cli.Println(strings.Join(chunk.cols, ","))
-	}
-
-	for r, row := range chunk.rows {
-		var line string
-		if cli.conf.Format == Formats.CSV {
-			line = strings.Join(row, ",")
-		} else {
-			for c := range chunk.cols {
-				chunk.rows[r][c] = fmt.Sprintf("%-*s", chunk.width[c], row[c])
-			}
-			line = strings.Join(row, "   ")
-			if chunk.windowWidth > 0 && len(line) > chunk.windowWidth {
-				line = line[0 : chunk.windowWidth-4]
-				line = line + "..."
-			}
-		}
-		cli.Println(line)
-	}
-}
-
-func tableTypeDesc(typ int, flg int) string {
-	desc := "undef"
-	switch typ {
-	case 0:
-		desc = "Log Table"
-	case 1:
-		desc = "Fixed Table"
-	case 3:
-		desc = "Volatile Table"
-	case 4:
-		desc = "Lookup Table"
-	case 5:
-		desc = "KeyValue Table"
-	case 6:
-		desc = "Tag Table"
-	}
-	switch flg {
-	case 1:
-		desc += " (data)"
-	case 2:
-		desc += " (rollup)"
-	case 4:
-		desc += " (meta)"
-	case 8:
-		desc += " (stat)"
-	}
-	return desc
 }

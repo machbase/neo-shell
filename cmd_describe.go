@@ -73,7 +73,7 @@ func doDescribe(c Client, line string, interactive bool) {
 	}
 	defer rows.Close()
 
-	box := cli.NewBox([]any{"#", "NAME", "TYPE", "LENGTH"})
+	box := cli.NewBox([]any{"#", "NAME", "TYPE", "LENGTH"}, false)
 	nrow := 0
 	for rows.Next() {
 		var nam string
@@ -89,9 +89,34 @@ func doDescribe(c Client, line string, interactive bool) {
 		box.AppendRow([]any{nrow, nam, typ, len})
 	}
 
-	if cli.conf.Format == Formats.CSV {
-		box.RenderCSV()
-	} else {
-		box.Render()
+	box.Render()
+}
+
+func tableTypeDesc(typ int, flg int) string {
+	desc := "undef"
+	switch typ {
+	case 0:
+		desc = "Log Table"
+	case 1:
+		desc = "Fixed Table"
+	case 3:
+		desc = "Volatile Table"
+	case 4:
+		desc = "Lookup Table"
+	case 5:
+		desc = "KeyValue Table"
+	case 6:
+		desc = "Tag Table"
 	}
+	switch flg {
+	case 1:
+		desc += " (data)"
+	case 2:
+		desc += " (rollup)"
+	case 4:
+		desc += " (meta)"
+	case 8:
+		desc += " (stat)"
+	}
+	return desc
 }

@@ -61,7 +61,7 @@ func (cli *client) doShowTables() {
 	}
 	defer rows.Close()
 
-	t := cli.NewBox([]any{"#", "NAME", "TYPE", "DESC"})
+	t := cli.NewBox([]any{"#", "NAME", "TYPE", "DESC"}, false)
 
 	nrow := 0
 	for rows.Next() {
@@ -88,7 +88,7 @@ func (cli *client) doShowInfo() {
 		return
 	}
 
-	box := cli.NewBox([]any{"NAME", "VALUE"})
+	box := cli.NewBox([]any{"NAME", "VALUE"}, false)
 
 	box.AppendRow([]any{"build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch)})
 	box.AppendRow([]any{"build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA)})
@@ -108,9 +108,5 @@ func (cli *client) doShowInfo() {
 	box.AppendRow([]any{"mem.stack.sys", cli.bytesUnit(nfo.Runtime.MemStackSys)})
 	box.AppendRow([]any{"mem.stack.in-use", cli.bytesUnit(nfo.Runtime.MemStackInUse)})
 
-	if cli.conf.Format == Formats.CSV {
-		box.RenderCSV()
-	} else {
-		box.Render()
-	}
+	box.Render()
 }

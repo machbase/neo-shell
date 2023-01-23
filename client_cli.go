@@ -11,9 +11,9 @@ type ShellCmd struct {
 	ServerAddr string   `name:"server" short:"s" default:"tcp://127.0.0.1:5655" help:"server address"`
 	User       string   `name:"user" short:"u" default:"sys"`
 	Heading    bool     `name:"heading" negatable:"" default:"true"`
-	LocalTime  bool     `name:"local-time" default:"false" help:"use locatime instead of UTC"`
+	LocalTime  bool     `name:"tz" default:"false" help:"use locatime instead of UTC"`
 	Format     string   `name:"format" default:"-" enum:"-,csv" help:"outout format"`
-	BoxStyle   string   `name:"box-style" default:"default" enum:"default,bold,double,light,round" help:"box table style [default|bold|double|light|round]"`
+	BoxStyle   string   `name:"box-style" default:"light" enum:"simple,bold,double,light,round" help:"box table style [simple|bold|double|light|round]"`
 }
 
 func Shell(cmd *ShellCmd) {

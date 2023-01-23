@@ -94,9 +94,9 @@ func doSet(c Client, line string, interactive bool) {
 
 func parseBoxStyle(s string) string {
 	switch s {
-	case "bold", "double", "light", "round":
+	case "simple", "bold", "double", "light", "round":
 		return s
 	default:
-		return "default"
+		return "light"
 	}
 }
