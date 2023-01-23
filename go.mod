@@ -8,7 +8,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.5.4
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/cemlib v0.0.0-20230119232328-dfbd55a9c863
-	github.com/machbase/neo-grpc v0.0.5-0.20230122083535-1975dc93d143
+	github.com/machbase/neo-grpc v0.0.5-0.20230122092818-0e0850a38d8b
 	github.com/mum4k/termdash v0.17.0
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
 	github.com/robfig/cron v1.2.0

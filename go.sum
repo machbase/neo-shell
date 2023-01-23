@@ -46,8 +46,8 @@ github.com/machbase/cemlib v0.0.0-20230119232328-dfbd55a9c863 h1:R39bKSBD+XvEVg3
 github.com/machbase/cemlib v0.0.0-20230119232328-dfbd55a9c863/go.mod h1:JvWkWyqDyN0L4nI4C1ctExEf+GioYb7cyijNLLWOTQ8=
 github.com/machbase/cemlib-msg v0.0.0-20230110024559-122fc1efab3c h1:jekIwFiK8POr8ZVIfgwthjEGXNsKCCwpHOxn6uloeGc=
 github.com/machbase/cemlib-msg v0.0.0-20230110024559-122fc1efab3c/go.mod h1:QLuMmqbm+qhXxq1gc0zEM6zKmv7AvGEfXW7SoFXeCjc=
-github.com/machbase/neo-grpc v0.0.5-0.20230122083535-1975dc93d143 h1:uLXkOtqZB9a68/miyTR46npgy7l8M0HY2AfXwEhvPso=
-github.com/machbase/neo-grpc v0.0.5-0.20230122083535-1975dc93d143/go.mod h1:qQSw+8ZdJ+a+b1gXtu+kfafZU8h74XSr0jErnRGAq5c=
+github.com/machbase/neo-grpc v0.0.5-0.20230122092818-0e0850a38d8b h1:0OvJeRV3wexSy0YrJlX5HategZmIulVNUKsuKlMg7Fw=
+github.com/machbase/neo-grpc v0.0.5-0.20230122092818-0e0850a38d8b/go.mod h1:qQSw+8ZdJ+a+b1gXtu+kfafZU8h74XSr0jErnRGAq5c=
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/mattn/go-runewidth v0.0.14 h1:+xnbZSEeDbOIg5/mE6JF0w6n9duR1l3/WmbinWVwUuU=
 github.com/mattn/go-runewidth v0.0.14/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
