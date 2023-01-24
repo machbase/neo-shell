@@ -164,18 +164,27 @@ func (cli *client) Run(line string, interactive bool) {
 	if !ok {
 		cmd = aliases[cmdName]
 	}
+	if cmd == nil {
+		// support trailing command
+		// ex) select * from table \w
+		tail := fields[len(fields)-1]
+		if strings.HasPrefix(tail, `\`) && len(tail) > 1 {
+			if cmd, ok = aliases[tail]; !ok {
+				cmd = commands[tail[1:]]
+			}
+			if cmd != nil {
+				line = strings.TrimSpace(line)
+				line = line[0 : len(line)-len(tail)]
+			}
+		}
+	} else {
+		line = strings.TrimSpace(line[len(cmdName):])
+	}
 
 	if cmd != nil {
-		line = strings.TrimSpace(line[len(cmdName):])
 		cmd.Action(cli, line, interactive)
 	} else {
-		tail := strings.TrimSpace(fields[len(fields)-1])
-		if tail == `\w` || tail == `\walk` && len(fields) > 1 {
-			line = strings.Join(fields[0:len(fields)-1], " ")
-			doWalk(cli, line, interactive)
-		} else {
-			doSql(cli, line, interactive)
-		}
+		doSql(cli, line, interactive)
 	}
 }
 

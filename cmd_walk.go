@@ -17,7 +17,7 @@ import (
 func init() {
 	RegisterCmd(&Cmd{
 		Name:    "walk",
-		Aliases: []string{"\\w"},
+		Aliases: []string{`\w`},
 		PcFunc:  pcWalk,
 		Action:  doWalk,
 		Desc:    "execute query then walk-through the results",
