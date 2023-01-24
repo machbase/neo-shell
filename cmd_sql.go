@@ -30,6 +30,11 @@ func doSql(cc Client, sqlText string, interactive bool) {
 	}
 	defer rows.Close()
 
+	if !rows.IsFetchable() {
+		cli.Println(rows.Message())
+		return
+	}
+
 	cols, err := rows.Columns()
 	if err != nil {
 		cli.Println("ERR", err.Error())
