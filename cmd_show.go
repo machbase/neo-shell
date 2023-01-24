@@ -15,7 +15,9 @@ func init() {
 		PcFunc:  pcShow,
 		Action:  doShow,
 		Desc:    "display information",
-		Usage:   "show [tables | info | table <table_name>]",
+		Usage: `  show tables          list tables
+  show table <table>   equiv. 'walk SELECT * FROM <table>'
+  show info            runtime info of server`,
 	})
 }
 
@@ -40,17 +42,13 @@ func doShow(c Client, line string, interactive bool) {
 		cli.doShowTables()
 	case "table":
 		if len(args) == 2 {
-			doShowTable(c, args[1], interactive)
+			doWalk(c, fmt.Sprintf("select * from %s", args[1]), interactive)
 		} else {
 			cli.Println("Usage: show table <table_name>")
 		}
 	default:
 		cli.Printfln("unknown show '%s'", args[0])
 	}
-}
-
-func doShowTable(c Client, table string, interactive bool) {
-	doWalk(c, fmt.Sprintf("select * from %s", table), interactive)
 }
 
 func (cli *client) doShowTables() {
@@ -76,7 +74,7 @@ func (cli *client) doShowTables() {
 		nrow++
 
 		desc := tableTypeDesc(typ, flg)
-		t.AppendRow([]any{nrow, name, typ, desc})
+		t.AppendRow(nrow, name, typ, desc)
 	}
 	t.Render()
 }
@@ -88,25 +86,27 @@ func (cli *client) doShowInfo() {
 		return
 	}
 
+	uptime := time.Duration(nfo.Runtime.UptimeInSecond) * time.Second
+
 	box := cli.NewBox([]any{"NAME", "VALUE"}, false)
 
-	box.AppendRow([]any{"build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch)})
-	box.AppendRow([]any{"build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA)})
-	box.AppendRow([]any{"build.timestamp", nfo.Version.BuildTimestamp})
-	box.AppendRow([]any{"build.engine", nfo.Version.Engine})
+	box.AppendRow("build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch))
+	box.AppendRow("build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA))
+	box.AppendRow("build.timestamp", nfo.Version.BuildTimestamp)
+	box.AppendRow("build.engine", nfo.Version.Engine)
 
-	box.AppendRow([]any{"runtime.os", nfo.Runtime.OS})
-	box.AppendRow([]any{"runtime.arch", nfo.Runtime.Arch})
-	box.AppendRow([]any{"runtime.pid", nfo.Runtime.Pid})
-	box.AppendRow([]any{"runtime.uptime", util.HumanizeDuration(time.Duration(nfo.Runtime.UptimeInSecond * int64(time.Second)))})
-	box.AppendRow([]any{"runtime.goroutines", nfo.Runtime.Goroutines})
+	box.AppendRow("runtime.os", nfo.Runtime.OS)
+	box.AppendRow("runtime.arch", nfo.Runtime.Arch)
+	box.AppendRow("runtime.pid", nfo.Runtime.Pid)
+	box.AppendRow("runtime.uptime", util.HumanizeDurationWithFormat(uptime, util.HumanizeDurationFormatSimple))
+	box.AppendRow("runtime.goroutines", nfo.Runtime.Goroutines)
 
-	box.AppendRow([]any{"mem.sys", cli.bytesUnit(nfo.Runtime.MemSys)})
-	box.AppendRow([]any{"mem.heap.sys", cli.bytesUnit(nfo.Runtime.MemHeapSys)})
-	box.AppendRow([]any{"mem.heap.alloc", cli.bytesUnit(nfo.Runtime.MemHeapAlloc)})
-	box.AppendRow([]any{"mem.heap.in-use", cli.bytesUnit(nfo.Runtime.MemHeapInUse)})
-	box.AppendRow([]any{"mem.stack.sys", cli.bytesUnit(nfo.Runtime.MemStackSys)})
-	box.AppendRow([]any{"mem.stack.in-use", cli.bytesUnit(nfo.Runtime.MemStackInUse)})
+	box.AppendRow("mem.sys", cli.bytesUnit(nfo.Runtime.MemSys))
+	box.AppendRow("mem.heap.sys", cli.bytesUnit(nfo.Runtime.MemHeapSys))
+	box.AppendRow("mem.heap.alloc", cli.bytesUnit(nfo.Runtime.MemHeapAlloc))
+	box.AppendRow("mem.heap.in-use", cli.bytesUnit(nfo.Runtime.MemHeapInUse))
+	box.AppendRow("mem.stack.sys", cli.bytesUnit(nfo.Runtime.MemStackSys))
+	box.AppendRow("mem.stack.in-use", cli.bytesUnit(nfo.Runtime.MemStackInUse))
 
 	box.Render()
 }

@@ -10,10 +10,10 @@ import (
 func init() {
 	RegisterCmd(&Cmd{
 		Name:    "help",
-		Aliases: []string{"\\h"},
+		Aliases: []string{},
 		PcFunc:  pcHelp,
 		Action:  doHelp,
-		Desc:    "display this message, help [command]",
+		Desc:    "display this message, use 'help [command]'",
 	})
 }
 
@@ -31,8 +31,20 @@ func doHelp(c Client, line string, interactive bool) {
 	cli := c.(*client)
 
 	if cmd, ok := commands[line]; ok {
-		cli.Println("command:", cmd.Name)
-		cli.Println(cmd.Usage)
+		cli.Println(cmd.Desc)
+
+		ali := strings.Join(cmd.Aliases, ", ")
+		if len(ali) > 0 {
+			cli.Println("Alias:")
+			cli.Println("  ", ali)
+		}
+		cli.Println("Usage:")
+		if len(cmd.Usage) > 0 {
+			lines := strings.Split(cmd.Usage, "\n")
+			for _, l := range lines {
+				cli.Println(l)
+			}
+		}
 	} else {
 		cli.Println("commands")
 		keys := make([]string, 0, len(commands))
@@ -49,14 +61,8 @@ func doHelp(c Client, line string, interactive bool) {
 		})
 		for _, k := range keys {
 			cmd := commands[k]
-			cli.Printfln("    %-*s %s", 12, cmd.Name, cmd.Desc)
-			if len(cmd.Usage) > 0 {
-				lines := strings.Split(cmd.Usage, "\n")
-				for _, l := range lines {
-					cli.Printfln("%s %s", strings.Repeat(" ", 16), l)
-				}
-			}
+			cli.Printfln("    %-*s %s", 10, cmd.Name, cmd.Desc)
 		}
-		cli.Printfln("    %-*s %s", 12, "exit", "exit machsql shell")
+		cli.Printfln("    %-*s %s", 10, "exit", "exit shell")
 	}
 }

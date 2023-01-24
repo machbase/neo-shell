@@ -25,8 +25,8 @@ func init() {
 		Aliases: []string{},
 		PcFunc:  pcChart,
 		Action:  doChart,
-		Desc:    "draw graph",
-		Usage: `chart [options] <tag_path> ...
+		Desc:    "chart [options] <tag_path> ...",
+		Usage: `  options:
     --time         base time, now or time string in format "2023-02-03 13:20:30" (default: now)
     --range        time range of data, from time specified by '--time'
     --refresh, -r  refresh period, effective only if time is "now" (default: 1s)`,
@@ -96,12 +96,8 @@ func doChart(c Client, line string, interactive bool) {
 				timestamp = time.Now()
 			} else {
 				timeformat := "2006-01-02 15:04:05"
-				if cli.conf.LocalTime {
-					timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, time.Local)
-					timestamp = timestamp.UTC()
-				} else {
-					timestamp, err = time.Parse(timeformat, cmd.Timestamp)
-				}
+				timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, cli.conf.TimeLocation)
+				timestamp = timestamp.UTC()
 				if err != nil {
 					fmt.Println(err.Error())
 				}
@@ -176,12 +172,7 @@ func doChart(c Client, line string, interactive bool) {
 					fmt.Println(err.Error())
 					return
 				}
-				var label string
-				if cli.conf.LocalTime {
-					label = ts.Local().Format("15:04:05")
-				} else {
-					label = ts.Format("15:04:05")
-				}
+				label := ts.In(cli.conf.TimeLocation).Format("15:04:05")
 				values = append(values, value)
 				xlabels[idx] = label
 				idx++

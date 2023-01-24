@@ -17,7 +17,7 @@ func init() {
 		PcFunc:  nil,
 		Action:  doSql,
 		Desc:    "run sql query",
-		Usage:   "sql <sql query>",
+		Usage:   "  sql <sql query>",
 	})
 }
 
@@ -40,12 +40,7 @@ func doSql(cc Client, sqlText string, interactive bool) {
 	names[0] = "#"
 	for i := range cols {
 		if cols[i].Type == "datetime" {
-			tz := "UTC"
-			if cli.conf.LocalTime {
-				tz = "LOCAL"
-				tz, _ = time.Now().Zone()
-			}
-			names[i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, tz)
+			names[i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, cli.conf.TimeLocation.String())
 		} else {
 			names[i+1] = cols[i].Name
 		}
@@ -82,13 +77,13 @@ func doSql(cc Client, sqlText string, interactive bool) {
 			return
 		}
 		nrow++
-		vs := makeValues(rec, cli.conf.LocalTime)
+		vs := makeValues(rec, cli.conf.TimeLocation)
 		values := make([]any, len(vs)+1)
 		values[0] = nrow
 		for i := range vs {
 			values[i+1] = vs[i]
 		}
-		box.AppendRow(values)
+		box.AppendRow(values...)
 
 		if windowHeight > 0 && nrow%height == 0 {
 			box.Render()
@@ -119,7 +114,7 @@ func doSql(cc Client, sqlText string, interactive bool) {
 	}
 }
 
-func makeValues(rec []any, localtime bool) []string {
+func makeValues(rec []any, tz *time.Location) []string {
 	cols := make([]string, len(rec))
 	for i, r := range rec {
 		if r == nil {
@@ -131,11 +126,7 @@ func makeValues(rec []any, localtime bool) []string {
 			cols[i] = *v
 		case *time.Time:
 			timeformat := "2006-01-02 15:04:05.000000"
-			if localtime {
-				cols[i] = v.Local().Format(timeformat)
-			} else {
-				cols[i] = v.UTC().Format(timeformat)
-			}
+			cols[i] = v.In(tz).Format(timeformat)
 		case *float64:
 			cols[i] = fmt.Sprintf("%f", *v)
 		case *int:

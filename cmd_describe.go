@@ -9,18 +9,17 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "describe",
-		Aliases: []string{"desc"},
+		Name:    "desc",
+		Aliases: []string{},
 		PcFunc:  pcDescribe,
 		Action:  doDescribe,
-		Usage:   "describe <table_name>",
-		Desc:    "display table structure",
+		Desc:    "desc <table>",
 	})
 }
 
 func pcDescribe(c Client) readline.PrefixCompleterInterface {
 	cli := c.(*client)
-	return readline.PcItem("describe",
+	return readline.PcItem("desc",
 		readline.PcItemDynamic(cli.listTables()),
 	)
 }
@@ -29,7 +28,7 @@ func doDescribe(c Client, line string, interactive bool) {
 	object := line
 	cli := c.(*client)
 	if len(line) == 0 {
-		cli.Println("Usage: describe <table_name>")
+		cli.Println("Usage: desc <table_name>")
 		return
 	}
 
@@ -47,7 +46,6 @@ func doDescribe(c Client, line string, interactive bool) {
 
 	cli.Println("TABLE   ", tableName)
 	cli.Println("TYPE    ", tableTypeDesc(tableType, tableFlag))
-	cli.Println("COLUMNS ", colCount)
 	if tableType == 6 {
 		tags := []string{}
 		rows, err := cli.db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(object)))
@@ -66,6 +64,8 @@ func doDescribe(c Client, line string, interactive bool) {
 		}
 		cli.Println("TAGS    ", strings.Join(tags, ", "))
 	}
+	cli.Println("COLUMNS ", colCount)
+
 	rows, err := cli.db.Query("select name, type, length from M$SYS_COLUMNS where table_id = ? order by id", tableId)
 	if err != nil {
 		cli.Println("ERR", err.Error())
@@ -86,7 +86,7 @@ func doDescribe(c Client, line string, interactive bool) {
 			return
 		}
 		nrow++
-		box.AppendRow([]any{nrow, nam, typ, len})
+		box.AppendRow(nrow, nam, typ, len)
 	}
 
 	box.Render()

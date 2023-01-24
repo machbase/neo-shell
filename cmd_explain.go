@@ -8,8 +8,7 @@ func init() {
 		Aliases: []string{},
 		PcFunc:  pcExplain,
 		Action:  doExplain,
-		Desc:    "resolve sql execution plan.",
-		Usage:   "explain <sql>",
+		Desc:    "explain <sql>",
 	})
 }
 

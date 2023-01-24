@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 type ShellCmd struct {
@@ -11,7 +12,7 @@ type ShellCmd struct {
 	ServerAddr string   `name:"server" short:"s" default:"tcp://127.0.0.1:5655" help:"server address"`
 	User       string   `name:"user" short:"u" default:"sys"`
 	Heading    bool     `name:"heading" negatable:"" default:"true"`
-	LocalTime  bool     `name:"tz" default:"false" help:"use locatime instead of UTC"`
+	TimeZone   string   `name:"tz" default:"UTC" help:"timezone to handle datetime"`
 	Format     string   `name:"format" default:"-" enum:"-,csv" help:"outout format"`
 	BoxStyle   string   `name:"box-style" default:"light" enum:"simple,bold,double,light,round" help:"box table style [simple|bold|double|light|round]"`
 }
@@ -21,8 +22,13 @@ func Shell(cmd *ShellCmd) {
 	clientConf.ServerAddr = cmd.ServerAddr
 	clientConf.Heading = cmd.Heading
 	clientConf.Format = cmd.Format
-	clientConf.LocalTime = cmd.LocalTime
 	clientConf.BoxStyle = cmd.BoxStyle
+	if tz, err := time.LoadLocation(cmd.TimeZone); err == nil {
+		clientConf.TimeLocation = tz
+	} else {
+		fmt.Fprintln(os.Stdout, "ERR timezone", err.Error())
+		return
+	}
 
 	client, err := New(clientConf)
 	if err != nil {

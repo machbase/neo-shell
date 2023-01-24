@@ -2,6 +2,7 @@ package shell
 
 import (
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 )
@@ -12,19 +13,23 @@ func init() {
 		Aliases: []string{},
 		PcFunc:  pcSet,
 		Action:  doSet,
-		Desc:    "show/set machsql shell settings",
-		Usage:   "set [local-time | vi-mode | heading] [on|off]",
+		Desc:    "show/set shell settings",
+		Usage: `  set vi-mode   [on|off]
+  set heading   [on|off]
+  set tz        [time-zone|UTC|Local]
+  set box-style [simple|bold|double|light|round]
+  set format    [-|csv]`,
 	})
 }
 
 func pcSet(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("set",
-		readline.PcItem("local-time",
-			readline.PcItem("on"),
-			readline.PcItem("off"),
+		readline.PcItem("tz",
+			readline.PcItem("UTC"),
+			readline.PcItem("Local"),
 		),
 		readline.PcItem("box-style",
-			readline.PcItem("default"),
+			readline.PcItem("simple"),
 			readline.PcItem("bold"),
 			readline.PcItem("double"),
 			readline.PcItem("light"),
@@ -69,16 +74,27 @@ func doSet(c Client, line string, interactive bool) {
 	}
 
 	if len(args) == 0 {
-		cli.Println("local-time", onoff(cli.conf.LocalTime))
-		cli.Println("vi-mode   ", onoff(cli.conf.VimMode))
-		cli.Println("box-style ", cli.conf.BoxStyle)
-		cli.Println("heading   ", onoff(cli.conf.Heading))
-		cli.Println("format    ", cli.conf.Format)
+		box := cli.NewBox([]any{"NAME", "VALUE"}, false)
+		box.AppendRow("tz", cli.conf.TimeLocation.String())
+		box.AppendRow("vi-mode", onoff(cli.conf.VimMode))
+		box.AppendRow("heading", onoff(cli.conf.Heading))
+		box.AppendRow("box-style", cli.conf.BoxStyle)
+		box.AppendRow("format", cli.conf.Format)
+		box.Render()
 		return
 	}
 	switch strings.ToLower(args[0]) {
-	case "local-time":
-		parseflag(&cli.conf.LocalTime)
+	case "tz":
+		if strings.ToLower(args[1]) == "local" {
+			cli.conf.TimeLocation = time.Local
+		} else {
+			if tz, err := time.LoadLocation(args[1]); err == nil {
+				cli.conf.TimeLocation = tz
+			} else {
+				cli.Println("ERR", err.Error())
+			}
+		}
+		cli.Println("tz", cli.conf.TimeLocation.String())
 	case "vi-mode":
 		parseflag(&cli.conf.VimMode)
 	case "heading":

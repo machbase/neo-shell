@@ -20,7 +20,7 @@ func init() {
 		PcFunc:  pcWalk,
 		Action:  doWalk,
 		Desc:    "execute query then walk-through the results",
-		Usage:   "walk <sql query>",
+		Usage:   "  walk <sql query>",
 	})
 }
 
@@ -36,7 +36,7 @@ func doWalk(cc Client, sqlText string, interactive bool) {
 		return
 	}
 
-	walker, err := NewWalker(sqlText, cli.db, cli.conf.LocalTime)
+	walker, err := NewWalker(sqlText, cli.db, cli.conf.TimeLocation)
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
@@ -67,10 +67,10 @@ type Walker struct {
 	values    [][]string
 	eof       bool
 	fetchSize int
-	localtime bool
+	tz        *time.Location
 }
 
-func NewWalker(sqlText string, client *machrpc.Client, localtime bool) (*Walker, error) {
+func NewWalker(sqlText string, client *machrpc.Client, tz *time.Location) (*Walker, error) {
 	rows, err := client.Query(sqlText)
 	if err != nil {
 		return nil, err
@@ -87,12 +87,7 @@ func NewWalker(sqlText string, client *machrpc.Client, localtime bool) (*Walker,
 	values[0][0] = "#"
 	for i := range cols {
 		if cols[i].Type == "datetime" {
-			tz := "UTC"
-			if localtime {
-				tz = "LOCAL"
-				tz, _ = time.Now().Zone()
-			}
-			values[0][i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, tz)
+			values[0][i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, tz.String())
 		} else {
 			values[0][i+1] = cols[i].Name
 		}
@@ -104,7 +99,7 @@ func NewWalker(sqlText string, client *machrpc.Client, localtime bool) (*Walker,
 		cols:      cols,
 		values:    values,
 		fetchSize: 400,
-		localtime: localtime,
+		tz:        tz,
 	}, nil
 }
 
@@ -156,7 +151,7 @@ func (w *Walker) fetchMore() {
 			return
 		}
 
-		values := makeValues(buffer, w.localtime)
+		values := makeValues(buffer, w.tz)
 		w.values = append(w.values, append([]string{strconv.Itoa(nrows + count)}, values...))
 
 		count++

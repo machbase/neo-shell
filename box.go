@@ -3,7 +3,7 @@ package shell
 import "github.com/jedib0t/go-pretty/v6/table"
 
 type Box interface {
-	AppendRow(row []any)
+	AppendRow(row ...any)
 	ResetRows()
 	ResetHeaders()
 	Render() string
@@ -47,7 +47,7 @@ type box struct {
 	format string
 }
 
-func (b *box) AppendRow(row []any) {
+func (b *box) AppendRow(row ...any) {
 	b.w.AppendRow(row)
 }
 

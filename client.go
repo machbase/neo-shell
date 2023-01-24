@@ -51,7 +51,7 @@ type Config struct {
 	Stderr       io.Writer
 	VimMode      bool
 	Heading      bool
-	LocalTime    bool
+	TimeLocation *time.Location
 	Format       string
 	BoxStyle     string
 	QueryTimeout time.Duration
@@ -73,6 +73,11 @@ func DefaultConfig() *Config {
 		QueryTimeout: 30 * time.Second,
 		Lang:         language.English,
 	}
+}
+
+func (c *Config) TimeZone() string {
+	zone, _ := time.Now().In(c.TimeLocation).Zone()
+	return zone
 }
 
 func New(conf *Config) (Client, error) {
