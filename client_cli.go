@@ -23,7 +23,10 @@ func Shell(cmd *ShellCmd) {
 	clientConf.Heading = cmd.Heading
 	clientConf.Format = cmd.Format
 	clientConf.BoxStyle = cmd.BoxStyle
-	if tz, err := time.LoadLocation(cmd.TimeZone); err == nil {
+
+	if strings.ToLower(cmd.TimeZone) == "local" {
+		clientConf.TimeLocation = time.Local
+	} else if tz, err := time.LoadLocation(cmd.TimeZone); err == nil {
 		clientConf.TimeLocation = tz
 	} else {
 		fmt.Fprintln(os.Stdout, "ERR timezone", err.Error())
