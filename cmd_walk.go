@@ -5,6 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/chzyer/readline"
@@ -45,13 +46,21 @@ func doWalk(cc Client, sqlText string, interactive bool) {
 
 	app := tview.NewApplication()
 	table := tview.NewTable()
-	table.SetBorder(true).SetTitle(" ESC to quit ").SetTitleAlign(tview.AlignLeft)
+	table.SetBorder(true).SetTitle(" ESC to quit, [yellow::bl]R[-::-]eload ").SetTitleAlign(tview.AlignLeft)
 	table.SetFixed(1, 1)
 	table.SetContent(walker)
 	table.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyESC {
 			app.Stop()
 		}
+	})
+	table.SetInputCapture(func(evt *tcell.EventKey) *tcell.EventKey {
+		if evt.Rune() == 'r' || evt.Rune() == 'R' {
+			walker.Reload()
+			table.ScrollToBeginning()
+			return nil
+		}
+		return evt
 	})
 	if err := app.SetRoot(table, true).SetFocus(table).Run(); err != nil {
 		cli.Println("ERR", err.Error())
@@ -61,7 +70,9 @@ func doWalk(cc Client, sqlText string, interactive bool) {
 
 type Walker struct {
 	tview.TableContentReadOnly
+	sqlText   string
 	db        *machrpc.Client
+	mutex     sync.Mutex
 	rows      *machrpc.Rows
 	cols      []*machrpc.Column
 	values    [][]string
@@ -71,15 +82,43 @@ type Walker struct {
 }
 
 func NewWalker(sqlText string, client *machrpc.Client, tz *time.Location) (*Walker, error) {
-	rows, err := client.Query(sqlText)
+	w := &Walker{
+		sqlText:   sqlText,
+		db:        client,
+		fetchSize: 400,
+		tz:        tz,
+	}
+	return w, w.Reload()
+}
+
+func (w *Walker) Close() {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	if w.rows != nil {
+		w.rows.Close()
+		w.rows = nil
+	}
+}
+
+func (w *Walker) Reload() error {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	if w.rows != nil {
+		w.rows.Close()
+		w.rows = nil
+	}
+
+	rows, err := w.db.Query(w.sqlText)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	cols, err := rows.Columns()
 	if err != nil {
 		rows.Close()
-		return nil, err
+		return err
 	}
 
 	values := make([][]string, 1)
@@ -87,30 +126,23 @@ func NewWalker(sqlText string, client *machrpc.Client, tz *time.Location) (*Walk
 	values[0][0] = "#"
 	for i := range cols {
 		if cols[i].Type == "datetime" {
-			values[0][i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, tz.String())
+			values[0][i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, w.tz.String())
 		} else {
 			values[0][i+1] = cols[i].Name
 		}
 	}
 
-	return &Walker{
-		db:        client,
-		rows:      rows,
-		cols:      cols,
-		values:    values,
-		fetchSize: 400,
-		tz:        tz,
-	}, nil
-}
-
-func (w *Walker) Close() {
-	if w.rows != nil {
-		w.rows.Close()
-		w.rows = nil
-	}
+	w.rows = rows
+	w.cols = cols
+	w.values = values
+	w.eof = false
+	return nil
 }
 
 func (w *Walker) GetCell(row, col int) *tview.TableCell {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
 	if row == 0 {
 		return tview.NewTableCell(w.values[row][col]).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter)
 	}
@@ -162,6 +194,9 @@ func (w *Walker) fetchMore() {
 }
 
 func (w *Walker) GetRowCount() int {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
 	if w.eof {
 		return len(w.values)
 	}
