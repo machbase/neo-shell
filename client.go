@@ -169,7 +169,9 @@ func (cli *client) Run(line string, interactive bool) {
 		line = strings.TrimSpace(line[len(cmdName):])
 		cmd.Action(cli, line, interactive)
 	} else {
-		if interactive {
+		tail := strings.TrimSpace(fields[len(fields)-1])
+		if tail == `\w` || tail == `\walk` && len(fields) > 1 {
+			line = strings.Join(fields[0:len(fields)-1], " ")
 			doWalk(cli, line, interactive)
 		} else {
 			doSql(cli, line, interactive)
