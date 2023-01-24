@@ -26,18 +26,22 @@ func init() {
 		PcFunc:  pcChart,
 		Action:  doChart,
 		Desc:    "chart [options] <tag_path> ...",
-		Usage: `  options:
-    --time         base time, now or time string in format "2023-02-03 13:20:30" (default: now)
-    --range        time range of data, from time specified by '--time'
-    --refresh, -r  refresh period, effective only if time is "now" (default: 1s)`,
+		Usage: `  arguments:
+    tags_path ...   tag path as <table>/<tag>#<column>. ex) mytable/sensor.tag1#column
+	                since all tag tables has 'value' column,
+					'#<column>' part can be omitted for default '#value' ex) mytable/sensor
+  options:
+    --time          base time, now or time string in format "2023-02-03 13:20:30" (default: now)
+    --range         time range of data, from time specified by '--time'
+    --refresh, -r   refresh period, effective only if time is "now" (default: 1s)`,
 	})
 }
 
 type ChartCmd struct {
-	TagPaths  []string      `arg:"" name:"tags" help:"tag path forms as <table>/<tag>#<column>. ex) mytable/the.tag1#column"`
-	Range     time.Duration `name:"range" default:"5m" help:"time range of data, from now() - range to now()"`
-	Timestamp string        `name:"time" default:"now" help:"time ex) now or \"2023-02-03 13:20:30\""`
-	Refresh   time.Duration `name:"refresh" short:"r" default:"1s" help:"refresh period, effective only if time is \"now\""`
+	TagPaths  []string      `arg:"" name:"tags"`
+	Range     time.Duration `name:"range" default:"5m"`
+	Timestamp string        `name:"time" default:"now"`
+	Refresh   time.Duration `name:"refresh" short:"r" default:"1s"`
 }
 
 func pcChart(c Client) readline.PrefixCompleterInterface {
