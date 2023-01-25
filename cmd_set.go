@@ -50,7 +50,7 @@ func pcSet(c Client) readline.PrefixCompleterInterface {
 	)
 }
 
-func doSet(c Client, line string, interactive bool) {
+func doSet(c Client, line string) {
 	cli := c.(*client)
 	args := splitFields(line)
 	onoff := func(t bool) string {

@@ -29,7 +29,7 @@ func pcSql(cc Client) readline.PrefixCompleterInterface {
 	)
 }
 
-func doSql(cc Client, sqlText string, interactive bool) {
+func doSql(cc Client, sqlText string) {
 	cli := cc.(*client)
 	rows, err := cli.db.Query(sqlText)
 	if err != nil {
@@ -63,7 +63,7 @@ func doSql(cc Client, sqlText string, interactive bool) {
 
 	rec := makeBuffer(cols)
 
-	box := cli.NewBox(names, !interactive)
+	box := cli.NewBox(names, !cli.Interactive())
 
 	windowHeight := 0
 	//windowWidth := 0
@@ -103,7 +103,7 @@ func doSql(cc Client, sqlText string, interactive bool) {
 		if windowHeight > 0 && nrow%height == 0 {
 			box.Render()
 			box.ResetRows()
-			if interactive {
+			if cli.interactive {
 				cli.Print(":")
 				// switch stdin into 'raw' mode
 				if oldState, err := term.MakeRaw(int(os.Stdin.Fd())); err == nil {

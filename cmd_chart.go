@@ -48,7 +48,7 @@ func pcChart(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("chart")
 }
 
-func doChart(c Client, line string, interactive bool) {
+func doChart(c Client, line string) {
 	cli := c.(*client)
 	args := splitFields(line)
 

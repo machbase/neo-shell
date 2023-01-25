@@ -20,6 +20,6 @@ func pcAppend(cc Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("append")
 }
 
-func doAppend(cc Client, sqlText string, interactive bool) {
+func doAppend(cc Client, sqlText string) {
 
 }

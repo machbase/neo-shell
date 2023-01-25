@@ -33,21 +33,18 @@ func Shell(cmd *ShellCmd) {
 		return
 	}
 
-	client, err := New(clientConf)
-	if err != nil {
-		fmt.Fprintln(os.Stdout, "ERR", err.Error())
-		return
-	}
-	defer client.Close()
-
 	var command = ""
 	if len(cmd.Args) > 0 {
 		command = strings.TrimSpace(strings.Join(cmd.Args, " "))
 	}
+	interactive := len(command) == 0
 
-	if len(command) > 0 {
-		client.Run(command, false)
-	} else {
-		client.Prompt()
+	client := New(clientConf, interactive)
+	if err := client.Start(); err != nil {
+		fmt.Fprintln(os.Stdout, "ERR", err.Error())
+		return
 	}
+	defer client.Stop()
+
+	client.Run(command)
 }

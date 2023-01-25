@@ -16,9 +16,12 @@ import (
 )
 
 type Client interface {
-	Close()
-	Run(command string, interactive bool)
-	Prompt()
+	Start() error
+	Stop()
+
+	Run(command string)
+
+	Interactive() bool
 
 	Write(p []byte) (int, error)
 	Print(args ...any)
@@ -61,6 +64,8 @@ type Config struct {
 type client struct {
 	conf *Config
 	db   *machrpc.Client
+
+	interactive bool
 }
 
 func DefaultConfig() *Config {
@@ -80,23 +85,42 @@ func (c *Config) TimeZone() string {
 	return zone
 }
 
-func New(conf *Config) (Client, error) {
-	machcli := machrpc.NewClient(machrpc.QueryTimeout(conf.QueryTimeout))
-	err := machcli.Connect(conf.ServerAddr)
-	if err != nil {
-		return nil, err
+func New(conf *Config, interactive bool) Client {
+	return &client{
+		conf:        conf,
+		interactive: interactive,
 	}
-	cli := &client{
-		conf: conf,
-		db:   machcli,
-	}
-	return cli, nil
 }
 
-func (cli *client) Close() {
+func (cli *client) Start() error {
+	machcli := machrpc.NewClient(machrpc.QueryTimeout(cli.conf.QueryTimeout))
+	err := machcli.Connect(cli.conf.ServerAddr)
+	if err != nil {
+		return err
+	}
+	// TODO: check server reachable,
+	// then return error if not reachabse
+
+	cli.db = machcli
+	return nil
+}
+
+func (cli *client) Stop() {
 	if cli.db != nil {
 		cli.db.Disconnect()
 	}
+}
+
+func (cli *client) Run(command string) {
+	if len(command) == 0 {
+		cli.Prompt()
+	} else {
+		cli.Process(command)
+	}
+}
+
+func (cli *client) Interactive() bool {
+	return cli.interactive
 }
 
 func (cli *client) Config() *Config {
@@ -128,7 +152,7 @@ type Cmd struct {
 	Name    string
 	Aliases []string
 	PcFunc  func(cli Client) readline.PrefixCompleterInterface
-	Action  func(cli Client, line string, interactive bool)
+	Action  func(cli Client, line string)
 	Desc    string
 	Usage   string
 }
@@ -153,7 +177,7 @@ func (cli *client) completer() readline.PrefixCompleterInterface {
 	return readline.NewPrefixCompleter(pc...)
 }
 
-func (cli *client) Run(line string, interactive bool) {
+func (cli *client) Process(line string) {
 	fields := splitFields(line)
 	if len(fields) == 0 {
 		return
@@ -182,9 +206,9 @@ func (cli *client) Run(line string, interactive bool) {
 	}
 
 	if cmd != nil {
-		cmd.Action(cli, line, interactive)
+		cmd.Action(cli, line)
 	} else {
-		doSql(cli, line, interactive)
+		doSql(cli, line)
 	}
 }
 
@@ -253,7 +277,7 @@ func (cli *client) Prompt() {
 		line = strings.TrimSuffix(line, ";")
 		parts = parts[:0]
 		rl.SetPrompt(prompt)
-		cli.Run(line, true)
+		cli.Process(line)
 	}
 exit:
 }

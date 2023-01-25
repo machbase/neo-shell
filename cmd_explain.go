@@ -16,7 +16,7 @@ func pcExplain(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("explain")
 }
 
-func doExplain(c Client, line string, interactive bool) {
+func doExplain(c Client, line string) {
 	cli := c.(*client)
 	plan, err := cli.db.Explain(line)
 	if err != nil {

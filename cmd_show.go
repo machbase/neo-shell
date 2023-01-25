@@ -27,7 +27,7 @@ func pcShow(c Client) readline.PrefixCompleterInterface {
 	)
 }
 
-func doShow(c Client, line string, interactive bool) {
+func doShow(c Client, line string) {
 	cli := c.(*client)
 	args := splitFields(line)
 	switch args[0] {

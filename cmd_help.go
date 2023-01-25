@@ -27,7 +27,7 @@ func pcHelp(c Client) readline.PrefixCompleterInterface {
 	}))
 }
 
-func doHelp(c Client, line string, interactive bool) {
+func doHelp(c Client, line string) {
 	cli := c.(*client)
 
 	fields := splitFields(line)

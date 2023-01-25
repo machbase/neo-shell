@@ -24,7 +24,7 @@ func pcDescribe(c Client) readline.PrefixCompleterInterface {
 	)
 }
 
-func doDescribe(c Client, line string, interactive bool) {
+func doDescribe(c Client, line string) {
 	object := line
 	cli := c.(*client)
 	if len(line) == 0 {

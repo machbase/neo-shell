@@ -29,7 +29,7 @@ func pcWalk(c Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("walk")
 }
 
-func doWalk(cc Client, sqlText string, interactive bool) {
+func doWalk(cc Client, sqlText string) {
 	cli := cc.(*client)
 	sqlText = strings.TrimSpace(sqlText)
 	if len(sqlText) == 0 {
