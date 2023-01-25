@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 	"golang.org/x/term"
 )
@@ -13,12 +14,19 @@ import (
 func init() {
 	RegisterCmd(&Cmd{
 		Name:    "sql",
-		Aliases: []string{"\\s"},
-		PcFunc:  nil,
+		Aliases: []string{`\s`},
+		PcFunc:  pcSql,
 		Action:  doSql,
 		Desc:    "run sql query",
 		Usage:   "  sql <sql query>",
 	})
+}
+
+func pcSql(cc Client) readline.PrefixCompleterInterface {
+	cli := cc.(*client)
+	return readline.PcItem("sql",
+		readline.PcItemDynamic(cli.SqlHistory),
+	)
 }
 
 func doSql(cc Client, sqlText string, interactive bool) {
@@ -29,6 +37,8 @@ func doSql(cc Client, sqlText string, interactive bool) {
 		return
 	}
 	defer rows.Close()
+
+	cli.AddSqlHistory(sqlText)
 
 	if !rows.IsFetchable() {
 		cli.Println(rows.Message())

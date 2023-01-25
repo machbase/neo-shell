@@ -333,3 +333,17 @@ func (cli *client) bytesUnit(v uint64) string {
 func (cli *client) Printer() *message.Printer {
 	return message.NewPrinter(cli.conf.Lang)
 }
+
+var sqlHistory = make([]string, 0)
+
+func (cli *client) AddSqlHistory(sqlText string) {
+	if len(sqlHistory) > 10 {
+		sqlHistory = sqlHistory[len(sqlHistory)-10:]
+	}
+
+	sqlHistory = append(sqlHistory, sqlText)
+}
+
+func (cli *client) SqlHistory(line string) []string {
+	return sqlHistory
+}

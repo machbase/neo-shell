@@ -10,7 +10,7 @@ import (
 func init() {
 	RegisterCmd(&Cmd{
 		Name:    "help",
-		Aliases: []string{},
+		Aliases: []string{`\h`},
 		PcFunc:  pcHelp,
 		Action:  doHelp,
 		Desc:    "display this message, use 'help [command]'",
@@ -30,7 +30,8 @@ func pcHelp(c Client) readline.PrefixCompleterInterface {
 func doHelp(c Client, line string, interactive bool) {
 	cli := c.(*client)
 
-	if cmd, ok := commands[line]; ok {
+	fields := splitFields(line)
+	if cmd, ok := commands[fields[0]]; ok {
 		cli.Println(cmd.Desc)
 
 		ali := strings.Join(cmd.Aliases, ", ")
