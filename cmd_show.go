@@ -16,19 +16,14 @@ func init() {
 		Action:  doShow,
 		Desc:    "display information",
 		Usage: `  show tables          list tables
-  show table <table>   equiv. 'walk SELECT * FROM <table>'
   show info            runtime info of server`,
 	})
 }
 
 func pcShow(c Client) readline.PrefixCompleterInterface {
-	cli := c.(*client)
 	return readline.PcItem("show",
 		readline.PcItem("tables"),
 		readline.PcItem("info"),
-		readline.PcItem("table",
-			readline.PcItemDynamic(cli.listTables()),
-		),
 	)
 }
 
@@ -40,12 +35,6 @@ func doShow(c Client, line string, interactive bool) {
 		cli.doShowInfo()
 	case "tables":
 		cli.doShowTables()
-	case "table":
-		if len(args) == 2 {
-			doWalk(c, fmt.Sprintf("select * from %s", args[1]), interactive)
-		} else {
-			cli.Println("Usage: show table <table_name>")
-		}
 	default:
 		cli.Printfln("unknown show '%s'", args[0])
 	}
