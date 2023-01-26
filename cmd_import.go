@@ -27,12 +27,12 @@ func init() {
     --input,-i <file>  input file, (default: '-' stdin)
     --format,-f        file format [csv] (default:'csv')
     --no-header        there is no header, do not skip first line (default)
-    --header,-h        first line is header, skip it
+    --header           first line is header, skip it
     --method           write method [insert|append] (default:'insert')
-    --separator,-s     csv separator (default:',')
+    --delimiter,-d     csv delimiter (default:',')
     --timeformat,-t    time format [ns|ms|s|<date-time-format>] (default:'ns')
-       ns, ms, s
-         represents unix epoch time in nanoseconds, milliseconds and seconds for each
+       ns, us, ms, s
+         represents unix epoch time in nano-, micro-, milli- and seconds for each
        date-time-format  ex) '2006-01-02 15:04:05.999'
          year   2006
          month  01
@@ -51,7 +51,7 @@ type ImportCmd struct {
 	EofMark     string `name:"eof" default:"."`
 	InputFormat string `name:"format" short:"f" default:"csv"`
 	Method      string `name:"method" default:"insert"`
-	Separator   string `name:"separator" short:"s" default:","`
+	Delimiter   string `name:"delimiter" short:"d" default:","`
 	TimeFormat  string `name:"timeformat" short:"t" default:"ns"`
 }
 
@@ -101,7 +101,7 @@ func doImport(cli Client, cmdLine string) {
 			colNames = append(colNames, col.Name)
 		}
 
-		cli.Println("#", strings.Join(colNames, cmd.Separator))
+		cli.Println("#", strings.Join(colNames, cmd.Delimiter))
 	}
 	buff := []string{}
 	vals := []any{}
@@ -125,11 +125,7 @@ func doImport(cli Client, cmdLine string) {
 
 		lineno++
 		line := strings.Join(buff, "")
-		if strings.HasPrefix(line, "#") {
-			// comment line
-			continue
-		}
-		toks := strings.Split(line, cmd.Separator)
+		toks := strings.Split(line, cmd.Delimiter)
 		if len(toks) != len(desc.Columns) {
 			cli.Printfln("line %d contains %d columns, but expected %d", lineno, len(toks), len(desc.Columns))
 			break
@@ -201,6 +197,12 @@ func stringToColumnValue(str string, cd *machrpc.ColumnDescription, tz *time.Loc
 				return nil, err
 			}
 			return time.Unix(0, v*int64(time.Millisecond)), nil
+		case "us":
+			v, err := strconv.ParseInt(str, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			return time.Unix(0, v*int64(time.Microsecond)), nil
 		case "s":
 			v, err := strconv.ParseInt(str, 10, 64)
 			if err != nil {

@@ -38,7 +38,9 @@ func doSql(cc Client, sqlText string) {
 	}
 	defer rows.Close()
 
-	cli.AddSqlHistory(sqlText)
+	if cc.Interactive() {
+		cli.AddSqlHistory(sqlText)
+	}
 
 	if !rows.IsFetchable() {
 		cli.Println(rows.Message())
@@ -88,7 +90,7 @@ func doSql(cc Client, sqlText string) {
 		}
 		err := rows.Scan(rec...)
 		if err != nil {
-			cli.Println("ERR>", err.Error())
+			cli.Println("ERR", err.Error())
 			return
 		}
 		nrow++

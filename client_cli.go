@@ -35,6 +35,14 @@ func Shell(cmd *ShellCmd) {
 
 	var command = ""
 	if len(cmd.Args) > 0 {
+		for i := range cmd.Args {
+			if strings.Contains(cmd.Args[i], "\"") {
+				cmd.Args[i] = strings.ReplaceAll(cmd.Args[i], "\"", "\\\"")
+			}
+			if strings.Contains(cmd.Args[i], " ") || strings.Contains(cmd.Args[i], "\t") {
+				cmd.Args[i] = "\"" + cmd.Args[i] + "\""
+			}
+		}
 		command = strings.TrimSpace(strings.Join(cmd.Args, " "))
 	}
 	interactive := len(command) == 0
