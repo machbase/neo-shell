@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -28,6 +27,10 @@ type Client interface {
 	Printf(format string, args ...any)
 	Println(args ...any)
 	Printfln(format string, args ...any)
+
+	Stdin() io.Reader
+	Stdout() io.Writer
+	Stderr() io.Writer
 }
 
 var Formats = struct {
@@ -52,6 +55,8 @@ type Config struct {
 	Stdin        io.ReadCloser
 	Stdout       io.Writer
 	Stderr       io.Writer
+	Prompt       string
+	HistoryFile  string
 	VimMode      bool
 	Heading      bool
 	TimeLocation *time.Location
@@ -73,6 +78,8 @@ func DefaultConfig() *Config {
 		Stdin:        os.Stdin,
 		Stdout:       os.Stdout,
 		Stderr:       os.Stderr,
+		Prompt:       "\033[31mmachbase-neo»\033[0m ",
+		HistoryFile:  "/tmp/readline.tmp",
 		VimMode:      false,
 		Heading:      true,
 		QueryTimeout: 30 * time.Second,
@@ -125,27 +132,6 @@ func (cli *client) Interactive() bool {
 
 func (cli *client) Config() *Config {
 	return cli.conf
-}
-
-func (cli *client) Write(p []byte) (int, error) {
-	return cli.conf.Stdout.Write(p)
-}
-
-func (cli *client) Print(args ...any) {
-	fmt.Fprint(cli.conf.Stdout, args...)
-}
-
-func (cli *client) Printf(format string, args ...any) {
-	str := fmt.Sprintf(format, args...)
-	fmt.Fprint(cli.conf.Stdout, str)
-}
-
-func (cli *client) Println(args ...any) {
-	fmt.Fprintln(cli.conf.Stdout, args...)
-}
-
-func (cli *client) Printfln(format string, args ...any) {
-	fmt.Fprintf(cli.conf.Stdout, format+"\r\n", args...)
 }
 
 type Cmd struct {
@@ -213,10 +199,9 @@ func (cli *client) Process(line string) {
 }
 
 func (cli *client) Prompt() {
-	prompt := "\033[31mmachsql»\033[0m "
 	rl, err := readline.NewEx(&readline.Config{
-		Prompt:                 prompt,
-		HistoryFile:            "/tmp/readline.tmp",
+		Prompt:                 cli.conf.Prompt,
+		HistoryFile:            cli.conf.HistoryFile,
 		DisableAutoSaveHistory: true,
 		AutoComplete:           cli.completer(),
 		InterruptPrompt:        "^C",
@@ -276,7 +261,7 @@ func (cli *client) Prompt() {
 
 		line = strings.TrimSuffix(line, ";")
 		parts = parts[:0]
-		rl.SetPrompt(prompt)
+		rl.SetPrompt(cli.conf.Prompt)
 		cli.Process(line)
 	}
 exit:
