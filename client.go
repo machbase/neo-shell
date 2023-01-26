@@ -264,7 +264,7 @@ func (cli *client) Prompt() {
 
 		parts = append(parts, line)
 		if !strings.HasSuffix(line, ";") {
-			rl.SetPrompt("         ")
+			rl.SetPrompt(">  ")
 			continue
 		}
 		line = strings.Join(parts, " ")
