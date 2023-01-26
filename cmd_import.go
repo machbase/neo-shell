@@ -94,10 +94,20 @@ func doImport(cli Client, cmdLine string) {
 	}
 	desc := (_desc).(*machrpc.TableDescription)
 
+	if cli.Interactive() {
+		cli.Printfln("# Enter %s⏎ to quit", cmd.EofMark)
+		colNames := []string{}
+		for _, col := range desc.Columns {
+			colNames = append(colNames, col.Name)
+		}
+
+		cli.Println("#", strings.Join(colNames, cmd.Separator))
+	}
 	buff := []string{}
 	vals := []any{}
 	hold := []string{}
 	lineno := 0
+	written := 0
 	for {
 		bs, ispart, err := r.ReadLine()
 		if err != nil {
@@ -115,6 +125,10 @@ func doImport(cli Client, cmdLine string) {
 
 		lineno++
 		line := strings.Join(buff, "")
+		if strings.HasPrefix(line, "#") {
+			// comment line
+			continue
+		}
 		toks := strings.Split(line, cmd.Separator)
 		if len(toks) != len(desc.Columns) {
 			cli.Printfln("line %d contains %d columns, but expected %d", lineno, len(toks), len(desc.Columns))
@@ -136,11 +150,13 @@ func doImport(cli Client, cmdLine string) {
 			cli.Println(err.Error())
 			break
 		}
+		written++
+
 		buff = buff[:0]
 		vals = vals[:0]
 		hold = hold[:0]
 	}
-	cli.Println("total", lineno)
+	cli.Println("total", written, "record(s) imported")
 }
 
 func stringToColumnValue(str string, cd *machrpc.ColumnDescription, tz *time.Location, timeformat string) (any, error) {
