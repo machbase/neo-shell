@@ -15,6 +15,8 @@ import (
 )
 
 type Client interface {
+	Boxer
+
 	Start() error
 	Stop()
 
@@ -31,6 +33,9 @@ type Client interface {
 	Stdin() io.Reader
 	Stdout() io.Writer
 	Stderr() io.Writer
+
+	Database() *machrpc.Client
+	TimeLocation() *time.Location
 }
 
 var Formats = struct {
@@ -116,6 +121,14 @@ func (cli *client) Stop() {
 	if cli.db != nil {
 		cli.db.Disconnect()
 	}
+}
+
+func (cli *client) Database() *machrpc.Client {
+	return cli.db
+}
+
+func (cli *client) TimeLocation() *time.Location {
+	return cli.conf.TimeLocation
 }
 
 func (cli *client) Run(command string) {

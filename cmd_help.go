@@ -29,39 +29,41 @@ func pcHelp(cli Client) readline.PrefixCompleterInterface {
 
 func doHelp(cli Client, line string) {
 	fields := splitFields(line)
-	if cmd, ok := commands[fields[0]]; ok {
-		cli.Println(cmd.Desc)
+	if len(fields) > 0 {
+		if cmd, ok := commands[fields[0]]; ok {
+			cli.Println(cmd.Desc)
 
-		ali := strings.Join(cmd.Aliases, ", ")
-		if len(ali) > 0 {
-			cli.Println("Alias:")
-			cli.Println("  ", ali)
-		}
-		cli.Println("Usage:")
-		if len(cmd.Usage) > 0 {
-			lines := strings.Split(cmd.Usage, "\n")
-			for _, l := range lines {
-				cli.Println(l)
+			ali := strings.Join(cmd.Aliases, ", ")
+			if len(ali) > 0 {
+				cli.Println("Alias:")
+				cli.Println("  ", ali)
 			}
-		}
-	} else {
-		cli.Println("commands")
-		keys := make([]string, 0, len(commands))
-		for k := range commands {
-			keys = append(keys, k)
-		}
-		sort.Slice(keys, func(i, j int) bool {
-			if keys[i] == "help" {
-				return false
-			} else if keys[j] == "help" {
-				return true
+			cli.Println("Usage:")
+			if len(cmd.Usage) > 0 {
+				lines := strings.Split(cmd.Usage, "\n")
+				for _, l := range lines {
+					cli.Println(l)
+				}
 			}
-			return keys[i] < keys[j]
-		})
-		for _, k := range keys {
-			cmd := commands[k]
-			cli.Printfln("    %-*s %s", 10, cmd.Name, cmd.Desc)
+			return
 		}
-		cli.Printfln("    %-*s %s", 10, "exit", "exit shell")
 	}
+	cli.Println("commands")
+	keys := make([]string, 0, len(commands))
+	for k := range commands {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i] == "help" {
+			return false
+		} else if keys[j] == "help" {
+			return true
+		}
+		return keys[i] < keys[j]
+	})
+	for _, k := range keys {
+		cmd := commands[k]
+		cli.Printfln("    %-*s %s", 10, cmd.Name, cmd.Desc)
+	}
+	cli.Printfln("    %-*s %s", 10, "exit", "exit shell")
 }

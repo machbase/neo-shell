@@ -2,6 +2,10 @@ package shell
 
 import "github.com/jedib0t/go-pretty/v6/table"
 
+type Boxer interface {
+	NewBox(header []any, compact bool) Box
+}
+
 type Box interface {
 	AppendRow(row ...any)
 	ResetRows()

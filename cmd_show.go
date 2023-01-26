@@ -6,6 +6,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/cemlib/util"
+	"github.com/machbase/neo-grpc/machrpc"
 )
 
 func init() {
@@ -48,7 +49,7 @@ func (cli *client) doShowTables() {
 	}
 	defer rows.Close()
 
-	t := cli.NewBox([]any{"#", "NAME", "TYPE", "DESC"}, false)
+	t := cli.NewBox([]any{"#", "NAME", "TYPE"}, false)
 
 	nrow := 0
 	for rows.Next() {
@@ -62,8 +63,8 @@ func (cli *client) doShowTables() {
 		}
 		nrow++
 
-		desc := tableTypeDesc(typ, flg)
-		t.AppendRow(nrow, name, typ, desc)
+		desc := machrpc.TableTypeDescription(machrpc.TableType(typ), flg)
+		t.AppendRow(nrow, name, desc)
 	}
 	t.Render()
 }
