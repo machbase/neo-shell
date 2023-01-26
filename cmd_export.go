@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -24,12 +23,12 @@ func init() {
 		Usage: `  export [options] <table>
     table               table name to read
   options:
-    --output,-o <file>  input file, (default: '-' stdout)
-    --format,-f        file format [csv] (default:'csv')
-    --no-header        do not export header (default)
-    --header           export header
-    --delimiter,-d     csv delimiter (default:',')
-    --timeformat,-t    time format [ns|ms|s|<date-time-format>] (default:'ns')
+    --output,-o <file>  output file (default:'-' stdout)
+    --format,-f         file format [csv] (default:'csv')
+    --no-header         do not export header (default)
+    --header            export header
+    --delimiter,-d      csv delimiter (default:',')
+    --timeformat,-t     time format [ns|ms|s|<date-time-format>] (default:'ns')
        ns, us, ms, s
          represents unix epoch time in nano-, micro-, milli- and seconds for each
        date-time-format  ex) '2006-01-02 15:04:05.999'
@@ -39,7 +38,7 @@ func init() {
          hour   03 or 15
          minute 04
          second 05 or with sub-seconds '05.999999'
-    --precision,-p <uint> precision of float value, if 0, disable round value (default: 0)`,
+    --precision,-p <int>  precision of float value, if less than 0, disable round value (default: -1)`,
 	})
 }
 
@@ -49,7 +48,7 @@ type ExportCmd struct {
 	Header     bool   `name:"header" negatable:""`
 	Delimiter  string `name:"delimiter" short:"d" default:","`
 	TimeFormat string `name:"timeFormat" short:"t" default:"ns"`
-	Precision  uint   `name:"precision" short:"p" default:"0"`
+	Precision  int    `name:"precision" short:"p" default:"-1"`
 }
 
 func pcExport(cli Client) readline.PrefixCompleterInterface {
@@ -63,10 +62,9 @@ func doExport(cli Client, cmdLine string) {
 		cli.Println("ERR", err.Error())
 		return
 	}
-	x := splitFields(cmdLine)
-	_, err = parser.Parse(x)
+	_, err = parser.Parse(splitFields(cmdLine))
 	if err != nil {
-		cli.Println("ERR", err.Error(), strings.Join(x, "|"))
+		cli.Println("ERR", err.Error())
 		return
 	}
 
@@ -123,9 +121,9 @@ func doExport(cli Client, cmdLine string) {
 	}
 }
 
-func makeCsvValues(buf []any, tz *time.Location, timeFormat string, precision uint) []string {
-	var round = func(v float64, p uint) float64 {
-		if p == 0 {
+func makeCsvValues(buf []any, tz *time.Location, timeFormat string, precision int) []string {
+	var round = func(v float64, p int) float64 {
+		if p < 0 {
 			return v
 		}
 		ratio := math.Pow(10, float64(p))
