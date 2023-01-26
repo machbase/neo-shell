@@ -28,8 +28,8 @@ func init() {
 		Desc:    "chart [options] <tag_path> ...",
 		Usage: `  arguments:
     tags_path ...   tag path as <table>/<tag>#<column>. ex) mytable/sensor.tag1#column
-	                since all tag tables has 'value' column,
-					'#<column>' part can be omitted for default '#value' ex) mytable/sensor
+                    since all tag tables have 'value' column,
+                    '#<column>' part can be omitted for default '#value' ex) mytable/sensor
   options:
     --time  <time>           base time, now or time string in format "2023-02-03 13:20:30" (default: now)
     --range <duration>       time range of data, from time specified by '--time'
