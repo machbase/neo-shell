@@ -20,7 +20,7 @@ func init() {
 		Aliases: []string{`\w`},
 		PcFunc:  pcWalk,
 		Action:  doWalk,
-		Desc:    "execute query then walk-through the results",
+		Desc:    "Execute query then walk-through the results",
 		Usage:   "  walk <sql query>",
 	})
 }

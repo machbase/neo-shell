@@ -38,8 +38,8 @@ func doHelp(cli Client, line string) {
 				cli.Println("Alias:")
 				cli.Println("  ", ali)
 			}
-			cli.Println("Usage:")
 			if len(cmd.Usage) > 0 {
+				cli.Println("Usage:")
 				lines := strings.Split(cmd.Usage, "\n")
 				for _, l := range lines {
 					cli.Println(l)

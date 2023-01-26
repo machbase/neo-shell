@@ -17,8 +17,8 @@ func init() {
 		Aliases: []string{`\s`},
 		PcFunc:  pcSql,
 		Action:  doSql,
-		Desc:    "run sql query",
-		Usage:   "  sql <sql query>",
+		Desc:    "Execute sql query",
+		Usage:   "  sql <query>",
 	})
 }
 
