@@ -61,6 +61,7 @@ type Config struct {
 	Stdout       io.Writer
 	Stderr       io.Writer
 	Prompt       string
+	PromptCont   string
 	HistoryFile  string
 	VimMode      bool
 	Heading      bool
@@ -84,6 +85,7 @@ func DefaultConfig() *Config {
 		Stdout:       os.Stdout,
 		Stderr:       os.Stderr,
 		Prompt:       "\033[31mmachbase-neo»\033[0m ",
+		PromptCont:   "\033[37m>\033[0m  ",
 		HistoryFile:  "/tmp/readline.tmp",
 		VimMode:      false,
 		Heading:      true,
@@ -264,7 +266,7 @@ func (cli *client) Prompt() {
 
 		parts = append(parts, line)
 		if !strings.HasSuffix(line, ";") {
-			rl.SetPrompt(">  ")
+			rl.SetPrompt(cli.conf.PromptCont)
 			continue
 		}
 		line = strings.Join(parts, " ")
