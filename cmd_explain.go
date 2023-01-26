@@ -12,13 +12,13 @@ func init() {
 	})
 }
 
-func pcExplain(c Client) readline.PrefixCompleterInterface {
+func pcExplain(cli Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("explain")
 }
 
-func doExplain(c Client, line string) {
-	cli := c.(*client)
-	plan, err := cli.db.Explain(line)
+func doExplain(cli Client, line string) {
+	db := cli.Database()
+	plan, err := db.Explain(line)
 	if err != nil {
 		cli.Println(err.Error())
 		return

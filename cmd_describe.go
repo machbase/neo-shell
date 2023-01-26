@@ -24,13 +24,15 @@ func pcDescribe(c Client) readline.PrefixCompleterInterface {
 	)
 }
 
-func doDescribe(c Client, line string) {
+func doDescribe(cli Client, line string) {
 	object := line
-	cli := c.(*client)
+	// cli := c.(*client)
 	if len(line) == 0 {
 		cli.Println("Usage: desc <table_name>")
 		return
 	}
+
+	db := cli.Database()
 
 	var tableName string
 	var tableType int
@@ -38,7 +40,7 @@ func doDescribe(c Client, line string) {
 	var tableId int
 	var colCount int
 
-	r := cli.db.QueryRow("select name, type, flag, id, colcount from M$SYS_TABLES where name = ?", strings.ToUpper(object))
+	r := db.QueryRow("select name, type, flag, id, colcount from M$SYS_TABLES where name = ?", strings.ToUpper(object))
 	if err := r.Scan(&tableName, &tableType, &tableFlag, &tableId, &colCount); err != nil {
 		cli.Println("unable to describe", object)
 		return
@@ -48,7 +50,7 @@ func doDescribe(c Client, line string) {
 	cli.Println("TYPE    ", tableTypeDesc(tableType, tableFlag))
 	if tableType == 6 {
 		tags := []string{}
-		rows, err := cli.db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(object)))
+		rows, err := db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(object)))
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
@@ -66,7 +68,7 @@ func doDescribe(c Client, line string) {
 	}
 	cli.Println("COLUMNS ", colCount)
 
-	rows, err := cli.db.Query("select name, type, length from M$SYS_COLUMNS where table_id = ? order by id", tableId)
+	rows, err := db.Query("select name, type, length from M$SYS_COLUMNS where table_id = ? order by id", tableId)
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return

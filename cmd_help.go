@@ -17,7 +17,7 @@ func init() {
 	})
 }
 
-func pcHelp(c Client) readline.PrefixCompleterInterface {
+func pcHelp(cli Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("help", readline.PcItemDynamic(func(line string) []string {
 		lst := make([]string, 0)
 		for k := range commands {
@@ -27,9 +27,7 @@ func pcHelp(c Client) readline.PrefixCompleterInterface {
 	}))
 }
 
-func doHelp(c Client, line string) {
-	cli := c.(*client)
-
+func doHelp(cli Client, line string) {
 	fields := splitFields(line)
 	if cmd, ok := commands[fields[0]]; ok {
 		cli.Println(cmd.Desc)

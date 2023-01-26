@@ -31,9 +31,9 @@ func init() {
 	                since all tag tables has 'value' column,
 					'#<column>' part can be omitted for default '#value' ex) mytable/sensor
   options:
-    --time          base time, now or time string in format "2023-02-03 13:20:30" (default: now)
-    --range         time range of data, from time specified by '--time'
-    --refresh, -r   refresh period, effective only if time is "now" (default: 1s)`,
+    --time  <time>           base time, now or time string in format "2023-02-03 13:20:30" (default: now)
+    --range <duration>       time range of data, from time specified by '--time'
+    --refresh,-r <duration>  refresh period, effective only if time is "now" (default: 1s)`,
 	})
 }
 
@@ -44,13 +44,12 @@ type ChartCmd struct {
 	Refresh   time.Duration `name:"refresh" short:"r" default:"1s"`
 }
 
-func pcChart(c Client) readline.PrefixCompleterInterface {
+func pcChart(cli Client) readline.PrefixCompleterInterface {
 	return readline.PcItem("chart")
 }
 
-func doChart(c Client, line string) {
-	cli := c.(*client)
-	args := splitFields(line)
+func doChart(cli Client, line string) {
+	// cli := c.(*client)
 
 	cmd := &ChartCmd{}
 	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}))
@@ -59,7 +58,7 @@ func doChart(c Client, line string) {
 		cli.Println(err.Error())
 		return
 	}
-	_, err = parser.Parse(args)
+	_, err = parser.Parse(splitFields(line))
 	if err != nil {
 		cli.Println(err.Error())
 		return
@@ -75,6 +74,7 @@ func doChart(c Client, line string) {
 	}
 
 	queries := make([]*DataQuery, len(cmd.TagPaths))
+	tz := cli.TimeLocation()
 	for i, path := range cmd.TagPaths {
 		// path는 <table>/<tag>#<column> 형식으로 구성된다.
 		toks := strings.SplitN(path, "/", 2)
@@ -100,7 +100,7 @@ func doChart(c Client, line string) {
 				timestamp = time.Now()
 			} else {
 				timeformat := "2006-01-02 15:04:05"
-				timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, cli.conf.TimeLocation)
+				timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, tz)
 				timestamp = timestamp.UTC()
 				if err != nil {
 					fmt.Println(err.Error())
@@ -146,6 +146,8 @@ func doChart(c Client, line string) {
 	}
 
 	runner := func() {
+		db := cli.Database()
+		tz := cli.TimeLocation()
 		// query
 		for _, dq := range queries {
 			if strings.ToUpper(dq.field) == "VALUE" {
@@ -157,7 +159,7 @@ func doChart(c Client, line string) {
 
 			lastSql := fmt.Sprintf(`select TIME, %s from %s where NAME = ? AND TIME between ? AND ? order by time`, dq.field, dq.table)
 
-			rows, err := cli.db.Query(lastSql, dq.tag, rangeFrom, rangeTo)
+			rows, err := db.Query(lastSql, dq.tag, rangeFrom, rangeTo)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -176,7 +178,7 @@ func doChart(c Client, line string) {
 					fmt.Println(err.Error())
 					return
 				}
-				label := ts.In(cli.conf.TimeLocation).Format("15:04:05")
+				label := ts.In(tz).Format("15:04:05")
 				values = append(values, value)
 				xlabels[idx] = label
 				idx++
