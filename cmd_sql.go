@@ -26,11 +26,12 @@ func init() {
 }
 
 const helpSql string = `  sql [options] <query>
+  arguments:
     query         sql query to execute
   options:
     --output,-o <file>     output file (default:'-' stdout)
     --format,-f <format>   output format
-      none       non-export mode (default)
+      none       default mode (default)
       csv        csv format
       json       json format
     --delimiter,-d       delimiter for csv format (default:',')
