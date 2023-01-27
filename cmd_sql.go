@@ -1,7 +1,9 @@
 package shell
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -26,16 +28,14 @@ func init() {
 const helpSql string = `  sql [options] <query>
     query         sql query to execute
   options:
-    --export,-e <format>   export query result into output file
+    --output,-o <file>     output file (default:'-' stdout)
+    --format,-f <format>   output format
       none       non-export mode (default)
       csv        csv format
       json       json format
-      chart.js   export result in json for chart.js
-                 if output file's extension is '.html', result json will be embeded in html.
-    --output,-o <file>  output file (default:'-' stdout)
-    --delimiter,-d      delimiter for csv format (default:',')
-    --[no-]rownum       include rownum as first column (default:true)
-    --timeformat,-t     time format [ns|ms|s|<date-time-format>] (default:'ns')
+    --delimiter,-d       delimiter for csv format (default:',')
+    --[no-]rownum        include rownum as first column (default:true)
+    --timeformat,-t      time format [ns|ms|s|<date-time-format>] (default:'ns')
       ns, us, ms, s
         represents unix epoch time in nano-, micro-, milli- and seconds for each
       date-time-format  ex) '2006-01-02 15:04:05.999'
@@ -48,13 +48,14 @@ const helpSql string = `  sql [options] <query>
     --precision,-p <int>  set precision of float value to force round`
 
 type SqlCmd struct {
-	Output     string   `name:"output" short:"o" default:"-"`
-	Export     string   `name:"export" short:"e" default:"none"`
-	Delimiter  string   `name:"delimiter" short:"d" default:","`
-	Rownum     bool     `name:"rownum" negatable:"" default:"true"`
-	TimeFormat string   `name:"timeFormat" short:"t" default:"ns"`
-	Precision  int      `name:"precision" short:"p" default:"-1"`
-	Query      []string `arg:"" name:"query" passthrough:""`
+	Output      string   `name:"output" short:"o" default:"-"`
+	Format      string   `name:"format" short:"f" enum:"none,csv,json" default:"none"`
+	Delimiter   string   `name:"delimiter" short:"d" default:","`
+	Rownum      bool     `name:"rownum" negatable:"" default:"true"`
+	TimeFormat  string   `name:"timeFormat" short:"t" default:"ns"`
+	Precision   int      `name:"precision" short:"p" default:"-1"`
+	Interactive bool     `kong:"-"`
+	Query       []string `arg:"" name:"query" passthrough:""`
 }
 
 func pcSql(cc Client) readline.PrefixCompleterInterface {
@@ -83,7 +84,9 @@ func doSql(cc Client, cmdLine string) {
 	}
 
 	sqlText := stripQuote(strings.Join(cmd.Query, " "))
-	cc.Println("SQL", sqlText)
+	// cc.Println("SQL", sqlText)
+	// cc.Printfln("    %+v", cmd)
+
 	db := cc.Database()
 	rows, err := db.Query(sqlText)
 	if err != nil {
@@ -102,7 +105,43 @@ func doSql(cc Client, cmdLine string) {
 		return
 	}
 
-	cli.exportRowsNone(rows, cmd.Rownum, cli.Interactive(), cmd.Precision)
+	var writer io.Writer
+	switch cmd.Output {
+	case "-":
+		cmd.Interactive = cc.Interactive()
+		buf := bufio.NewWriter(cc.Stdout())
+		defer func() {
+			buf.Flush()
+		}()
+		writer = buf
+	default:
+		cmd.Interactive = false
+		f, err := os.OpenFile(cmd.Output, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			cc.Println("ERR", err.Error())
+			return
+		}
+		buf := bufio.NewWriter(f)
+		defer func() {
+			buf.Flush()
+			f.Close()
+		}()
+		writer = buf
+	}
+
+	// json       json format
+	// chart.js   export result in json for chart.js
+	// 		      if output file's extension is '.html', result json will be embeded in html.
+	switch cmd.Format {
+	default:
+		cli.exportRowsNone(writer, rows, cmd)
+	case "csv":
+		cli.exportRowsCsv(writer, rows, cmd)
+	case "json":
+		cli.exportRowsJson(writer, rows, cmd)
+	case "chart.js":
+		cli.exportRowsChartJs(writer, rows, cmd)
+	}
 }
 
 func (cli *client) columnNames(cols []*machrpc.Column, withRowNum bool) []string {
@@ -126,68 +165,24 @@ func (cli *client) columnNames(cols []*machrpc.Column, withRowNum bool) []string
 	return names
 }
 
-func (cli *client) exportRowsNone(rows *machrpc.Rows, includeRowNum bool, interactiveMode bool, precision int) {
-	cols, err := rows.Columns()
-	if err != nil {
-		cli.Println("ERR", err.Error())
-		return
+func (cli *client) columnTypes(cols []*machrpc.Column, withRowNum bool) []string {
+	var types []string
+	var colIdxOffset int
+	if withRowNum {
+		types = make([]string, len(cols)+1)
+		types[0] = "int64"
+		colIdxOffset = 1
+	} else {
+		types = make([]string, len(cols))
+		colIdxOffset = 0
 	}
-	rec := makeBuffer(cols)
-
-	names := cli.columnNames(cols, includeRowNum)
-
-	box := cli.newBox(names, !interactiveMode)
-
-	windowHeight := 0
-	//windowWidth := 0
-	if term.IsTerminal(0) {
-		if _, height, err := term.GetSize(0); err == nil {
-			windowHeight = height
-			//windowWidth = width
-		}
+	for i := range cols {
+		types[i+colIdxOffset] = cols[i].Type
 	}
-
-	height := windowHeight - 4
-	if cli.conf.Heading {
-		height--
-	}
-
-	nrow := 0
-	for {
-		if !rows.Next() {
-			box.Render()
-			box.ResetRows()
-			return
-		}
-		err := rows.Scan(rec...)
-		if err != nil {
-			cli.Println("ERR", err.Error())
-			return
-		}
-		nrow++
-		vs := makeValues(rec, cli.conf.TimeLocation, precision)
-		values := make([]any, len(vs)+1)
-		values[0] = nrow
-		for i := range vs {
-			values[i+1] = vs[i]
-		}
-		box.AppendRow(values...)
-
-		if windowHeight > 0 && nrow%height == 0 {
-			box.Render()
-			box.ResetRows()
-			if interactiveMode {
-				if !pauseForMore(cli) {
-					return
-				}
-			} else {
-				box.ResetHeaders()
-			}
-		}
-	}
+	return types
 }
 
-func pauseForMore(cli Client) bool {
+func (cli *client) pauseForMore() bool {
 	cli.Print(":")
 	// switch stdin into 'raw' mode
 	if oldState, err := term.MakeRaw(int(os.Stdin.Fd())); err == nil {

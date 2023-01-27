@@ -1,6 +1,10 @@
 package shell
 
-import "github.com/jedib0t/go-pretty/v6/table"
+import (
+	"io"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+)
 
 type Boxer interface {
 	NewBox(header []string) Box
@@ -15,19 +19,19 @@ type Box interface {
 }
 
 func (cli *client) NewCompactBox(header []string) Box {
-	return cli.newBox(header, true)
+	return cli.newBox(header, true, cli.conf.Stdout)
 }
 
 func (cli *client) NewBox(header []string) Box {
-	return cli.newBox(header, false)
+	return cli.newBox(header, false, cli.conf.Stdout)
 }
 
-func (cli *client) newBox(header []string, compact bool) Box {
+func (cli *client) newBox(header []string, compact bool, mirror io.Writer) Box {
 	b := &box{
 		w:      table.NewWriter(),
 		format: cli.conf.Format,
 	}
-	b.w.SetOutputMirror(cli.conf.Stdout)
+	b.w.SetOutputMirror(mirror)
 
 	style := table.StyleDefault
 	switch cli.conf.BoxStyle {

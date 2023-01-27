@@ -25,10 +25,9 @@ func init() {
 const helpExport = `  export [options] <table>
     table               table name to read
   options:
-    --output,-o <file>  output file (default:'-' stdout)
-    --format,-f         file format [csv] (default:'csv')
-    --no-header         do not export header (default)
-    --header            export header
+    --output,-o <file>   output file (default:'-' stdout)
+    --format,-f <format> output format [csv] (default:'csv')
+    --[no-]header        export header (default:false)
     --delimiter,-d      csv delimiter (default:',')
     --timeformat,-t     time format [ns|ms|s|<date-time-format>] (default:'ns')
        ns, us, ms, s
@@ -45,6 +44,7 @@ const helpExport = `  export [options] <table>
 type ExportCmd struct {
 	Table      string `arg:"" name:"table"`
 	Output     string `name:"output" short:"o" default:"-"`
+	Format     string `name:"format" short:"f" default:"csv"`
 	Header     bool   `name:"header" negatable:""`
 	Delimiter  string `name:"delimiter" short:"d" default:","`
 	TimeFormat string `name:"timeFormat" short:"t" default:"ns"`
