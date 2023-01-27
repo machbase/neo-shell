@@ -4,11 +4,10 @@ import "github.com/chzyer/readline"
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "explain",
-		Aliases: []string{},
-		PcFunc:  pcExplain,
-		Action:  doExplain,
-		Desc:    "explain <sql>",
+		Name:   "explain",
+		PcFunc: pcExplain,
+		Action: doExplain,
+		Desc:   "explain <sql>",
 	})
 }
 

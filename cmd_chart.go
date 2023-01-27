@@ -21,11 +21,10 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "chart",
-		Aliases: []string{},
-		PcFunc:  pcChart,
-		Action:  doChart,
-		Desc:    "chart [options] <tag_path> ...",
+		Name:   "chart",
+		PcFunc: pcChart,
+		Action: doChart,
+		Desc:   "chart [options] <tag_path> ...",
 		Usage: `  arguments:
     tags_path ...   tag path as <table>/<tag>#<column>. ex) mytable/sensor.tag1#column
                     since all tag tables have 'value' column,
@@ -58,7 +57,7 @@ func doChart(cli Client, line string) {
 		cli.Println(err.Error())
 		return
 	}
-	_, err = parser.Parse(splitFields(line))
+	_, err = parser.Parse(splitFields(line, true))
 	if err != nil {
 		cli.Println(err.Error())
 		return

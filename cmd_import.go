@@ -16,11 +16,10 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "import",
-		Aliases: []string{},
-		PcFunc:  pcImport,
-		Action:  doImport,
-		Desc:    "import table",
+		Name:   "import",
+		PcFunc: pcImport,
+		Action: doImport,
+		Desc:   "import table",
 		Usage: `  import [options] <table>
     table               table name to write
   options:
@@ -67,7 +66,7 @@ func doImport(cli Client, cmdLine string) {
 		return
 	}
 
-	_, err = parser.Parse(splitFields(cmdLine))
+	_, err = parser.Parse(splitFields(cmdLine, true))
 	if err != nil {
 		cli.Println(err.Error())
 		return

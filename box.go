@@ -3,7 +3,8 @@ package shell
 import "github.com/jedib0t/go-pretty/v6/table"
 
 type Boxer interface {
-	NewBox(header []any, compact bool) Box
+	NewBox(header []string) Box
+	NewCompactBox(header []string) Box
 }
 
 type Box interface {
@@ -13,7 +14,15 @@ type Box interface {
 	Render() string
 }
 
-func (cli *client) NewBox(header []any, compact bool) Box {
+func (cli *client) NewCompactBox(header []string) Box {
+	return cli.newBox(header, true)
+}
+
+func (cli *client) NewBox(header []string) Box {
+	return cli.newBox(header, false)
+}
+
+func (cli *client) newBox(header []string, compact bool) Box {
 	b := &box{
 		w:      table.NewWriter(),
 		format: cli.conf.Format,
@@ -41,7 +50,11 @@ func (cli *client) NewBox(header []any, compact bool) Box {
 	b.w.SetStyle(style)
 
 	if cli.conf.Heading {
-		b.w.AppendHeader(table.Row(header))
+		vs := make([]any, len(header))
+		for i, h := range header {
+			vs[i] = h
+		}
+		b.w.AppendHeader(table.Row(vs))
 	}
 	return b
 }

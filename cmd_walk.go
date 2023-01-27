@@ -16,12 +16,11 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "walk",
-		Aliases: []string{`\w`},
-		PcFunc:  pcWalk,
-		Action:  doWalk,
-		Desc:    "Execute query then walk-through the results",
-		Usage:   "  walk <sql query>",
+		Name:   "walk",
+		PcFunc: pcWalk,
+		Action: doWalk,
+		Desc:   "Execute query then walk-through the results",
+		Usage:  "  walk <sql query>",
 	})
 }
 
@@ -31,7 +30,7 @@ func pcWalk(c Client) readline.PrefixCompleterInterface {
 
 func doWalk(cc Client, sqlText string) {
 	cli := cc.(*client)
-	sqlText = strings.TrimSpace(sqlText)
+	sqlText = stripQuote(strings.TrimSpace(sqlText))
 	if len(sqlText) == 0 {
 		cli.Println("Usage: walk <sql query>")
 		return
@@ -183,7 +182,7 @@ func (w *Walker) fetchMore() {
 			return
 		}
 
-		values := makeValues(buffer, w.tz)
+		values := makeValues(buffer, w.tz, -1)
 		w.values = append(w.values, append([]string{strconv.Itoa(nrows + count)}, values...))
 
 		count++

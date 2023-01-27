@@ -11,11 +11,10 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "show",
-		Aliases: []string{},
-		PcFunc:  pcShow,
-		Action:  doShow,
-		Desc:    "display information",
+		Name:   "show",
+		PcFunc: pcShow,
+		Action: doShow,
+		Desc:   "display information",
 		Usage: `  show tables          list tables
   show info            runtime info of server`,
 	})
@@ -30,7 +29,7 @@ func pcShow(c Client) readline.PrefixCompleterInterface {
 
 func doShow(c Client, line string) {
 	cli := c.(*client)
-	args := splitFields(line)
+	args := splitFields(line, true)
 	switch args[0] {
 	case "info":
 		cli.doShowInfo()
@@ -49,7 +48,7 @@ func (cli *client) doShowTables() {
 	}
 	defer rows.Close()
 
-	t := cli.NewBox([]any{"#", "NAME", "TYPE"}, false)
+	t := cli.NewBox([]string{"#", "NAME", "TYPE"})
 
 	nrow := 0
 	for rows.Next() {
@@ -78,7 +77,7 @@ func (cli *client) doShowInfo() {
 
 	uptime := time.Duration(nfo.Runtime.UptimeInSecond) * time.Second
 
-	box := cli.NewBox([]any{"NAME", "VALUE"}, false)
+	box := cli.NewBox([]string{"NAME", "VALUE"})
 
 	box.AppendRow("build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch))
 	box.AppendRow("build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA))

@@ -3,7 +3,6 @@ package shell
 import (
 	"encoding/csv"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"time"
@@ -15,12 +14,15 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "export",
-		Aliases: []string{},
-		PcFunc:  pcExport,
-		Action:  doExport,
-		Desc:    "export table",
-		Usage: `  export [options] <table>
+		Name:   "export",
+		PcFunc: pcExport,
+		Action: doExport,
+		Desc:   "export table",
+		Usage:  helpExport,
+	})
+}
+
+const helpExport = `  export [options] <table>
     table               table name to read
   options:
     --output,-o <file>  output file (default:'-' stdout)
@@ -38,9 +40,7 @@ func init() {
          hour   03 or 15
          minute 04
          second 05 or with sub-seconds '05.999999'
-    --precision,-p <int>  precision of float value, if less than 0, disable round value (default: -1)`,
-	})
-}
+    --precision,-p <int>  set precision of float value to force round`
 
 type ExportCmd struct {
 	Table      string `arg:"" name:"table"`
@@ -57,12 +57,17 @@ func pcExport(cli Client) readline.PrefixCompleterInterface {
 
 func doExport(cli Client, cmdLine string) {
 	cmd := &ExportCmd{}
-	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}))
+	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
+		kong.Help(
+			func(options kong.HelpOptions, ctx *kong.Context) error {
+				cli.Println(helpExport)
+				return nil
+			}))
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
 	}
-	_, err = parser.Parse(splitFields(cmdLine))
+	_, err = parser.Parse(splitFields(cmdLine, false))
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
@@ -122,14 +127,6 @@ func doExport(cli Client, cmdLine string) {
 }
 
 func makeCsvValues(buf []any, tz *time.Location, timeFormat string, precision int) []string {
-	var round = func(v float64, p int) float64 {
-		if p < 0 {
-			return v
-		}
-		ratio := math.Pow(10, float64(p))
-		return math.Round(v*ratio) / ratio
-	}
-
 	cols := make([]string, len(buf))
 	for i, r := range buf {
 		if r == nil {
@@ -153,7 +150,11 @@ func makeCsvValues(buf []any, tz *time.Location, timeFormat string, precision in
 				cols[i] = v.In(tz).Format(timeFormat)
 			}
 		case *float64:
-			cols[i] = fmt.Sprintf("%.*f", precision, round(*v, precision))
+			if precision < 0 {
+				cols[i] = fmt.Sprintf("%f", *v)
+			} else {
+				cols[i] = fmt.Sprintf("%.*f", precision, *v)
+			}
 		case *int:
 			cols[i] = strconv.FormatInt(int64(*v), 10)
 		case *int32:

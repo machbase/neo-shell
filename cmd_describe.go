@@ -10,11 +10,10 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "desc",
-		Aliases: []string{},
-		PcFunc:  pcDescribe,
-		Action:  doDescribe,
-		Desc:    "desc <table>",
+		Name:   "desc",
+		PcFunc: pcDescribe,
+		Action: doDescribe,
+		Desc:   "desc <table>",
 	})
 }
 
@@ -62,7 +61,7 @@ func doDescribe(cli Client, line string) {
 		cli.Println("TAGS    ", strings.Join(tags, ", "))
 	}
 
-	box := cli.NewBox([]any{"#", "NAME", "TYPE", "LENGTH"}, false)
+	box := cli.NewBox([]string{"#", "NAME", "TYPE", "LENGTH"})
 	for i, col := range desc.Columns {
 		colType := machrpc.ColumnTypeDescription(col.Type)
 		box.AppendRow(i+1, col.Name, colType, col.Length)

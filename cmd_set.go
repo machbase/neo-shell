@@ -9,11 +9,10 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:    "set",
-		Aliases: []string{},
-		PcFunc:  pcSet,
-		Action:  doSet,
-		Desc:    "show/set shell settings",
+		Name:   "set",
+		PcFunc: pcSet,
+		Action: doSet,
+		Desc:   "show/set shell settings",
 		Usage: `  set vi-mode   [on|off]
   set heading   [on|off]
   set tz        [time-zone|UTC|Local]
@@ -52,7 +51,7 @@ func pcSet(c Client) readline.PrefixCompleterInterface {
 
 func doSet(c Client, line string) {
 	cli := c.(*client)
-	args := splitFields(line)
+	args := splitFields(line, true)
 	onoff := func(t bool) string {
 		if t {
 			return "on"
@@ -74,7 +73,7 @@ func doSet(c Client, line string) {
 	}
 
 	if len(args) == 0 {
-		box := cli.NewBox([]any{"NAME", "VALUE"}, false)
+		box := cli.NewBox([]string{"NAME", "VALUE"})
 		box.AppendRow("tz", cli.conf.TimeLocation.String())
 		box.AppendRow("vi-mode", onoff(cli.conf.VimMode))
 		box.AppendRow("heading", onoff(cli.conf.Heading))

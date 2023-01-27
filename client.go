@@ -150,22 +150,17 @@ func (cli *client) Config() *Config {
 }
 
 type Cmd struct {
-	Name    string
-	Aliases []string
-	PcFunc  func(cli Client) readline.PrefixCompleterInterface
-	Action  func(cli Client, line string)
-	Desc    string
-	Usage   string
+	Name   string
+	PcFunc func(cli Client) readline.PrefixCompleterInterface
+	Action func(cli Client, line string)
+	Desc   string
+	Usage  string
 }
 
 var commands = make(map[string]*Cmd)
-var aliases = make(map[string]*Cmd)
 
 func RegisterCmd(cmd *Cmd) {
 	commands[cmd.Name] = cmd
-	for _, a := range cmd.Aliases {
-		aliases[a] = cmd
-	}
 }
 
 func (cli *client) completer() readline.PrefixCompleterInterface {
@@ -179,34 +174,14 @@ func (cli *client) completer() readline.PrefixCompleterInterface {
 }
 
 func (cli *client) Process(line string) {
-	fields := splitFields(line)
+	fields := splitFields(line, true)
 	if len(fields) == 0 {
 		return
 	}
 
 	cmdName := fields[0]
-	cmd, ok := commands[cmdName]
-	if !ok {
-		cmd = aliases[cmdName]
-	}
-	if cmd == nil {
-		// support trailing command
-		// ex) select * from table \w
-		tail := fields[len(fields)-1]
-		if strings.HasPrefix(tail, `\`) && len(tail) > 1 {
-			if cmd, ok = aliases[tail]; !ok {
-				cmd = commands[tail[1:]]
-			}
-			if cmd != nil {
-				line = strings.TrimSpace(line)
-				line = line[0 : len(line)-len(tail)]
-			}
-		}
-	} else {
+	if cmd, ok := commands[cmdName]; ok {
 		line = strings.TrimSpace(line[len(cmdName):])
-	}
-
-	if cmd != nil {
 		cmd.Action(cli, line)
 	} else {
 		doSql(cli, line)
@@ -252,6 +227,8 @@ func (cli *client) Prompt() {
 
 		line = strings.TrimSpace(line)
 		if line == "" {
+			parts = parts[:0]
+			rl.SetPrompt(cli.conf.Prompt)
 			continue
 		}
 		if len(parts) == 0 {
@@ -309,7 +286,7 @@ func (cli *client) listTables() func(string) []string {
 	}
 }
 
-func splitFields(line string) []string {
+func splitFields(line string, stripQuote bool) []string {
 	lastQuote := rune(0)
 	f := func(c rune) bool {
 		switch {
@@ -327,13 +304,26 @@ func splitFields(line string) []string {
 	}
 	fields := strings.FieldsFunc(line, f)
 
-	for i, f := range fields {
-		c := []rune(f)[0]
-		if unicode.In(c, unicode.Quotation_Mark) {
-			fields[i] = strings.Trim(f, string(c))
+	if stripQuote {
+		for i, f := range fields {
+			c := []rune(f)[0]
+			if unicode.In(c, unicode.Quotation_Mark) {
+				fields[i] = strings.Trim(f, string(c))
+			}
 		}
 	}
 	return fields
+}
+
+func stripQuote(str string) string {
+	if len(str) == 0 {
+		return str
+	}
+	c := []rune(str)[0]
+	if unicode.In(c, unicode.Quotation_Mark) {
+		return strings.Trim(str, string(c))
+	}
+	return str
 }
 
 func (cli *client) bytesUnit(v uint64) string {
