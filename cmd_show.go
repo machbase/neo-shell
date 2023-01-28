@@ -2,8 +2,10 @@ package shell
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 	"github.com/machbase/cemlib/util"
 	"github.com/machbase/neo-grpc/machrpc"
@@ -14,10 +16,22 @@ func init() {
 		Name:   "show",
 		PcFunc: pcShow,
 		Action: doShow,
-		Desc:   "display information",
-		Usage: `  show tables          list tables
-  show info            runtime info of server`,
+		Desc:   "Display information",
+		Usage:  helpShow,
 	})
+}
+
+const helpShow = `  show [options] tables      list tables
+    options:
+      --all,-a       show all hidden tables
+  show info                  runtime info of server`
+
+type ShowCmd struct {
+	Info   struct{} `cmd:""`
+	Tables struct {
+		ShowAll bool `name:"all" short:"a"`
+	} `cmd:""`
+	Help bool `kong:"-"`
 }
 
 func pcShow(c Client) readline.PrefixCompleterInterface {
@@ -27,43 +41,70 @@ func pcShow(c Client) readline.PrefixCompleterInterface {
 	)
 }
 
-func doShow(c Client, line string) {
-	cli := c.(*client)
-	args := splitFields(line, true)
-	switch args[0] {
+func doShow(cc Client, line string) {
+	cmd := &ShowCmd{}
+	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
+		kong.Help(
+			func(options kong.HelpOptions, ctx *kong.Context) error {
+				cc.Println(helpShow)
+				cmd.Help = true
+				return nil
+			}))
+	if err != nil {
+		cc.Println("ERR", err.Error())
+		return
+	}
+	ctx, err := parser.Parse(splitFields(line, false))
+	if err != nil {
+		cc.Println("ERR", err.Error())
+		return
+	}
+
+	if cmd.Help {
+		return
+	}
+
+	switch ctx.Command() {
 	case "info":
+		cli := cc.(*client)
 		cli.doShowInfo()
 	case "tables":
-		cli.doShowTables()
+		cli := cc.(*client)
+		cli.doShowTables(cmd.Tables.ShowAll)
 	default:
-		cli.Printfln("unknown show '%s'", args[0])
+		cc.Println(helpShow)
+		return
 	}
 }
 
-func (cli *client) doShowTables() {
-	rows, err := cli.db.Query("select NAME, TYPE, FLAG from M$SYS_TABLES order by NAME")
+func (cli *client) doShowTables(showAll bool) {
+	rows, err := cli.db.Query("select NAME, TYPE, FLAG, ID from M$SYS_TABLES order by ID")
 	if err != nil {
 		cli.Printfln("ERR select m$sys_tables fail; %s", err.Error())
 		return
 	}
 	defer rows.Close()
 
-	t := cli.NewBox([]string{"#", "NAME", "TYPE"})
+	t := cli.NewBox([]string{"#", "ID", "NAME", "TYPE"})
 
 	nrow := 0
 	for rows.Next() {
 		var name string
 		var typ int
 		var flg int
-		err := rows.Scan(&name, &typ, &flg)
+		var id int
+		err := rows.Scan(&name, &typ, &flg, &id)
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
 		}
+		if !showAll && strings.HasPrefix(name, "_") {
+			continue
+		}
 		nrow++
 
 		desc := machrpc.TableTypeDescription(machrpc.TableType(typ), flg)
-		t.AppendRow(nrow, name, desc)
+		t.AppendRow(nrow, id, name, desc)
 	}
 	t.Render()
 }
