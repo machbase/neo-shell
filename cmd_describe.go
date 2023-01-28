@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 )
@@ -13,8 +14,20 @@ func init() {
 		Name:   "desc",
 		PcFunc: pcDescribe,
 		Action: doDescribe,
-		Desc:   "desc <table>",
+		Desc:   "describe table structure",
+		Usage:  helpDescribe,
 	})
+}
+
+const helpDescribe = `  desc [options] <table>
+  options:
+    --all,-a     show all hidden columns
+`
+
+type DescribeCmd struct {
+	Table   string `arg:"" name:"table"`
+	ShowAll bool   `name:"all" short:"a"`
+	Help    bool   `kong:"-"`
 }
 
 func pcDescribe(c Client) readline.PrefixCompleterInterface {
@@ -25,17 +38,33 @@ func pcDescribe(c Client) readline.PrefixCompleterInterface {
 }
 
 func doDescribe(cli Client, line string) {
-	object := line
-	if len(line) == 0 {
-		cli.Println("Usage: desc <table_name>")
+	cmd := &DescribeCmd{}
+	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
+		kong.Help(
+			func(options kong.HelpOptions, ctx *kong.Context) error {
+				cli.Println(helpDescribe)
+				cmd.Help = true
+				return nil
+			}))
+	if err != nil {
+		cli.Println("ERR", err.Error())
+		return
+	}
+	_, err = parser.Parse(splitFields(line, false))
+	if err != nil {
+		cli.Println("ERR", err.Error())
+		return
+	}
+
+	if cmd.Help {
 		return
 	}
 
 	db := cli.Database()
 
-	_desc, err := db.Describe(line)
+	_desc, err := db.Describe(cmd.Table)
 	if err != nil {
-		cli.Println("unable to describe", object, err.Error())
+		cli.Println("unable to describe", cmd.Table, err.Error())
 		return
 	}
 	desc := _desc.(*machrpc.TableDescription)
@@ -44,7 +73,7 @@ func doDescribe(cli Client, line string) {
 	cli.Println("TYPE    ", desc.TypeString())
 	if desc.Type == machrpc.TagTableType {
 		tags := []string{}
-		rows, err := db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(object)))
+		rows, err := db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(cmd.Table)))
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
@@ -61,10 +90,15 @@ func doDescribe(cli Client, line string) {
 		cli.Println("TAGS    ", strings.Join(tags, ", "))
 	}
 
-	box := cli.NewBox([]string{"#", "NAME", "TYPE", "LENGTH"})
-	for i, col := range desc.Columns {
+	nrow := 0
+	box := cli.NewBox([]string{"#", "ID", "NAME", "TYPE", "LENGTH"})
+	for _, col := range desc.Columns {
+		if !cmd.ShowAll && strings.HasPrefix(col.Name, "_") {
+			continue
+		}
+		nrow++
 		colType := machrpc.ColumnTypeDescription(col.Type)
-		box.AppendRow(i+1, col.Name, colType, col.Length)
+		box.AppendRow(nrow, col.Id, col.Name, colType, col.Length)
 	}
 
 	box.Render()
