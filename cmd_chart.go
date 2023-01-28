@@ -2,27 +2,19 @@ package shell
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	_ "embed"
-	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
-	"github.com/mum4k/termdash"
-	"github.com/mum4k/termdash/cell"
-	"github.com/mum4k/termdash/container"
-	"github.com/mum4k/termdash/keyboard"
-	"github.com/mum4k/termdash/linestyle"
-	"github.com/mum4k/termdash/terminal/tcell"
-	"github.com/mum4k/termdash/terminal/terminalapi"
-	"github.com/mum4k/termdash/widgets/linechart"
+	"github.com/machbase/neo-shell/api"
+	"github.com/machbase/neo-shell/internal/chartjs"
+	"github.com/machbase/neo-shell/internal/termchart"
 	"github.com/robfig/cron"
 )
 
@@ -102,71 +94,85 @@ func doChart(cli Client, line string) {
 		cmd.Timestamp = "now"
 	}
 
-	var writer io.Writer
-	switch cmd.Output {
-	case "-":
-		buf := bufio.NewWriter(cli.Stdout())
-		defer func() {
-			buf.Flush()
-		}()
-		writer = buf
-	default:
-		f, err := os.OpenFile(cmd.Output, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			cli.Println("ERR", err.Error())
-			return
-		}
-		buf := bufio.NewWriter(f)
-		defer func() {
-			buf.Flush()
-			f.Close()
-		}()
-		writer = buf
+	queries, err := buildDataQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, cli.TimeLocation())
+	if err != nil {
+		cli.Println("ERR", err.Error())
+		return
 	}
 
-	queries := make([]*DataQuery, len(cmd.TagPaths))
-	tz := cli.TimeLocation()
-	for i, path := range cmd.TagPaths {
-		// path는 <table>/<tag>#<column> 형식으로 구성된다.
-		toks := strings.SplitN(path, "/", 2)
-		if len(toks) == 2 {
-			queries[i] = &DataQuery{}
-			queries[i].table = toks[0]
-		} else {
-			cli.Printfln("table name not found in '%s'", path)
-			return
-		}
-		toks = strings.SplitN(toks[1], "#", 2)
-		if len(toks) == 2 {
-			queries[i].tag = toks[0]
-			queries[i].field = toks[1]
-		} else {
-			queries[i].tag = toks[0]
-			queries[i].field = "VALUE"
-		}
-
-		queries[i].rangeFunc = func() (time.Time, time.Time) {
-			var timestamp time.Time
-			if cmd.Timestamp == "now" {
-				timestamp = time.Now()
-			} else {
-				timeformat := "2006-01-02 15:04:05"
-				timestamp, err = time.ParseInLocation(timeformat, cmd.Timestamp, tz)
-				timestamp = timestamp.UTC()
-				if err != nil {
-					fmt.Println(err.Error())
-				}
+	openWriter := func() (io.Writer, func(), error) {
+		var writer io.Writer
+		var closer func()
+		switch cmd.Output {
+		case "-":
+			buf := bufio.NewWriter(cli.Stdout())
+			closer = func() {
+				buf.Flush()
 			}
-			return timestamp.Add(-1 * cmd.Range), timestamp
+			writer = buf
+		default:
+			f, err := os.OpenFile(cmd.Output, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+			if err != nil {
+				cli.Println("ERR", err.Error())
+				return nil, nil, err
+			}
+			buf := bufio.NewWriter(f)
+			closer = func() {
+				buf.Flush()
+				f.Close()
+			}
+			writer = buf
+		}
+		return writer, closer, nil
+	}
+
+	var renderer api.SeriesRenderer
+	switch cmd.Format {
+	default:
+		renderer = &termchart.Renderer{}
+		// termdash는 항상 tty를 사용해야하므로
+		// 별도의 output 설정이 의미 없음.
+		openWriter = nil
+		// termdash의 경우 refresh cycle이 cmd.Count에 도달하여
+		// 외부에서 close하는 경우 정상적으로 화면이 복구 되지 않는 문제가 있어
+		// Count를 무조건 0 (무한 루프)으로 강제 설정한다.
+		cmd.Count = 0
+	case "json":
+		renderer = &chartjs.JsonRenderer{}
+	case "html":
+		renderer = &chartjs.HtmlRenderer{
+			Options: chartjs.HtmlOptions{
+				Title:    cmd.HtmlTitle,
+				Subtitle: cmd.HtmlSubtitle,
+				Width:    cmd.HtmlWidth,
+				Height:   cmd.HtmlHeight,
+			},
 		}
 	}
 
-	dataCh := make(chan *DataSeries, 1)
+	var scheduler *cron.Cron
+	var quitCh = make(chan bool, 1)
+	var ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
 
 	runCount := 0
+	runCanceled := false
 	runner := func() {
+		var writer io.Writer
+		var closer func()
+		var closeOnce sync.Once
+		if openWriter != nil {
+			writer, closer, err = openWriter()
+			if err != nil {
+				cli.Println("ERR", err.Error())
+				return
+			}
+			defer closeOnce.Do(closer)
+		}
+
 		db := cli.Database()
 		tz := cli.TimeLocation()
+		series := []*api.SeriesData{}
 		// query
 		for _, dq := range queries {
 			if strings.ToUpper(dq.field) == "VALUE" {
@@ -201,58 +207,44 @@ func doChart(cli Client, line string) {
 				labels = append(labels, label)
 				idx++
 			}
-
-			dataCh <- &DataSeries{
+			series = append(series, &api.SeriesData{
 				Name:   dq.label,
 				Values: values,
 				Labels: labels,
-			}
-			runCount++
+			})
+		}
+		runCount++
 
-			if cmd.Count > 0 && cmd.Count <= runCount {
-				close(dataCh)
+		if err = renderer.Render(ctx, writer, series); err != nil {
+			runCanceled = true
+			if err != nil && err != api.ErrUserCancel {
+				cli.Println("ERR", err.Error())
 			}
+		}
+		if closer != nil {
+			closeOnce.Do(closer)
+		}
+		if runCanceled || cmd.Count > 0 && cmd.Count <= runCount {
+			quitCh <- true
 		}
 	}
 
-	var scheduler *cron.Cron
-	if cmd.Timestamp == "now" {
+	// run first round
+	runner()
+	// repeat ?
+	if cmd.Count != 1 && !runCanceled {
 		scheduler = cron.New()
-		err := scheduler.AddFunc(fmt.Sprintf("@every %s", cmd.Refresh.String()), runner)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		go scheduler.Run()
-
-		defer func() {
-			// stop scheduler
-			if scheduler != nil {
-				scheduler.Stop()
-			}
+		go func() {
+			<-quitCh
+			scheduler.Stop()
+			cancel()
 		}()
-	} else {
-		runner()
-	}
 
-	switch cmd.Format {
-	default: /*none*/
-		if err := chartTerm(dataCh, cmd.Refresh); err != nil {
-			cli.Println("ERR", err.Error())
+		if err := scheduler.AddFunc(fmt.Sprintf("@every %s", cmd.Refresh.String()), runner); err != nil {
+			fmt.Println(err.Error())
+			return
 		}
-	case "json":
-		if err := chartJson(writer, dataCh); err != nil {
-			cli.Println("ERR", err.Error())
-		}
-	case "html":
-		opt := ChartHtmlOptions{
-			Title:    cmd.HtmlTitle,
-			Subtitle: cmd.HtmlSubtitle,
-			Width:    cmd.HtmlWidth,
-			Height:   cmd.HtmlHeight,
-		}
-		if err := chartHtml(writer, dataCh, opt); err != nil {
-			cli.Println("ERR", err.Error())
-		}
+		scheduler.Run()
 	}
 }
 
@@ -264,198 +256,41 @@ type DataQuery struct {
 	label     string
 }
 
-type DataSeries struct {
-	Name   string
-	Values []float64
-	Labels []string
-}
-
-type ChartJsModel struct {
-	Type    string         `json:"type"`
-	Data    ChartJsData    `json:"data"`
-	Options ChartJsOptions `json:"options"`
-}
-
-type ChartJsData struct {
-	Labels   []string         `json:"labels"`
-	Datasets []ChartJsDataset `json:"datasets"`
-}
-
-type ChartJsDataset struct {
-	Label       string    `json:"label"`
-	Data        []float64 `json:"data"`
-	BorderWidth int       `json:"borderWidth"`
-}
-
-type ChartJsOptions struct {
-	Scales ChartJsScalesOption `json:"scales"`
-}
-
-type ChartJsScalesOption struct {
-	Y ChartJsScale `json:"y"`
-}
-
-type ChartJsScale struct {
-	BeginAtZero bool `json:"beginAtZero"`
-}
-
-func convertChartJsModel(data *DataSeries) (*ChartJsModel, error) {
-	cm := &ChartJsModel{}
-	cm.Type = "line"
-	cm.Data = ChartJsData{}
-	cm.Data.Labels = data.Labels
-	cm.Data.Datasets = []ChartJsDataset{
-		{
-			Label:       data.Name,
-			Data:        data.Values,
-			BorderWidth: 1,
-		},
-	}
-	cm.Options = ChartJsOptions{}
-	cm.Options.Scales = ChartJsScalesOption{
-		Y: ChartJsScale{BeginAtZero: false},
-	}
-	return cm, nil
-}
-
-func chartJson(writer io.Writer, dataChan <-chan *DataSeries) error {
-	for data := range dataChan {
-		model, err := convertChartJsModel(data)
-		if err != nil {
-			return err
+func buildDataQueries(tagPaths []string, cmdTimestamp string, cmdRange time.Duration, tz *time.Location) ([]*DataQuery, error) {
+	queries := make([]*DataQuery, len(tagPaths))
+	for i, path := range tagPaths {
+		// path는 <table>/<tag>#<column> 형식으로 구성된다.
+		toks := strings.SplitN(path, "/", 2)
+		if len(toks) == 2 {
+			queries[i] = &DataQuery{}
+			queries[i].table = toks[0]
+		} else {
+			return nil, fmt.Errorf("table name not found in '%s'", path)
 		}
-		buf, err := json.Marshal(model)
-		if err != nil {
-			return err
-		}
-		writer.Write(buf)
-	}
-	return nil
-}
-
-//go:embed cmd_chart.html
-var chartHtmlTemplate string
-
-type ChartHtmlVars struct {
-	ChartHtmlOptions
-	ChartData template.JS
-}
-
-type ChartHtmlOptions struct {
-	Title    string
-	Subtitle string
-	Width    string
-	Height   string
-}
-
-func chartHtml(writer io.Writer, dataChan <-chan *DataSeries, opt ChartHtmlOptions) error {
-	tmpl, err := template.New("chart_template").Parse(chartHtmlTemplate)
-	if err != nil {
-		fmt.Println(err.Error())
-		return err
-	}
-	for data := range dataChan {
-		model, err := convertChartJsModel(data)
-		if err != nil {
-			return err
-		}
-		dataJson, err := json.Marshal(model)
-		if err != nil {
-			fmt.Println(err.Error())
-			return err
+		toks = strings.SplitN(toks[1], "#", 2)
+		if len(toks) == 2 {
+			queries[i].tag = toks[0]
+			queries[i].field = toks[1]
+		} else {
+			queries[i].tag = toks[0]
+			queries[i].field = "VALUE"
 		}
 
-		buff := &bytes.Buffer{}
-		vars := &ChartHtmlVars{ChartHtmlOptions: opt}
-		vars.ChartData = template.JS(string(dataJson))
-		err = tmpl.Execute(buff, vars)
-		if err != nil {
-			fmt.Println(err.Error())
-			return err
-		}
-
-		writer.Write(buff.Bytes())
-	}
-	return nil
-}
-
-func chartTerm(dataChan <-chan *DataSeries, refresh time.Duration) error {
-	// make terminal interface
-	term, err := tcell.New()
-	if err != nil {
-		return err
-	}
-	defer term.Close()
-
-	// line chart
-	lchart, err := linechart.New(
-		linechart.AxesCellOpts(cell.FgColor(cell.ColorRed)),
-		linechart.YLabelCellOpts(cell.FgColor(cell.ColorGreen)),
-		linechart.XLabelCellOpts(cell.FgColor(cell.ColorCyan)),
-	)
-	if err != nil {
-		return err
-	}
-
-	// terminal container
-	cont, err := container.New(
-		term,
-		container.Border(linestyle.Light),
-		container.BorderTitle("ESC to quit"),
-		container.PlaceWidget(lchart),
-	)
-	if err != nil {
-		return err
-	}
-	// context
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		for {
-			select {
-			case data := <-dataChan:
-				if data == nil {
-					cancel()
-					return
-				}
-				xlabels := make(map[int]string)
-				for i, n := range data.Labels {
-					xlabels[i] = n
-				}
-				err = lchart.Series(
-					data.Name,
-					data.Values,
-					linechart.SeriesCellOpts(cell.FgColor(cell.ColorNumber(33))),
-					linechart.SeriesXLabels(xlabels),
-				)
+		queries[i].rangeFunc = func() (time.Time, time.Time) {
+			var timestamp time.Time
+			var err error
+			if cmdTimestamp == "now" {
+				timestamp = time.Now()
+			} else {
+				timeformat := "2006-01-02 15:04:05"
+				timestamp, err = time.ParseInLocation(timeformat, cmdTimestamp, tz)
+				timestamp = timestamp.UTC()
 				if err != nil {
 					fmt.Println(err.Error())
-					return
 				}
-			case <-ctx.Done():
-				cancel()
-				return
 			}
-		}
-	}()
-
-	quitter := func(k *terminalapi.Keyboard) {
-		if k.Key == keyboard.KeyEsc {
-			// stop ui
-			cancel()
+			return timestamp.Add(-1 * cmdRange), timestamp
 		}
 	}
-
-	if refresh < time.Second {
-		refresh = time.Second
-	}
-	termOpts := []termdash.Option{
-		termdash.KeyboardSubscriber(quitter),
-		termdash.RedrawInterval(refresh),
-	}
-	if err := termdash.Run(ctx, term, cont, termOpts...); err != nil {
-		return err
-	}
-	return nil
+	return queries, nil
 }
