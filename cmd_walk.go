@@ -26,13 +26,14 @@ func init() {
 
 const helpWalk = ` walk [options] <sql query>
   options:
+     --[no-]rownum        show rownum
+     --precision <int>    precision for float values
      --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'ns')
        ns, us, ms, s
          represents unix epoch time in nano-, micro-, milli- and seconds for each
        timeformat
          consult "help timeformat"
-     --tz                  timezone for handling datetime
-     --[no-]heading        print header`
+     --tz                  timezone for handling datetime`
 
 type WalkCmd struct {
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
@@ -67,7 +68,7 @@ func doWalk(cc Client, cmdLine string) {
 	sqlText := stripQuote(strings.Join(cmd.Query, " "))
 	db := cc.Database()
 
-	walker, err := NewWalker(sqlText, db, GetTimeformat(cmd.Timeformat), cmd.TimeLocation)
+	walker, err := NewWalker(sqlText, db, GetTimeformat(cmd.Timeformat), cmd.TimeLocation, cmd.Precision)
 	if err != nil {
 		cc.Println("ERR", err.Error())
 		return
@@ -110,15 +111,17 @@ type Walker struct {
 	fetchSize  int
 	tz         *time.Location
 	timeformat string
+	precision  int
 }
 
-func NewWalker(sqlText string, client *machrpc.Client, timeformat string, tz *time.Location) (*Walker, error) {
+func NewWalker(sqlText string, client *machrpc.Client, timeformat string, tz *time.Location, precision int) (*Walker, error) {
 	w := &Walker{
 		sqlText:    sqlText,
 		db:         client,
 		fetchSize:  400,
 		timeformat: timeformat,
 		tz:         tz,
+		precision:  precision,
 	}
 	return w, w.Reload()
 }
@@ -215,7 +218,7 @@ func (w *Walker) fetchMore() {
 			return
 		}
 
-		values := makeValues(buffer, w.tz, w.timeformat, -1)
+		values := makeValues(buffer, w.tz, w.timeformat, w.precision)
 		w.values = append(w.values, append([]string{strconv.Itoa(nrows + count)}, values...))
 
 		count++

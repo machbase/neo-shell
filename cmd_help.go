@@ -22,6 +22,8 @@ func pcHelp(cli Client) readline.PrefixCompleterInterface {
 		for k := range commands {
 			lst = append(lst, k)
 		}
+		lst = append(lst, "timeformat")
+		lst = append(lst, "exit")
 		return lst
 	}))
 }

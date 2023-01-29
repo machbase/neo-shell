@@ -43,7 +43,7 @@ type ExportCmd struct {
 	Format       string         `name:"format" short:"f" default:"csv"`
 	Header       bool           `name:"header" negatable:""`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
-	TimeFormat   string         `name:"timeFormat" short:"t" default:"ns"`
+	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Help         bool           `kong:"-"`
 }
