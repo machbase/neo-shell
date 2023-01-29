@@ -38,7 +38,7 @@ const helpSql string = `  sql [options] <query>
       json       json format
     --delimiter,-d       csv delimiter (default:',')
     --[no-]rownum        include rownum as first column (default:true)
-    --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'ns')
+    --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'default')
       ns, us, ms, s
         represents unix epoch time in nano-, micro-, milli- and seconds for each
       timeformat
@@ -51,10 +51,10 @@ type SqlCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:"" default:"true"`
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Format       string         `name:"format" default:"-" enum:"-,csv,json"`
+	Format       string         `name:"format" short:"f" default:"-" enum:"-,csv,json"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
-	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
+	TimeFormat   string         `name:"timeformat" short:"t" default:"default"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Interactive  bool           `kong:"-"`
 	Help         bool           `kong:"-"`
@@ -131,7 +131,7 @@ func doSql(cc Client, cmdLine string) {
 	var renderCtx = &api.RowsContext{
 		Writer:       writer,
 		TimeLocation: cmd.TimeLocation,
-		TimeFormat:   cmd.TimeFormat,
+		TimeFormat:   GetTimeformat(cmd.TimeFormat),
 		Precision:    cmd.Precision,
 		Rownum:       cmd.Rownum,
 		Heading:      cmd.Heading,
@@ -275,7 +275,7 @@ func (cli *client) pauseForMore() bool {
 	return true
 }
 
-func makeValues(rec []any, tz *time.Location, precision int) []string {
+func makeValues(rec []any, tz *time.Location, timeformat string, precision int) []string {
 	cols := make([]string, len(rec))
 	for i, r := range rec {
 		if r == nil {
@@ -286,7 +286,6 @@ func makeValues(rec []any, tz *time.Location, precision int) []string {
 		case *string:
 			cols[i] = *v
 		case *time.Time:
-			timeformat := "2006-01-02 15:04:05.000000"
 			cols[i] = v.In(tz).Format(timeformat)
 		case *float64:
 			if precision < 0 {

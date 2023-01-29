@@ -3,6 +3,7 @@ package out_json
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/machbase/neo-shell/api"
 )
@@ -46,8 +47,35 @@ func (ex *Exporter) PageFlush(heading bool) {
 	ex.flush()
 }
 
-func (ex *Exporter) RenderRow(values []any) error {
+func (ex *Exporter) RenderRow(source []any) error {
 	ex.nrow++
+
+	if ex.ctx.TimeLocation == nil {
+		ex.ctx.TimeLocation = time.UTC
+	}
+
+	values := make([]any, len(source))
+	for i, field := range source {
+		values[i] = field
+		if v, ok := field.(*time.Time); ok {
+			switch ex.ctx.TimeFormat {
+			case "ns":
+				values[i] = v.UnixNano()
+			case "ms":
+				values[i] = v.UnixMilli()
+			case "us":
+				values[i] = v.UnixMicro()
+			case "s":
+				values[i] = v.Unix()
+			default:
+				if ex.ctx.TimeLocation == nil {
+					ex.ctx.TimeLocation = time.UTC
+				}
+				values[i] = v.In(ex.ctx.TimeLocation).Format(ex.ctx.TimeFormat)
+			}
+			continue
+		}
+	}
 	var recJson []byte
 	if ex.ctx.Rownum {
 		vs := append([]any{ex.nrow}, values...)

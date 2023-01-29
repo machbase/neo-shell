@@ -104,9 +104,6 @@ func (ex *Exporter) RenderRow(values []any) error {
 				if ex.ctx.TimeLocation == nil {
 					ex.ctx.TimeLocation = time.UTC
 				}
-				if ex.ctx.TimeFormat == "-" {
-					ex.ctx.TimeFormat = "2006-01-02 15:04:05.000"
-				}
 				cols[i] = v.In(ex.ctx.TimeLocation).Format(ex.ctx.TimeFormat)
 			}
 		case *float64:

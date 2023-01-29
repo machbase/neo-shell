@@ -36,7 +36,7 @@ const helpWalk = ` walk [options] <sql query>
 
 type WalkCmd struct {
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
+	Timeformat   string         `name:"timeformat" short:"t" default:"default"`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Help         bool           `kong:"-"`
@@ -67,7 +67,7 @@ func doWalk(cc Client, cmdLine string) {
 	sqlText := stripQuote(strings.Join(cmd.Query, " "))
 	db := cc.Database()
 
-	walker, err := NewWalker(sqlText, db, cmd.TimeLocation)
+	walker, err := NewWalker(sqlText, db, GetTimeformat(cmd.Timeformat), cmd.TimeLocation)
 	if err != nil {
 		cc.Println("ERR", err.Error())
 		return
@@ -100,23 +100,25 @@ func doWalk(cc Client, cmdLine string) {
 
 type Walker struct {
 	tview.TableContentReadOnly
-	sqlText   string
-	db        *machrpc.Client
-	mutex     sync.Mutex
-	rows      *machrpc.Rows
-	cols      []*machrpc.Column
-	values    [][]string
-	eof       bool
-	fetchSize int
-	tz        *time.Location
+	sqlText    string
+	db         *machrpc.Client
+	mutex      sync.Mutex
+	rows       *machrpc.Rows
+	cols       []*machrpc.Column
+	values     [][]string
+	eof        bool
+	fetchSize  int
+	tz         *time.Location
+	timeformat string
 }
 
-func NewWalker(sqlText string, client *machrpc.Client, tz *time.Location) (*Walker, error) {
+func NewWalker(sqlText string, client *machrpc.Client, timeformat string, tz *time.Location) (*Walker, error) {
 	w := &Walker{
-		sqlText:   sqlText,
-		db:        client,
-		fetchSize: 400,
-		tz:        tz,
+		sqlText:    sqlText,
+		db:         client,
+		fetchSize:  400,
+		timeformat: timeformat,
+		tz:         tz,
 	}
 	return w, w.Reload()
 }
@@ -213,7 +215,7 @@ func (w *Walker) fetchMore() {
 			return
 		}
 
-		values := makeValues(buffer, w.tz, -1)
+		values := makeValues(buffer, w.tz, w.timeformat, -1)
 		w.values = append(w.values, append([]string{strconv.Itoa(nrows + count)}, values...))
 
 		count++

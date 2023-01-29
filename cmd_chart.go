@@ -34,6 +34,11 @@ const helpChart = `  chart [options] <tag_path>...
                    '#<column>' part can be omitted for default '#value' ex) mytable/sensor
   options:
     --tz                     timezone for handling datetime
+    --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'default')
+      ns, us, ms, s
+        represents unix epoch time in nano-, micro-, milli- and seconds for each
+      timeformat
+        consult "help timeformat"    
     --time  <time>           base time, now or time string in format "2023-02-03 13:20:30" (default: now)
     --range <duration>       time range of data, from time specified by '--time' (default: 1m)
     --refresh,-r <duration>  refresh period (default: 0)
@@ -53,6 +58,7 @@ const helpChart = `  chart [options] <tag_path>...
 type ChartCmd struct {
 	TagPaths     []string       `arg:"" name:"tags"`
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	Timeformat   string         `name:"timeformat" default:"default"`
 	Range        time.Duration  `name:"range" default:"1m"`
 	Timestamp    string         `name:"time" default:"now"`
 	Refresh      time.Duration  `name:"refresh" short:"r" default:"0"`
@@ -95,7 +101,7 @@ func doChart(cli Client, line string) {
 		cmd.Timestamp = "now"
 	}
 
-	queries, err := buildDataQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, cmd.TimeLocation)
+	queries, err := buildDataQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, GetTimeformat(cmd.Timeformat), cmd.TimeLocation)
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
@@ -257,7 +263,7 @@ type DataQuery struct {
 	label     string
 }
 
-func buildDataQueries(tagPaths []string, cmdTimestamp string, cmdRange time.Duration, tz *time.Location) ([]*DataQuery, error) {
+func buildDataQueries(tagPaths []string, cmdTimestamp string, cmdRange time.Duration, timeformat string, tz *time.Location) ([]*DataQuery, error) {
 	queries := make([]*DataQuery, len(tagPaths))
 	for i, path := range tagPaths {
 		// path는 <table>/<tag>#<column> 형식으로 구성된다.
@@ -283,7 +289,6 @@ func buildDataQueries(tagPaths []string, cmdTimestamp string, cmdRange time.Dura
 			if cmdTimestamp == "now" {
 				timestamp = time.Now()
 			} else {
-				timeformat := "2006-01-02 15:04:05"
 				timestamp, err = time.ParseInLocation(timeformat, cmdTimestamp, tz)
 				timestamp = timestamp.UTC()
 				if err != nil {
