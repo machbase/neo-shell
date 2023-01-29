@@ -3,7 +3,6 @@ package shell
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strings"
@@ -11,6 +10,10 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-shell/api"
+	"github.com/machbase/neo-shell/internal/out_csv"
+	"github.com/machbase/neo-shell/internal/out_default"
+	"github.com/machbase/neo-shell/internal/out_json"
 	"golang.org/x/term"
 )
 
@@ -40,7 +43,7 @@ const helpSql string = `  sql [options] <query>
         represents unix epoch time in nano-, micro-, milli- and seconds for each
       timeformat
         consult "help timeformat"
-   --tz                  timezone for handling datetime
+    --tz                  timezone for handling datetime
     --[no-]heading        print header
     --precision,-p <int>  set precision of float value to force round`
 
@@ -51,7 +54,7 @@ type SqlCmd struct {
 	Format       string         `name:"format" default:"-" enum:"-,csv,json"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
-	TimeFormat   string         `name:"timeFormat" short:"t" default:"ns"`
+	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Interactive  bool           `kong:"-"`
 	Help         bool           `kong:"-"`
@@ -101,7 +104,7 @@ func doSql(cc Client, cmdLine string) {
 		return
 	}
 
-	var writer io.Writer
+	var writer *bufio.Writer
 	switch cmd.Output {
 	case "-":
 		cmd.Interactive = cc.Interactive()
@@ -125,16 +128,90 @@ func doSql(cc Client, cmdLine string) {
 		writer = buf
 	}
 
+	var renderCtx = &api.RowsContext{
+		Writer:       writer,
+		TimeLocation: cmd.TimeLocation,
+		TimeFormat:   cmd.TimeFormat,
+		Precision:    cmd.Precision,
+		Rownum:       cmd.Rownum,
+		Heading:      cmd.Heading,
+	}
+	var renderer api.RowsRenderer
 	switch cmd.Format {
 	default:
-		cli.exportRowsNone(writer, rows, cmd)
+		renderCtx.HeaderHeight = 4
+		renderer = &out_default.Exporter{
+			Style:           "light",
+			SeparateColumns: cmd.Interactive,
+			DrawBorder:      cmd.Interactive,
+		}
 	case "csv":
-		cli.exportRowsCsv(writer, rows, cmd)
+		renderCtx.HeaderHeight = 1
+		exporter := &out_csv.Exporter{}
+		exporter.SetDelimiter(cmd.Delimiter)
+		renderer = exporter
 	case "json":
-		cli.exportRowsJson(writer, rows, cmd)
-	case "chart.js":
-		cli.exportRowsChartJs(writer, rows, cmd)
+		renderCtx.HeaderHeight = 0
+		renderer = &out_json.Exporter{}
 	}
+	if renderer == nil {
+		return
+	}
+
+	if err := cli.exportRows(renderCtx, rows, renderer, cmd.Interactive); err != nil {
+		cli.Println("ERR", err.Error())
+	}
+}
+
+func (cli *client) exportRows(ctx *api.RowsContext, rows *machrpc.Rows, renderer api.RowsRenderer, interactive bool) error {
+	cols, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	windowHeight := 0
+	if interactive && term.IsTerminal(0) {
+		if _, height, err := term.GetSize(0); err == nil {
+			windowHeight = height
+		}
+	}
+	pageHeight := windowHeight - 1
+	if ctx.Heading {
+		pageHeight -= ctx.HeaderHeight
+	}
+	nextPauseRow := pageHeight
+
+	ctx.ColumnNames = cli.columnNames(cols, ctx.TimeLocation, false)
+	ctx.ColumnTypes = cli.columnTypes(cols, false)
+
+	renderer.OpenRender(ctx)
+	defer renderer.CloseRender()
+
+	buf := makeBuffer(cols)
+	nrow := 0
+	for rows.Next() {
+		err := rows.Scan(buf...)
+		if err != nil {
+			cli.Println("ERR", err.Error())
+			return err
+		}
+		nrow++
+
+		renderer.RenderRow(buf)
+
+		if nextPauseRow > 0 && nextPauseRow == nrow {
+			nextPauseRow += pageHeight
+			renderer.PageFlush(ctx.Heading)
+			if !cli.pauseForMore() {
+				return nil
+			}
+		}
+
+		if nextPauseRow <= 0 && nrow%1000 == 0 {
+			renderer.PageFlush(false)
+		}
+	}
+	return nil
 }
 
 func (cli *client) columnNames(cols []*machrpc.Column, tz *time.Location, withRowNum bool) []string {

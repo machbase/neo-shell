@@ -36,7 +36,7 @@ const helpWalk = ` walk [options] <sql query>
 
 type WalkCmd struct {
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	TimeFormat   string         `name:"timeFormat" short:"t" default:"ns"`
+	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Help         bool           `kong:"-"`

@@ -1,4 +1,4 @@
-package termchart
+package ser_termchart
 
 import (
 	"context"

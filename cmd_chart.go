@@ -12,8 +12,8 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-shell/api"
-	"github.com/machbase/neo-shell/internal/chartjs"
-	"github.com/machbase/neo-shell/internal/termchart"
+	"github.com/machbase/neo-shell/internal/ser_chartjs"
+	"github.com/machbase/neo-shell/internal/ser_termchart"
 	"github.com/robfig/cron"
 )
 
@@ -130,7 +130,7 @@ func doChart(cli Client, line string) {
 	var renderer api.SeriesRenderer
 	switch cmd.Format {
 	default:
-		renderer = &termchart.Renderer{}
+		renderer = &ser_termchart.Renderer{}
 		// termdash는 항상 tty를 사용해야하므로
 		// 별도의 output 설정이 의미 없음.
 		openWriter = nil
@@ -139,10 +139,10 @@ func doChart(cli Client, line string) {
 		// Count를 무조건 0 (무한 루프)으로 강제 설정한다.
 		cmd.Count = 0
 	case "json":
-		renderer = &chartjs.JsonRenderer{}
+		renderer = &ser_chartjs.JsonRenderer{}
 	case "html":
-		renderer = &chartjs.HtmlRenderer{
-			Options: chartjs.HtmlOptions{
+		renderer = &ser_chartjs.HtmlRenderer{
+			Options: ser_chartjs.HtmlOptions{
 				Title:    cmd.HtmlTitle,
 				Subtitle: cmd.HtmlSubtitle,
 				Width:    cmd.HtmlWidth,
