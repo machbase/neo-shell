@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 	"github.com/machbase/cemlib/util"
 	"github.com/machbase/neo-grpc/machrpc"
@@ -21,10 +20,11 @@ func init() {
 	})
 }
 
-const helpShow = `  show [options] tables      list tables
-    options:
-      --all,-a       show all hidden tables
-  show info                  runtime info of server`
+const helpShow = `  show [options] <command>
+  commands:
+    info             show server info
+    tables           list tables
+      --all,-a       includes all hidden tables`
 
 type ShowCmd struct {
 	Info   struct{} `cmd:""`
@@ -43,24 +43,18 @@ func pcShow(c Client) readline.PrefixCompleterInterface {
 
 func doShow(cc Client, line string) {
 	cmd := &ShowCmd{}
-	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
-		kong.Help(
-			func(options kong.HelpOptions, ctx *kong.Context) error {
-				cc.Println(helpShow)
-				cmd.Help = true
-				return nil
-			}))
+
+	parser, err := Kong(cmd, func() error { cc.Println(helpShow); cmd.Help = true; return nil })
 	if err != nil {
 		cc.Println("ERR", err.Error())
 		return
 	}
 	ctx, err := parser.Parse(splitFields(line, false))
-	if err != nil {
-		cc.Println("ERR", err.Error())
+	if cmd.Help {
 		return
 	}
-
-	if cmd.Help {
+	if err != nil {
+		cc.Println("ERR", err.Error())
 		return
 	}
 

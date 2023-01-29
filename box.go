@@ -19,17 +19,17 @@ type Box interface {
 }
 
 func (cli *client) NewCompactBox(header []string) Box {
-	return cli.newBox(header, true, cli.conf.Stdout)
+	return cli.newBox(header, true, true, "-", cli.conf.Stdout)
 }
 
 func (cli *client) NewBox(header []string) Box {
-	return cli.newBox(header, false, cli.conf.Stdout)
+	return cli.newBox(header, false, true, "-", cli.conf.Stdout)
 }
 
-func (cli *client) newBox(header []string, compact bool, mirror io.Writer) Box {
+func (cli *client) newBox(header []string, compact bool, heading bool, format string, mirror io.Writer) Box {
 	b := &box{
 		w:      table.NewWriter(),
-		format: cli.conf.Format,
+		format: format,
 	}
 	b.w.SetOutputMirror(mirror)
 
@@ -53,7 +53,7 @@ func (cli *client) newBox(header []string, compact bool, mirror io.Writer) Box {
 	}
 	b.w.SetStyle(style)
 
-	if cli.conf.Heading {
+	if heading {
 		vs := make([]any, len(header))
 		for i, h := range header {
 			vs[i] = h

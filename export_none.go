@@ -14,9 +14,9 @@ func (cli *client) exportRowsNone(writer io.Writer, rows *machrpc.Rows, cmd *Sql
 		return
 	}
 	buf := makeBuffer(cols)
-	names := cli.columnNames(cols, cmd.Rownum)
+	names := cli.columnNames(cols, cmd.TimeLocation, cmd.Rownum)
 
-	box := cli.newBox(names, !cmd.Interactive, writer)
+	box := cli.newBox(names, !cmd.Interactive, cmd.Heading, cmd.Format, writer)
 	windowHeight := 0
 	if term.IsTerminal(0) {
 		if _, height, err := term.GetSize(0); err == nil {
@@ -25,7 +25,7 @@ func (cli *client) exportRowsNone(writer io.Writer, rows *machrpc.Rows, cmd *Sql
 	}
 
 	pageHeight := windowHeight - 4
-	if cli.conf.Heading {
+	if cmd.Heading {
 		pageHeight--
 	}
 
@@ -42,7 +42,7 @@ func (cli *client) exportRowsNone(writer io.Writer, rows *machrpc.Rows, cmd *Sql
 			return
 		}
 		nrow++
-		vs := makeValues(buf, cli.TimeLocation(), cmd.Precision)
+		vs := makeValues(buf, cmd.TimeLocation, cmd.Precision)
 		values := make([]any, len(vs)+1)
 		values[0] = nrow
 		for i := range vs {

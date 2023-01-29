@@ -12,7 +12,7 @@ func init() {
 		Name:   "help",
 		PcFunc: pcHelp,
 		Action: doHelp,
-		Desc:   "display this message, use 'help [command]'",
+		Desc:   "Display this message, use 'help [command]'",
 	})
 }
 
@@ -41,6 +41,11 @@ func doHelp(cli Client, line string) {
 			}
 			return
 		}
+		switch fields[0] {
+		case "timeformat":
+			helpTimeFormat(cli)
+			return
+		}
 	}
 	cli.Println("commands")
 	keys := make([]string, 0, len(commands))
@@ -59,5 +64,17 @@ func doHelp(cli Client, line string) {
 		cmd := commands[k]
 		cli.Printfln("    %-*s %s", 10, cmd.Name, cmd.Desc)
 	}
-	cli.Printfln("    %-*s %s", 10, "exit", "exit shell")
+	cli.Printfln("    %-*s %s", 10, "exit", "Exit shell")
+}
+
+func helpTimeFormat(cli Client) {
+	cli.Println(`
+  date-time-format  ex) '2006-01-02 15:04:05.999'
+     year   2006
+     month  01
+     day    02
+     hour   03 or 15
+     minute 04
+     second 05 or with sub-seconds '05.999999'
+`)
 }

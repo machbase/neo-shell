@@ -7,7 +7,8 @@ func init() {
 		Name:   "explain",
 		PcFunc: pcExplain,
 		Action: doExplain,
-		Desc:   "explain <sql>",
+		Desc:   "Display execution plan of query",
+		Usage:  "  explain <query>",
 	})
 }
 

@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-shell/api"
 	"github.com/machbase/neo-shell/internal/chartjs"
@@ -34,6 +33,7 @@ const helpChart = `  chart [options] <tag_path>...
                    since all tag tables have 'value' column,
                    '#<column>' part can be omitted for default '#value' ex) mytable/sensor
   options:
+    --tz                     timezone for handling datetime
     --time  <time>           base time, now or time string in format "2023-02-03 13:20:30" (default: now)
     --range <duration>       time range of data, from time specified by '--time' (default: 1m)
     --refresh,-r <duration>  refresh period (default: 0)
@@ -51,17 +51,19 @@ const helpChart = `  chart [options] <tag_path>...
     --html-subtitle <title>  sub title text for html output (default:"")`
 
 type ChartCmd struct {
-	TagPaths     []string      `arg:"" name:"tags"`
-	Range        time.Duration `name:"range" default:"1m"`
-	Timestamp    string        `name:"time" default:"now"`
-	Refresh      time.Duration `name:"refresh" short:"r" default:"0"`
-	Count        int           `name:"count" short:"n" default:"0"`
-	Output       string        `name:"output" short:"o" default:"-"`
-	Format       string        `name:"format" short:"f" enum:"none,json,html" default:"none"`
-	HtmlTitle    string        `name:"html-title" default:"Chart"`
-	HtmlSubtitle string        `name:"html-subtitle" default:""`
-	HtmlWidth    string        `name:"html-width" default:"1600"`
-	HtmlHeight   string        `name:"html-height" default:"900"`
+	TagPaths     []string       `arg:"" name:"tags"`
+	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	Range        time.Duration  `name:"range" default:"1m"`
+	Timestamp    string         `name:"time" default:"now"`
+	Refresh      time.Duration  `name:"refresh" short:"r" default:"0"`
+	Count        int            `name:"count" short:"n" default:"0"`
+	Output       string         `name:"output" short:"o" default:"-"`
+	Format       string         `name:"format" short:"f" enum:"none,json,html" default:"none"`
+	HtmlTitle    string         `name:"html-title" default:"Chart"`
+	HtmlSubtitle string         `name:"html-subtitle" default:""`
+	HtmlWidth    string         `name:"html-width" default:"1600"`
+	HtmlHeight   string         `name:"html-height" default:"900"`
+	Help         bool           `kong:"-"`
 }
 
 func pcChart(cli Client) readline.PrefixCompleterInterface {
@@ -70,16 +72,15 @@ func pcChart(cli Client) readline.PrefixCompleterInterface {
 
 func doChart(cli Client, line string) {
 	cmd := &ChartCmd{}
-	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
-		kong.Help(func(options kong.HelpOptions, ctx *kong.Context) error {
-			cli.Println(helpChart)
-			return nil
-		}))
+	parser, err := Kong(cmd, func() error { cli.Println(helpSql); cmd.Help = true; return nil })
 	if err != nil {
 		cli.Println(err.Error())
 		return
 	}
 	_, err = parser.Parse(splitFields(line, true))
+	if cmd.Help {
+		return
+	}
 	if err != nil {
 		cli.Println(err.Error())
 		return
@@ -94,7 +95,7 @@ func doChart(cli Client, line string) {
 		cmd.Timestamp = "now"
 	}
 
-	queries, err := buildDataQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, cli.TimeLocation())
+	queries, err := buildDataQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, cmd.TimeLocation)
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
@@ -171,7 +172,7 @@ func doChart(cli Client, line string) {
 		}
 
 		db := cli.Database()
-		tz := cli.TimeLocation()
+		tz := cmd.TimeLocation
 		series := []*api.SeriesData{}
 		// query
 		for _, dq := range queries {

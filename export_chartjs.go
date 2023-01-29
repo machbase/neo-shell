@@ -14,7 +14,7 @@ func (cli *client) exportRowsChartJs(writer io.Writer, rows *machrpc.Rows, cmd *
 		cli.Println("ERR", err.Error())
 		return
 	}
-	names := cli.columnNames(cols, cmd.Rownum)
+	names := cli.columnNames(cols, cmd.TimeLocation, cmd.Rownum)
 	columnsJson, _ := json.Marshal(names)
 	types := cli.columnTypes(cols, cmd.Rownum)
 	typesJson, _ := json.Marshal(types)

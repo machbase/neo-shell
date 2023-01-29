@@ -25,7 +25,7 @@ func (cli *client) exportRowsCsv(writer io.Writer, rows *machrpc.Rows, cmd *SqlC
 	}
 	pageHeight := windowHeight - 1
 	nextPauseRow := pageHeight
-	if cli.conf.Heading {
+	if cmd.Heading {
 		nextPauseRow--
 	}
 
@@ -33,8 +33,9 @@ func (cli *client) exportRowsCsv(writer io.Writer, rows *machrpc.Rows, cmd *SqlC
 	csvWriter.Comma, _ = utf8.DecodeRuneInString(cmd.Delimiter)
 	defer csvWriter.Flush()
 
-	if cli.conf.Heading {
-		names := cli.columnNames(cols, cmd.Rownum)
+	if cmd.Heading {
+		names := cli.columnNames(cols, cmd.TimeLocation, cmd.Rownum)
+		// TODO check return error, if csvWritter.Comma is not valid
 		csvWriter.Write(names)
 	}
 
@@ -51,7 +52,7 @@ func (cli *client) exportRowsCsv(writer io.Writer, rows *machrpc.Rows, cmd *SqlC
 		}
 		nrow++
 
-		vs := makeCsvValues(buf, cli.TimeLocation(), cmd.TimeFormat, cmd.Precision)
+		vs := makeCsvValues(buf, cmd.TimeLocation, cmd.TimeFormat, cmd.Precision)
 		if cmd.Rownum {
 			vs = append([]string{strconv.Itoa(nrow)}, vs...)
 		}

@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
@@ -35,16 +34,17 @@ type Client interface {
 	Stderr() io.Writer
 
 	Database() *machrpc.Client
-	TimeLocation() *time.Location
 }
 
 var Formats = struct {
 	Default string
 	CSV     string
+	JSON    string
 	Parse   func(string) string
 }{
 	Default: "-",
 	CSV:     "csv",
+	JSON:    "json",
 	Parse: func(str string) string {
 		switch str {
 		default:
@@ -64,9 +64,6 @@ type Config struct {
 	PromptCont   string
 	HistoryFile  string
 	VimMode      bool
-	Heading      bool
-	TimeLocation *time.Location
-	Format       string
 	BoxStyle     string
 	QueryTimeout time.Duration
 	Lang         language.Tag
@@ -88,16 +85,15 @@ func DefaultConfig() *Config {
 		PromptCont:   "\033[37m>\033[0m  ",
 		HistoryFile:  "/tmp/readline.tmp",
 		VimMode:      false,
-		Heading:      true,
 		QueryTimeout: 30 * time.Second,
 		Lang:         language.English,
 	}
 }
 
-func (c *Config) TimeZone() string {
-	zone, _ := time.Now().In(c.TimeLocation).Zone()
-	return zone
-}
+// func (c *Config) TimeZone() string {
+// 	zone, _ := time.Now().In(c.TimeLocation).Zone()
+// 	return zone
+// }
 
 func New(conf *Config, interactive bool) Client {
 	return &client{
@@ -127,10 +123,6 @@ func (cli *client) Stop() {
 
 func (cli *client) Database() *machrpc.Client {
 	return cli.db
-}
-
-func (cli *client) TimeLocation() *time.Location {
-	return cli.conf.TimeLocation
 }
 
 func (cli *client) Run(command string) {
@@ -284,46 +276,6 @@ func (cli *client) listTables() func(string) []string {
 		}
 		return rt
 	}
-}
-
-func splitFields(line string, stripQuote bool) []string {
-	lastQuote := rune(0)
-	f := func(c rune) bool {
-		switch {
-		case c == lastQuote:
-			lastQuote = rune(0)
-			return false
-		case lastQuote != rune(0):
-			return false
-		case unicode.In(c, unicode.Quotation_Mark):
-			lastQuote = c
-			return false
-		default:
-			return unicode.IsSpace(c)
-		}
-	}
-	fields := strings.FieldsFunc(line, f)
-
-	if stripQuote {
-		for i, f := range fields {
-			c := []rune(f)[0]
-			if unicode.In(c, unicode.Quotation_Mark) {
-				fields[i] = strings.Trim(f, string(c))
-			}
-		}
-	}
-	return fields
-}
-
-func stripQuote(str string) string {
-	if len(str) == 0 {
-		return str
-	}
-	c := []rune(str)[0]
-	if unicode.In(c, unicode.Quotation_Mark) {
-		return strings.Trim(str, string(c))
-	}
-	return str
 }
 
 func (cli *client) bytesUnit(v uint64) string {

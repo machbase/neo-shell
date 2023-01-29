@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 )
@@ -39,24 +38,18 @@ func pcDescribe(c Client) readline.PrefixCompleterInterface {
 
 func doDescribe(cli Client, line string) {
 	cmd := &DescribeCmd{}
-	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
-		kong.Help(
-			func(options kong.HelpOptions, ctx *kong.Context) error {
-				cli.Println(helpDescribe)
-				cmd.Help = true
-				return nil
-			}))
+
+	parser, err := Kong(cmd, func() error { cli.Println(helpDescribe); cmd.Help = true; return nil })
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
 	}
 	_, err = parser.Parse(splitFields(line, false))
-	if err != nil {
-		cli.Println("ERR", err.Error())
+	if cmd.Help {
 		return
 	}
-
-	if cmd.Help {
+	if err != nil {
+		cli.Println("ERR", err.Error())
 		return
 	}
 
@@ -64,7 +57,7 @@ func doDescribe(cli Client, line string) {
 
 	_desc, err := db.Describe(cmd.Table)
 	if err != nil {
-		cli.Println("unable to describe", cmd.Table, err.Error())
+		cli.Println("unable to describe", cmd.Table, "; ERR", err.Error())
 		return
 	}
 	desc := _desc.(*machrpc.TableDescription)

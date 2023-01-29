@@ -20,25 +20,56 @@ func init() {
 		PcFunc: pcWalk,
 		Action: doWalk,
 		Desc:   "Execute query then walk-through the results",
-		Usage:  "  walk <sql query>",
+		Usage:  helpWalk,
 	})
 }
 
-func pcWalk(c Client) readline.PrefixCompleterInterface {
-	return readline.PcItem("walk")
+const helpWalk = ` walk [options] <sql query>
+  options:
+     --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'ns')
+       ns, us, ms, s
+         represents unix epoch time in nano-, micro-, milli- and seconds for each
+       timeformat
+         consult "help timeformat"
+     --tz                  timezone for handling datetime
+     --[no-]heading        print header`
+
+type WalkCmd struct {
+	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	TimeFormat   string         `name:"timeFormat" short:"t" default:"ns"`
+	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
+	Precision    int            `name:"precision" short:"p" default:"-1"`
+	Help         bool           `kong:"-"`
+	Query        []string       `arg:"" name:"query" passthrough:""`
 }
 
-func doWalk(cc Client, sqlText string) {
-	cli := cc.(*client)
-	sqlText = stripQuote(strings.TrimSpace(sqlText))
-	if len(sqlText) == 0 {
-		cli.Println("Usage: walk <sql query>")
+func pcWalk(c Client) readline.PrefixCompleterInterface {
+	cli := c.(*client)
+	return readline.PcItem("walk", readline.PcItemDynamic(cli.SqlHistory))
+}
+
+func doWalk(cc Client, cmdLine string) {
+	cmd := &WalkCmd{}
+	parser, err := Kong(cmd, func() error { cc.Println(helpWalk); cmd.Help = true; return nil })
+	if err != nil {
+		cc.Println("ERR", err.Error())
+		return
+	}
+	_, err = parser.Parse(splitFields(cmdLine, false))
+	if cmd.Help {
+		return
+	}
+	if err != nil {
+		cc.Println("ERR", err.Error())
 		return
 	}
 
-	walker, err := NewWalker(sqlText, cli.db, cli.conf.TimeLocation)
+	sqlText := stripQuote(strings.Join(cmd.Query, " "))
+	db := cc.Database()
+
+	walker, err := NewWalker(sqlText, db, cmd.TimeLocation)
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		cc.Println("ERR", err.Error())
 		return
 	}
 	defer walker.Close()
@@ -62,7 +93,7 @@ func doWalk(cc Client, sqlText string) {
 		return evt
 	})
 	if err := app.SetRoot(table, true).SetFocus(table).Run(); err != nil {
-		cli.Println("ERR", err.Error())
+		cc.Println("ERR", err.Error())
 		return
 	}
 }

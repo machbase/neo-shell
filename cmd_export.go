@@ -8,7 +8,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 )
 
@@ -29,26 +28,24 @@ const helpExport = `  export [options] <table>
     --format,-f <format> output format [csv] (default:'csv')
     --[no-]header        export header (default:false)
     --delimiter,-d      csv delimiter (default:',')
-    --timeformat,-t     time format [ns|ms|s|<date-time-format>] (default:'ns')
+    --tz                timezone for handling datetime
+    --timeformat,-t     time format [ns|ms|s|<timeformat>] (default:'ns')
        ns, us, ms, s
          represents unix epoch time in nano-, micro-, milli- and seconds for each
-       date-time-format  ex) '2006-01-02 15:04:05.999'
-         year   2006
-         month  01
-         day    02
-         hour   03 or 15
-         minute 04
-         second 05 or with sub-seconds '05.999999'
+       timeformat
+         consult "help timeformat"
     --precision,-p <int>  set precision of float value to force round`
 
 type ExportCmd struct {
-	Table      string `arg:"" name:"table"`
-	Output     string `name:"output" short:"o" default:"-"`
-	Format     string `name:"format" short:"f" default:"csv"`
-	Header     bool   `name:"header" negatable:""`
-	Delimiter  string `name:"delimiter" short:"d" default:","`
-	TimeFormat string `name:"timeFormat" short:"t" default:"ns"`
-	Precision  int    `name:"precision" short:"p" default:"-1"`
+	Table        string         `arg:"" name:"table"`
+	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	Output       string         `name:"output" short:"o" default:"-"`
+	Format       string         `name:"format" short:"f" default:"csv"`
+	Header       bool           `name:"header" negatable:""`
+	Delimiter    string         `name:"delimiter" short:"d" default:","`
+	TimeFormat   string         `name:"timeFormat" short:"t" default:"ns"`
+	Precision    int            `name:"precision" short:"p" default:"-1"`
+	Help         bool           `kong:"-"`
 }
 
 func pcExport(cli Client) readline.PrefixCompleterInterface {
@@ -57,17 +54,16 @@ func pcExport(cli Client) readline.PrefixCompleterInterface {
 
 func doExport(cli Client, cmdLine string) {
 	cmd := &ExportCmd{}
-	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
-		kong.Help(
-			func(options kong.HelpOptions, ctx *kong.Context) error {
-				cli.Println(helpExport)
-				return nil
-			}))
+	parser, err := Kong(cmd, func() error { cli.Println(helpExport); cmd.Help = true; return nil })
+
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
 	}
 	_, err = parser.Parse(splitFields(cmdLine, false))
+	if cmd.Help {
+		return
+	}
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
@@ -121,7 +117,7 @@ func doExport(cli Client, cmdLine string) {
 			cli.Println("ERR", err.Error())
 			return
 		}
-		vs := makeCsvValues(buf, cli.TimeLocation(), cmd.TimeFormat, cmd.Precision)
+		vs := makeCsvValues(buf, cmd.TimeLocation, cmd.TimeFormat, cmd.Precision)
 		w.Write(vs)
 	}
 }

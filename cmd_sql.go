@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 	"golang.org/x/term"
@@ -31,32 +30,32 @@ const helpSql string = `  sql [options] <query>
   options:
     --output,-o <file>     output file (default:'-' stdout)
     --format,-f <format>   output format
-      none       default mode (default)
+      -          default format
       csv        csv format
       json       json format
-    --delimiter,-d       delimiter for csv format (default:',')
+    --delimiter,-d       csv delimiter (default:',')
     --[no-]rownum        include rownum as first column (default:true)
-    --timeformat,-t      time format [ns|ms|s|<date-time-format>] (default:'ns')
+    --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'ns')
       ns, us, ms, s
         represents unix epoch time in nano-, micro-, milli- and seconds for each
-      date-time-format  ex) '2006-01-02 15:04:05.999'
-        year   2006
-        month  01
-        day    02
-        hour   03 or 15
-        minute 04
-        second 05 or with sub-seconds '05.999999'
+      timeformat
+        consult "help timeformat"
+   --tz                  timezone for handling datetime
+    --[no-]heading        print header
     --precision,-p <int>  set precision of float value to force round`
 
 type SqlCmd struct {
-	Output      string   `name:"output" short:"o" default:"-"`
-	Format      string   `name:"format" short:"f" enum:"none,csv,json" default:"none"`
-	Delimiter   string   `name:"delimiter" short:"d" default:","`
-	Rownum      bool     `name:"rownum" negatable:"" default:"true"`
-	TimeFormat  string   `name:"timeFormat" short:"t" default:"ns"`
-	Precision   int      `name:"precision" short:"p" default:"-1"`
-	Interactive bool     `kong:"-"`
-	Query       []string `arg:"" name:"query" passthrough:""`
+	Output       string         `name:"output" short:"o" default:"-"`
+	Heading      bool           `name:"heading" negatable:"" default:"true"`
+	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	Format       string         `name:"format" default:"-" enum:"-,csv,json"`
+	Delimiter    string         `name:"delimiter" short:"d" default:","`
+	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
+	TimeFormat   string         `name:"timeFormat" short:"t" default:"ns"`
+	Precision    int            `name:"precision" short:"p" default:"-1"`
+	Interactive  bool           `kong:"-"`
+	Help         bool           `kong:"-"`
+	Query        []string       `arg:"" name:"query" passthrough:""`
 }
 
 func pcSql(cc Client) readline.PrefixCompleterInterface {
@@ -68,25 +67,21 @@ func pcSql(cc Client) readline.PrefixCompleterInterface {
 
 func doSql(cc Client, cmdLine string) {
 	cmd := &SqlCmd{}
-	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}),
-		kong.Help(
-			func(options kong.HelpOptions, ctx *kong.Context) error {
-				cc.Println(helpSql)
-				return nil
-			}))
+	parser, err := Kong(cmd, func() error { cc.Println(helpSql); cmd.Help = true; return nil })
 	if err != nil {
 		cc.Println("ERR", err.Error())
 		return
 	}
 	_, err = parser.Parse(splitFields(cmdLine, false))
+	if cmd.Help {
+		return
+	}
 	if err != nil {
 		cc.Println("ERR", err.Error())
 		return
 	}
 
 	sqlText := stripQuote(strings.Join(cmd.Query, " "))
-	// cc.Println("SQL", sqlText)
-	// cc.Printfln("    %+v", cmd)
 
 	db := cc.Database()
 	rows, err := db.Query(sqlText)
@@ -130,9 +125,6 @@ func doSql(cc Client, cmdLine string) {
 		writer = buf
 	}
 
-	// json       json format
-	// chart.js   export result in json for chart.js
-	// 		      if output file's extension is '.html', result json will be embeded in html.
 	switch cmd.Format {
 	default:
 		cli.exportRowsNone(writer, rows, cmd)
@@ -145,7 +137,7 @@ func doSql(cc Client, cmdLine string) {
 	}
 }
 
-func (cli *client) columnNames(cols []*machrpc.Column, withRowNum bool) []string {
+func (cli *client) columnNames(cols []*machrpc.Column, tz *time.Location, withRowNum bool) []string {
 	var names []string
 	var colIdxOffset int
 	if withRowNum {
@@ -158,7 +150,7 @@ func (cli *client) columnNames(cols []*machrpc.Column, withRowNum bool) []string
 	}
 	for i := range cols {
 		if cols[i].Type == "datetime" {
-			names[i+colIdxOffset] = fmt.Sprintf("%s(%s)", cols[i].Name, cli.conf.TimeLocation.String())
+			names[i+colIdxOffset] = fmt.Sprintf("%s(%s)", cols[i].Name, tz.String())
 		} else {
 			names[i+colIdxOffset] = cols[i].Name
 		}

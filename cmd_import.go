@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 )
@@ -20,7 +19,11 @@ func init() {
 		PcFunc: pcImport,
 		Action: doImport,
 		Desc:   "import table",
-		Usage: `  import [options] <table>
+		Usage:  helpImport,
+	})
+}
+
+const helpImport = `  import [options] <table>
     table               table name to write
   options:
     --input,-i <file>  input file, (default: '-' stdin)
@@ -29,29 +32,25 @@ func init() {
     --header           first line is header, skip it
     --method           write method [insert|append] (default:'insert')
     --delimiter,-d     csv delimiter (default:',')
-    --timeformat,-t    time format [ns|ms|s|<date-time-format>] (default:'ns')
+    --tz               timezone for handling datetime
+    --timeformat,-t    time format [ns|ms|s|<timeformat>] (default:'ns')
        ns, us, ms, s
          represents unix epoch time in nano-, micro-, milli- and seconds for each
-       date-time-format  ex) '2006-01-02 15:04:05.999'
-         year   2006
-         month  01
-         day    02
-         hour   03 or 15
-         minute 04
-         second 05 or with sub-seconds '05.999999'
-    --eof <string>     specify eof line, use any string matches [a-zA-Z0-9]+ (default: '.')`,
-	})
-}
+       timeformat
+         consult "help timeformat"
+    --eof <string>     specify eof line, use any string matches [a-zA-Z0-9]+ (default: '.')`
 
 type ImportCmd struct {
-	Table       string `arg:"" name:"table"`
-	Input       string `name:"input" short:"i" default:"-"`
-	HasHeader   bool   `name:"header" negatable:""`
-	EofMark     string `name:"eof" default:"."`
-	InputFormat string `name:"format" short:"f" default:"csv"`
-	Method      string `name:"method" default:"insert"`
-	Delimiter   string `name:"delimiter" short:"d" default:","`
-	TimeFormat  string `name:"timeformat" short:"t" default:"ns"`
+	Table        string         `arg:"" name:"table"`
+	Input        string         `name:"input" short:"i" default:"-"`
+	HasHeader    bool           `name:"header" negatable:""`
+	EofMark      string         `name:"eof" default:"."`
+	InputFormat  string         `name:"format" short:"f" default:"csv"`
+	Method       string         `name:"method" default:"insert"`
+	Delimiter    string         `name:"delimiter" short:"d" default:","`
+	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
+	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	Help         bool           `kong:"-"`
 }
 
 func pcImport(cli Client) readline.PrefixCompleterInterface {
@@ -60,13 +59,16 @@ func pcImport(cli Client) readline.PrefixCompleterInterface {
 
 func doImport(cli Client, cmdLine string) {
 	cmd := &ImportCmd{}
-	parser, err := kong.New(cmd, kong.HelpOptions{Compact: true}, kong.Exit(func(int) {}))
+	parser, err := Kong(cmd, func() error { cli.Println(helpImport); cmd.Help = true; return nil })
 	if err != nil {
 		cli.Println(err.Error())
 		return
 	}
 
 	_, err = parser.Parse(splitFields(cmdLine, true))
+	if cmd.Help {
+		return
+	}
 	if err != nil {
 		cli.Println(err.Error())
 		return
@@ -132,7 +134,7 @@ func doImport(cli Client, cmdLine string) {
 
 		for i := 0; i < len(desc.Columns); i++ {
 			str := strings.TrimSpace(toks[i])
-			v, err := stringToColumnValue(str, desc.Columns[i], cli.TimeLocation(), cmd.TimeFormat)
+			v, err := stringToColumnValue(str, desc.Columns[i], cmd.TimeLocation, cmd.TimeFormat)
 			if err != nil {
 				cli.Printfln("line %d, column %s, %s", lineno, desc.Columns[i].Name, err.Error())
 				break
