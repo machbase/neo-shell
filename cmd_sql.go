@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"github.com/machbase/neo-shell/internal/out_csv"
 	"github.com/machbase/neo-shell/internal/out_default"
 	"github.com/machbase/neo-shell/internal/out_json"
+	"github.com/machbase/neo-shell/internal/sink_file"
 	"golang.org/x/term"
 )
 
@@ -104,32 +104,20 @@ func doSql(cc Client, cmdLine string) {
 		return
 	}
 
-	var writer *bufio.Writer
-	switch cmd.Output {
-	case "-":
+	sink, err := sink_file.New(cmd.Output)
+	if err != nil {
+		cli.Println("ERR", err.Error())
+		return
+	}
+
+	if cmd.Output == "-" {
 		cmd.Interactive = cc.Interactive()
-		buf := bufio.NewWriter(cc.Stdout())
-		defer func() {
-			buf.Flush()
-		}()
-		writer = buf
-	default:
+	} else {
 		cmd.Interactive = false
-		f, err := os.OpenFile(cmd.Output, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			cc.Println("ERR", err.Error())
-			return
-		}
-		buf := bufio.NewWriter(f)
-		defer func() {
-			buf.Flush()
-			f.Close()
-		}()
-		writer = buf
 	}
 
 	var renderCtx = &api.RowsContext{
-		Writer:       writer,
+		Sink:         sink,
 		TimeLocation: cmd.TimeLocation,
 		TimeFormat:   GetTimeformat(cmd.TimeFormat),
 		Precision:    cmd.Precision,

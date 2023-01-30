@@ -9,16 +9,12 @@ import (
 )
 
 type Exporter struct {
-	api.RowsRenderer
-
-	nrow  int
-	ctx   *api.RowsContext
-	flush func() error
+	nrow int
+	ctx  *api.RowsContext
 }
 
 func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
 	ex.ctx = ctx
-	ex.flush = ctx.Writer.Flush
 
 	names := ctx.ColumnNames
 	types := ctx.ColumnTypes
@@ -32,19 +28,19 @@ func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
 
 	header := fmt.Sprintf(`{"data":{"columns":%s,"types":%s,"rows":[`,
 		string(columnsJson), string(typesJson))
-	ex.ctx.Writer.Write([]byte(header))
+	ex.ctx.Sink.Write([]byte(header))
 
 	return nil
 }
 
 func (ex *Exporter) CloseRender() {
 	footer := "]}}\n"
-	ex.ctx.Writer.Write([]byte(footer))
-	ex.flush()
+	ex.ctx.Sink.Write([]byte(footer))
+	ex.ctx.Sink.Close()
 }
 
 func (ex *Exporter) PageFlush(heading bool) {
-	ex.flush()
+	ex.ctx.Sink.Flush()
 }
 
 func (ex *Exporter) RenderRow(source []any) error {
@@ -85,9 +81,9 @@ func (ex *Exporter) RenderRow(source []any) error {
 	}
 
 	if ex.nrow > 1 {
-		ex.ctx.Writer.Write([]byte(","))
+		ex.ctx.Sink.Write([]byte(","))
 	}
-	ex.ctx.Writer.Write(recJson)
+	ex.ctx.Sink.Write(recJson)
 
 	return nil
 }

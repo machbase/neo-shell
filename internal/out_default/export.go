@@ -10,9 +10,7 @@ import (
 )
 
 type Exporter struct {
-	api.RowsRenderer
 	writer table.Writer
-	flush  func() error
 	rownum int64
 	ctx    *api.RowsContext
 
@@ -24,10 +22,7 @@ type Exporter struct {
 func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
 	ex.ctx = ctx
 	ex.writer = table.NewWriter()
-	ex.writer.SetOutputMirror(ctx.Writer)
-	//if bw, ok := ctx.Writer.(*bufio.Writer); ok {
-	ex.flush = ctx.Writer.Flush
-	//}
+	ex.writer.SetOutputMirror(ctx.Sink)
 
 	style := table.StyleDefault
 	switch ex.Style {
@@ -65,11 +60,12 @@ func (ex *Exporter) CloseRender() {
 		ex.writer.Render()
 		ex.writer.ResetRows()
 	}
+	ex.ctx.Sink.Close()
 }
 
 func (ex *Exporter) PageFlush(heading bool) {
 	ex.writer.Render()
-	ex.flush()
+	ex.ctx.Sink.Flush()
 
 	ex.writer.ResetRows()
 	if !heading {

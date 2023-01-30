@@ -1,12 +1,11 @@
 package api
 
 import (
-	"bufio"
 	"time"
 )
 
 type RowsContext struct {
-	Writer       *bufio.Writer
+	Sink         Sink
 	Rownum       bool
 	Heading      bool
 	TimeLocation *time.Location

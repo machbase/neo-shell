@@ -11,12 +11,10 @@ import (
 )
 
 type Exporter struct {
-	api.RowsRenderer
-	writer *csv.Writer
 	rownum int64
-	flush  func() error
 
-	Comma rune
+	writer *csv.Writer
+	Comma  rune
 
 	ctx *api.RowsContext
 }
@@ -28,8 +26,7 @@ func (ex *Exporter) SetDelimiter(delimiter string) {
 
 func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
 	ex.ctx = ctx
-	ex.writer = csv.NewWriter(ctx.Writer)
-	ex.flush = ctx.Writer.Flush
+	ex.writer = csv.NewWriter(ctx.Sink)
 
 	if ex.Comma != 0 {
 		ex.writer.Comma = ex.Comma
@@ -49,10 +46,12 @@ func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
 
 func (ex *Exporter) CloseRender() {
 	ex.writer.Flush()
+	ex.ctx.Sink.Close()
 }
 
 func (ex *Exporter) PageFlush(heading bool) {
-	ex.flush()
+	ex.writer.Flush()
+	ex.ctx.Sink.Flush()
 }
 
 func (ex *Exporter) RenderRow(values []any) error {
