@@ -2,7 +2,6 @@ package ser_termchart
 
 import (
 	"context"
-	"io"
 
 	"github.com/machbase/neo-shell/api"
 	"github.com/mum4k/termdash"
@@ -23,7 +22,7 @@ type Renderer struct {
 	err        error
 }
 
-func (r *Renderer) Render(ctx context.Context, writer io.Writer, data []*api.SeriesData) error {
+func (r *Renderer) Render(ctx context.Context, sink api.Sink, data []*api.SeriesData) error {
 	if r.err != nil {
 		return r.err
 	}

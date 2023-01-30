@@ -1,19 +1,16 @@
 package shell
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-shell/api"
 	"github.com/machbase/neo-shell/internal/ser_chartjs"
 	"github.com/machbase/neo-shell/internal/ser_termchart"
+	"github.com/machbase/neo-shell/internal/sink_file"
 	"github.com/robfig/cron"
 )
 
@@ -107,39 +104,10 @@ func doChart(cli Client, line string) {
 		return
 	}
 
-	openWriter := func() (io.Writer, func(), error) {
-		var writer io.Writer
-		var closer func()
-		switch cmd.Output {
-		case "-":
-			buf := bufio.NewWriter(cli.Stdout())
-			closer = func() {
-				buf.Flush()
-			}
-			writer = buf
-		default:
-			f, err := os.OpenFile(cmd.Output, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-			if err != nil {
-				cli.Println("ERR", err.Error())
-				return nil, nil, err
-			}
-			buf := bufio.NewWriter(f)
-			closer = func() {
-				buf.Flush()
-				f.Close()
-			}
-			writer = buf
-		}
-		return writer, closer, nil
-	}
-
 	var renderer api.SeriesRenderer
 	switch cmd.Format {
 	default:
 		renderer = &ser_termchart.Renderer{}
-		// termdash는 항상 tty를 사용해야하므로
-		// 별도의 output 설정이 의미 없음.
-		openWriter = nil
 		// termdash의 경우 refresh cycle이 cmd.Count에 도달하여
 		// 외부에서 close하는 경우 정상적으로 화면이 복구 되지 않는 문제가 있어
 		// Count를 무조건 0 (무한 루프)으로 강제 설정한다.
@@ -165,17 +133,12 @@ func doChart(cli Client, line string) {
 	runCount := 0
 	runCanceled := false
 	runner := func() {
-		var writer io.Writer
-		var closer func()
-		var closeOnce sync.Once
-		if openWriter != nil {
-			writer, closer, err = openWriter()
-			if err != nil {
-				cli.Println("ERR", err.Error())
-				return
-			}
-			defer closeOnce.Do(closer)
+		sink, err := sink_file.New(cmd.Output)
+		if err != nil {
+			cli.Println("ERR", err.Error())
+			return
 		}
+		defer sink.Close()
 
 		db := cli.Database()
 		tz := cmd.TimeLocation
@@ -222,14 +185,11 @@ func doChart(cli Client, line string) {
 		}
 		runCount++
 
-		if err = renderer.Render(ctx, writer, series); err != nil {
+		if err = renderer.Render(ctx, sink, series); err != nil {
 			runCanceled = true
 			if err != nil && err != api.ErrUserCancel {
 				cli.Println("ERR", err.Error())
 			}
-		}
-		if closer != nil {
-			closeOnce.Do(closer)
 		}
 		if runCanceled || cmd.Count > 0 && cmd.Count <= runCount {
 			quitCh <- true

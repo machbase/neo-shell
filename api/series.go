@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"io"
 )
 
 type SeriesData struct {
@@ -12,5 +11,5 @@ type SeriesData struct {
 }
 
 type SeriesRenderer interface {
-	Render(ctx context.Context, writer io.Writer, data []*SeriesData) error
+	Render(ctx context.Context, sink Sink, data []*SeriesData) error
 }

@@ -34,12 +34,16 @@ func (s *sink) Write(p []byte) (n int, err error) {
 }
 
 func (s *sink) Flush() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if s.buf == nil {
 		return nil
 	}
 	return s.buf.Flush()
 }
 
+// Deprecated do not call from outside.
 func (s *sink) Reset() error {
 	s.Close()
 

@@ -19,10 +19,6 @@ func (s *sink) Flush() error {
 	return nil
 }
 
-func (s *sink) Reset() error {
-	return nil
-}
-
 func (s *sink) Close() error {
 	return nil
 }

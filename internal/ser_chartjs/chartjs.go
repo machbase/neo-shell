@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 
 	api "github.com/machbase/neo-shell/api"
 )
@@ -67,7 +66,7 @@ func convertChartJsModel(data []*api.SeriesData) (*ChartJsModel, error) {
 type JsonRenderer struct {
 }
 
-func (r *JsonRenderer) Render(ctx context.Context, writer io.Writer, data []*api.SeriesData) error {
+func (r *JsonRenderer) Render(ctx context.Context, sink api.Sink, data []*api.SeriesData) error {
 	model, err := convertChartJsModel(data)
 	if err != nil {
 		return err
@@ -76,7 +75,7 @@ func (r *JsonRenderer) Render(ctx context.Context, writer io.Writer, data []*api
 	if err != nil {
 		return err
 	}
-	writer.Write(buf)
+	sink.Write(buf)
 	return nil
 }
 
@@ -102,7 +101,7 @@ type HtmlRenderer struct {
 	Options HtmlOptions
 }
 
-func (r *HtmlRenderer) Render(ctx context.Context, writer io.Writer, data []*api.SeriesData) error {
+func (r *HtmlRenderer) Render(ctx context.Context, sink api.Sink, data []*api.SeriesData) error {
 	tmpl, err := template.New("chart_template").Parse(chartHtmlTemplate)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -128,6 +127,6 @@ func (r *HtmlRenderer) Render(ctx context.Context, writer io.Writer, data []*api
 		return err
 	}
 
-	writer.Write(buff.Bytes())
+	sink.Write(buff.Bytes())
 	return nil
 }
