@@ -23,9 +23,11 @@ type ChartJsData struct {
 }
 
 type ChartJsDataset struct {
-	Label       string    `json:"label"`
-	Data        []float64 `json:"data"`
-	BorderWidth int       `json:"borderWidth"`
+	Label           string    `json:"label"`
+	Data            []float64 `json:"data"`
+	BorderWidth     int       `json:"borderWidth"`
+	BorderColor     string    `json:"borderColor"`
+	BackgroundColor string    `json:"backgroundColor"`
 }
 
 type ChartJsOptions struct {
@@ -41,16 +43,20 @@ type ChartJsScale struct {
 }
 
 func convertChartJsModel(data []*api.SeriesData) (*ChartJsModel, error) {
+	pl := []string{"rgb(44,142,229)", "rgb(251,72,113)", "rgb(63,180,179)", "rgb(252,141,50)", "rgb(133,71,255)", "rgb(253,195,69)", "rgb(189,192,197)"}
+
 	cm := &ChartJsModel{}
 	cm.Type = "line"
 	cm.Data = ChartJsData{}
 	cm.Data.Labels = data[0].Labels
 	cm.Data.Datasets = []ChartJsDataset{}
-	for _, series := range data {
+	for idx, series := range data {
 		cm.Data.Datasets = append(cm.Data.Datasets, ChartJsDataset{
-			Label:       series.Name,
-			Data:        series.Values,
-			BorderWidth: 1,
+			Label:           series.Name,
+			Data:            series.Values,
+			BorderWidth:     1,
+			BorderColor:     pl[idx%len(pl)],
+			BackgroundColor: "rgba(0,0,0,0)",
 		})
 	}
 	cm.Options = ChartJsOptions{}
