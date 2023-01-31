@@ -13,6 +13,7 @@ import (
 	"github.com/machbase/neo-shell/internal/out_csv"
 	"github.com/machbase/neo-shell/internal/out_default"
 	"github.com/machbase/neo-shell/internal/out_json"
+	"github.com/machbase/neo-shell/internal/sink_exec"
 	"github.com/machbase/neo-shell/internal/sink_file"
 	"golang.org/x/term"
 )
@@ -104,13 +105,25 @@ func doSql(cc Client, cmdLine string) {
 		return
 	}
 
-	sink, err := sink_file.New(cmd.Output)
-	if err != nil {
-		cli.Println("ERR", err.Error())
-		return
+	var sink api.Sink
+	var outputPath = stripQuote(cmd.Output)
+	var outputFields = strings.Fields(outputPath)
+	if outputFields[0] == "exec" {
+		binArgs := strings.TrimSpace(strings.TrimPrefix(outputPath, "exec"))
+		sink, err = sink_exec.New(binArgs)
+		if err != nil {
+			cli.Println("ERR", err.Error())
+			return
+		}
+	} else {
+		sink, err = sink_file.New(outputPath)
+		if err != nil {
+			cli.Println("ERR", err.Error())
+			return
+		}
 	}
 
-	if cmd.Output == "-" {
+	if outputPath == "-" {
 		cmd.Interactive = cc.Interactive()
 	} else {
 		cmd.Interactive = false
