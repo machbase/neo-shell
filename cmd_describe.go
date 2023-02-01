@@ -55,7 +55,7 @@ func doDescribe(cli Client, line string) {
 
 	db := cli.Database()
 
-	_desc, err := db.Describe(cmd.Table)
+	_desc, err := db.Describe(cmd.Table, cmd.ShowAll)
 	if err != nil {
 		cli.Println("unable to describe", cmd.Table, "; ERR", err.Error())
 		return
@@ -86,9 +86,6 @@ func doDescribe(cli Client, line string) {
 	nrow := 0
 	box := cli.NewBox([]string{"#", "ID", "NAME", "TYPE", "LENGTH"})
 	for _, col := range desc.Columns {
-		if !cmd.ShowAll && strings.HasPrefix(col.Name, "_") {
-			continue
-		}
 		nrow++
 		colType := machrpc.ColumnTypeDescription(col.Type)
 		box.AppendRow(nrow, col.Id, col.Name, colType, col.Length)
