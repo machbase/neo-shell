@@ -120,7 +120,9 @@ func (cli *client) Start() error {
 	}
 
 	cli.remoteSession = true
-	if !strings.HasPrefix(cli.conf.ServerAddr, "tcp://") {
+	if strings.HasPrefix(cli.conf.ServerAddr, "tcp://127.0.0.1:") {
+		cli.remoteSession = false
+	} else if !strings.HasPrefix(cli.conf.ServerAddr, "tcp://") {
 		serverPid := int(serverInfo.Runtime.Pid)
 		if os.Getppid() != serverPid {
 			// if my ppid is same with server pid, this client was invoked from server directly.
