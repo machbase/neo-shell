@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-grpc/mgmt"
+	"golang.org/x/net/context"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -73,7 +76,8 @@ type client struct {
 	conf *Config
 	db   *machrpc.Client
 
-	interactive bool
+	interactive   bool
+	remoteSession bool
 }
 
 func DefaultConfig() *Config {
@@ -108,8 +112,22 @@ func (cli *client) Start() error {
 	if err != nil {
 		return err
 	}
-	// TODO: check server reachable,
-	// then return error if not reachabse
+
+	// check connectivity to server
+	serverInfo, err := machcli.GetServerInfo()
+	if err != nil {
+		return err
+	}
+
+	cli.remoteSession = true
+	if !strings.HasPrefix(cli.conf.ServerAddr, "tcp://") {
+		serverPid := int(serverInfo.Runtime.Pid)
+		if os.Getppid() != serverPid {
+			// if my ppid is same with server pid, this client was invoked from server directly.
+			// which means connected remotely via ssh.
+			cli.remoteSession = false
+		}
+	}
 
 	cli.db = machcli
 	return nil
@@ -123,6 +141,25 @@ func (cli *client) Stop() {
 
 func (cli *client) Database() *machrpc.Client {
 	return cli.db
+}
+
+func (cli *client) ShutdownServer() error {
+	if cli.remoteSession {
+		return errors.New("remote session is not allowed to shutdown")
+	}
+	conn, err := machrpc.MakeGrpcConn(cli.conf.ServerAddr)
+	if err != nil {
+		return err
+	}
+	mgmtcli := mgmt.NewManagementClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err = mgmtcli.Shutdown(ctx, &mgmt.ShutdownRequest{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (cli *client) Run(command string) {
