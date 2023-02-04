@@ -235,7 +235,7 @@ func (w *Walker) GetRowCount() int {
 	if w.eof {
 		return len(w.values)
 	}
-	return math.MaxInt64
+	return math.MaxInt32
 }
 
 func (w *Walker) GetColumnCount() int {
