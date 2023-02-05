@@ -149,11 +149,10 @@ func (cli *client) ShutdownServer() error {
 	if cli.remoteSession {
 		return errors.New("remote session is not allowed to shutdown")
 	}
-	conn, err := machrpc.MakeGrpcConn(cli.conf.ServerAddr)
+	mgmtcli, err := cli.NewManagementClient()
 	if err != nil {
 		return err
 	}
-	mgmtcli := mgmt.NewManagementClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -162,6 +161,14 @@ func (cli *client) ShutdownServer() error {
 		return err
 	}
 	return nil
+}
+
+func (cli *client) NewManagementClient() (mgmt.ManagementClient, error) {
+	conn, err := machrpc.MakeGrpcConn(cli.conf.ServerAddr)
+	if err != nil {
+		return nil, err
+	}
+	return mgmt.NewManagementClient(conn), nil
 }
 
 func (cli *client) Run(command string) {

@@ -9,10 +9,11 @@ require (
 	github.com/gin-gonic/gin v1.8.2
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/cemlib v0.0.0-20230124025810-6525e5a45406
-	github.com/machbase/neo-grpc v0.1.1-0.20230202011104-fffa0e4746ea
+	github.com/machbase/neo-grpc v0.1.1-0.20230205061819-d003914feadd
 	github.com/mum4k/termdash v0.17.0
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
 	github.com/robfig/cron v1.2.0
+	github.com/tidwall/gjson v1.14.4
 	golang.org/x/net v0.5.0
 	golang.org/x/term v0.4.0
 	golang.org/x/text v0.6.0
@@ -47,6 +48,8 @@ require (
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sevlyar/go-daemon v0.1.6 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/ugorji/go/codec v1.2.8 // indirect
 	github.com/zclconf/go-cty v1.12.1 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
