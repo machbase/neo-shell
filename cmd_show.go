@@ -7,7 +7,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/cemlib/util"
-	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 func init() {
@@ -97,7 +97,7 @@ func (cli *client) doShowTables(showAll bool) {
 		}
 		nrow++
 
-		desc := machrpc.TableTypeDescription(machrpc.TableType(typ), flg)
+		desc := spi.TableTypeDescription(spi.TableType(typ), flg)
 		t.AppendRow(nrow, id, name, desc)
 	}
 	t.Render()

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-grpc/spi"
 	"github.com/machbase/neo-shell/api"
 	"github.com/machbase/neo-shell/internal/out_csv"
 	"github.com/machbase/neo-shell/internal/out_default"
@@ -164,7 +164,7 @@ func doSql(cc Client, cmdLine string) {
 	}
 }
 
-func (cli *client) exportRows(ctx *api.RowsContext, rows *machrpc.Rows, renderer api.RowsRenderer, interactive bool) error {
+func (cli *client) exportRows(ctx *api.RowsContext, rows spi.Rows, renderer api.RowsRenderer, interactive bool) error {
 	cols, err := rows.Columns()
 	if err != nil {
 		return err
@@ -215,7 +215,7 @@ func (cli *client) exportRows(ctx *api.RowsContext, rows *machrpc.Rows, renderer
 	return nil
 }
 
-func (cli *client) columnNames(cols []*machrpc.Column, tz *time.Location, withRowNum bool) []string {
+func (cli *client) columnNames(cols spi.Columns, tz *time.Location, withRowNum bool) []string {
 	var names []string
 	var colIdxOffset int
 	if withRowNum {
@@ -236,7 +236,7 @@ func (cli *client) columnNames(cols []*machrpc.Column, tz *time.Location, withRo
 	return names
 }
 
-func (cli *client) columnTypes(cols []*machrpc.Column, withRowNum bool) []string {
+func (cli *client) columnTypes(cols spi.Columns, withRowNum bool) []string {
 	var types []string
 	var colIdxOffset int
 	if withRowNum {
@@ -307,7 +307,7 @@ func makeValues(rec []any, tz *time.Location, timeformat string, precision int) 
 	return cols
 }
 
-func makeBuffer(cols []*machrpc.Column) []any {
+func makeBuffer(cols spi.Columns) []any {
 	rec := make([]any, len(cols))
 	for i := range cols {
 		switch cols[i].Type {

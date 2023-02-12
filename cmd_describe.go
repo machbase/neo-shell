@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 func init() {
@@ -55,16 +55,16 @@ func doDescribe(cli Client, line string) {
 
 	db := cli.Database()
 
-	_desc, err := db.Describe(cmd.Table, cmd.ShowAll)
+	_desc, err := spi.Describe(db, cmd.Table, cmd.ShowAll)
 	if err != nil {
 		cli.Println("unable to describe", cmd.Table, "; ERR", err.Error())
 		return
 	}
-	desc := _desc.(*machrpc.TableDescription)
+	desc := _desc.(*spi.TableDescription)
 
 	cli.Println("TABLE   ", desc.Name)
 	cli.Println("TYPE    ", desc.TypeString())
-	if desc.Type == machrpc.TagTableType {
+	if desc.Type == spi.TagTableType {
 		tags := []string{}
 		rows, err := db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(cmd.Table)))
 		if err != nil {
@@ -87,7 +87,7 @@ func doDescribe(cli Client, line string) {
 	box := cli.NewBox([]string{"#", "ID", "NAME", "TYPE", "LENGTH"})
 	for _, col := range desc.Columns {
 		nrow++
-		colType := machrpc.ColumnTypeDescription(col.Type)
+		colType := spi.ColumnTypeDescription(col.Type)
 		box.AppendRow(nrow, col.Id, col.Name, colType, col.Length)
 	}
 

@@ -8,13 +8,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/machbase/cemlib/logging"
-	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 type Server struct {
 	log              logging.Log
-	db               *machrpc.Client
-	logvaultAppender *machrpc.Appender
+	db               spi.Database
+	logvaultAppender spi.Appender
 	// temp struct to migrate
 	/*
 		if svr.logvaultAppender != nil {
@@ -30,7 +30,7 @@ type Server struct {
 	*/
 }
 
-func (svr *Server) handleLogVault(ctx *gin.Context) {
+func (svr *Server) HandleLogVault(ctx *gin.Context) {
 	oper := ctx.Param("oper")
 	contentType := ctx.Request.Header.Get("Content-type")
 	switch contentType {

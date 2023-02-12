@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 func init() {
@@ -88,12 +88,12 @@ func doImport(cli Client, cmdLine string) {
 	}
 
 	db := cli.Database()
-	_desc, err := db.Describe(cmd.Table, false)
+	_desc, err := spi.Describe(db, cmd.Table, false)
 	if err != nil {
 		cli.Printfln("ERR fail to get table info '%s', %s", cmd.Table, err.Error())
 		return
 	}
-	desc := (_desc).(*machrpc.TableDescription)
+	desc := (_desc).(*spi.TableDescription)
 
 	if cli.Interactive() {
 		cli.Printfln("# Enter %s⏎ to quit", cmd.EofMark)
@@ -156,35 +156,35 @@ func doImport(cli Client, cmdLine string) {
 	cli.Println("total", written, "record(s) imported")
 }
 
-func stringToColumnValue(str string, cd *machrpc.ColumnDescription, tz *time.Location, timeformat string) (any, error) {
+func stringToColumnValue(str string, cd *spi.ColumnDescription, tz *time.Location, timeformat string) (any, error) {
 	switch cd.Type {
-	case machrpc.Int16ColumnType:
+	case spi.Int16ColumnType:
 		return strconv.ParseInt(str, 10, 16)
-	case machrpc.Uint16ColumnType:
+	case spi.Uint16ColumnType:
 		return strconv.ParseUint(str, 10, 16)
-	case machrpc.Int32ColumnType:
+	case spi.Int32ColumnType:
 		return strconv.ParseInt(str, 10, 32)
-	case machrpc.Uint32ColumnType:
+	case spi.Uint32ColumnType:
 		return strconv.ParseUint(str, 10, 32)
-	case machrpc.Int64ColumnType:
+	case spi.Int64ColumnType:
 		return strconv.ParseInt(str, 10, 64)
-	case machrpc.Uint64ColumnType:
+	case spi.Uint64ColumnType:
 		return strconv.ParseUint(str, 10, 64)
-	case machrpc.Float32ColumnType:
+	case spi.Float32ColumnType:
 		return strconv.ParseFloat(str, 32)
-	case machrpc.Float64ColumnType:
+	case spi.Float64ColumnType:
 		return strconv.ParseFloat(str, 64)
-	case machrpc.VarcharColumnType:
+	case spi.VarcharColumnType:
 		return str, nil
-	case machrpc.TextColumnType:
+	case spi.TextColumnType:
 		return str, nil
-	case machrpc.ClobColumnType:
+	case spi.ClobColumnType:
 		return str, nil
-	case machrpc.BlobColumnType:
+	case spi.BlobColumnType:
 		return str, nil
-	case machrpc.BinaryColumnType:
+	case spi.BinaryColumnType:
 		return str, nil
-	case machrpc.DatetimeColumnType:
+	case spi.DatetimeColumnType:
 		switch timeformat {
 		case "ns":
 			v, err := strconv.ParseInt(str, 10, 64)
@@ -213,13 +213,13 @@ func stringToColumnValue(str string, cd *machrpc.ColumnDescription, tz *time.Loc
 		default:
 			return time.ParseInLocation(timeformat, str, tz)
 		}
-	case machrpc.IpV4ColumnType:
+	case spi.IpV4ColumnType:
 		if ip := net.ParseIP(str); ip != nil {
 			return ip, nil
 		} else {
 			return nil, fmt.Errorf("unable to parse as ip address %s", str)
 		}
-	case machrpc.IpV6ColumnType:
+	case spi.IpV6ColumnType:
 		if ip := net.ParseIP(str); ip != nil {
 			return ip, nil
 		} else {

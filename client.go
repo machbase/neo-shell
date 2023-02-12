@@ -11,6 +11,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 	"github.com/machbase/neo-grpc/mgmt"
+	"github.com/machbase/neo-grpc/spi"
 	"golang.org/x/net/context"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -36,7 +37,7 @@ type Client interface {
 	Stdout() io.Writer
 	Stderr() io.Writer
 
-	Database() *machrpc.Client
+	Database() spi.Database
 }
 
 var Formats = struct {
@@ -141,7 +142,7 @@ func (cli *client) Stop() {
 	}
 }
 
-func (cli *client) Database() *machrpc.Client {
+func (cli *client) Database() spi.Database {
 	return cli.db
 }
 

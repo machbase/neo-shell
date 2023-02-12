@@ -10,7 +10,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/gdamore/tcell/v2"
-	"github.com/machbase/neo-grpc/machrpc"
+	"github.com/machbase/neo-grpc/spi"
 	"github.com/rivo/tview"
 )
 
@@ -102,10 +102,10 @@ func doWalk(cc Client, cmdLine string) {
 type Walker struct {
 	tview.TableContentReadOnly
 	sqlText    string
-	db         *machrpc.Client
+	db         spi.Database
 	mutex      sync.Mutex
-	rows       *machrpc.Rows
-	cols       []*machrpc.Column
+	rows       spi.Rows
+	cols       spi.Columns
 	values     [][]string
 	eof        bool
 	fetchSize  int
@@ -114,10 +114,10 @@ type Walker struct {
 	precision  int
 }
 
-func NewWalker(sqlText string, client *machrpc.Client, timeformat string, tz *time.Location, precision int) (*Walker, error) {
+func NewWalker(sqlText string, database spi.Database, timeformat string, tz *time.Location, precision int) (*Walker, error) {
 	w := &Walker{
 		sqlText:    sqlText,
-		db:         client,
+		db:         database,
 		fetchSize:  400,
 		timeformat: timeformat,
 		tz:         tz,
