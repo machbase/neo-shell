@@ -2,7 +2,6 @@ package shell
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -86,8 +85,7 @@ func doSql(cc Client, cmdLine string) {
 
 	sqlText := stripQuote(strings.Join(cmd.Query, " "))
 
-	db := cc.Database()
-	rows, err := db.Query(sqlText)
+	rows, err := cc.Database().Query(sqlText)
 	if err != nil {
 		cc.Println("ERR", err.Error())
 		return
@@ -131,7 +129,7 @@ func doSql(cc Client, cmdLine string) {
 	var renderCtx = &spi.RowsRendererContext{
 		Sink:         sink,
 		TimeLocation: cmd.TimeLocation,
-		TimeFormat:   GetTimeformat(cmd.TimeFormat),
+		TimeFormat:   spi.GetTimeformat(cmd.TimeFormat),
 		Precision:    cmd.Precision,
 		Rownum:       cmd.Rownum,
 		Heading:      cmd.Heading,
@@ -175,13 +173,13 @@ func (cli *client) exportRows(ctx *spi.RowsRendererContext, rows spi.Rows, rende
 	}
 	nextPauseRow := pageHeight
 
-	ctx.ColumnNames = cli.columnNames(cols, ctx.TimeLocation, false)
-	ctx.ColumnTypes = cli.columnTypes(cols, false)
+	ctx.ColumnNames = cols.Names(ctx.TimeLocation)
+	ctx.ColumnTypes = cols.Types()
 
 	renderer.OpenRender(ctx)
 	defer renderer.CloseRender()
 
-	buf := makeBuffer(cols)
+	buf := cols.MakeBuffer()
 	nrow := 0
 	for rows.Next() {
 		err := rows.Scan(buf...)
@@ -208,44 +206,6 @@ func (cli *client) exportRows(ctx *spi.RowsRendererContext, rows spi.Rows, rende
 	return nil
 }
 
-func (cli *client) columnNames(cols spi.Columns, tz *time.Location, withRowNum bool) []string {
-	var names []string
-	var colIdxOffset int
-	if withRowNum {
-		names = make([]string, len(cols)+1)
-		names[0] = "#"
-		colIdxOffset = 1
-	} else {
-		names = make([]string, len(cols))
-		colIdxOffset = 0
-	}
-	for i := range cols {
-		if cols[i].Type == "datetime" {
-			names[i+colIdxOffset] = fmt.Sprintf("%s(%s)", cols[i].Name, tz.String())
-		} else {
-			names[i+colIdxOffset] = cols[i].Name
-		}
-	}
-	return names
-}
-
-func (cli *client) columnTypes(cols spi.Columns, withRowNum bool) []string {
-	var types []string
-	var colIdxOffset int
-	if withRowNum {
-		types = make([]string, len(cols)+1)
-		types[0] = "int64"
-		colIdxOffset = 1
-	} else {
-		types = make([]string, len(cols))
-		colIdxOffset = 0
-	}
-	for i := range cols {
-		types[i+colIdxOffset] = cols[i].Type
-	}
-	return types
-}
-
 func (cli *client) pauseForMore() bool {
 	cli.Print(":")
 	// switch stdin into 'raw' mode
@@ -267,64 +227,4 @@ func (cli *client) pauseForMore() bool {
 		}
 	}
 	return true
-}
-
-func makeValues(rec []any, tz *time.Location, timeformat string, precision int) []string {
-	cols := make([]string, len(rec))
-	for i, r := range rec {
-		if r == nil {
-			cols[i] = "NULL"
-			continue
-		}
-		switch v := r.(type) {
-		case *string:
-			cols[i] = *v
-		case *time.Time:
-			cols[i] = v.In(tz).Format(timeformat)
-		case *float64:
-			if precision < 0 {
-				cols[i] = fmt.Sprintf("%f", *v)
-			} else {
-				cols[i] = fmt.Sprintf("%.*f", precision, *v)
-			}
-		case *int:
-			cols[i] = fmt.Sprintf("%d", *v)
-		case *int32:
-			cols[i] = fmt.Sprintf("%d", *v)
-		case *int64:
-			cols[i] = fmt.Sprintf("%d", *v)
-		default:
-			cols[i] = fmt.Sprintf("%T", r)
-		}
-	}
-	return cols
-}
-
-func makeBuffer(cols spi.Columns) []any {
-	rec := make([]any, len(cols))
-	for i := range cols {
-		switch cols[i].Type {
-		case "int16":
-			rec[i] = new(int16)
-		case "int32":
-			rec[i] = new(int32)
-		case "int64":
-			rec[i] = new(int64)
-		case "datetime":
-			rec[i] = new(time.Time)
-		case "float":
-			rec[i] = new(float32)
-		case "double":
-			rec[i] = new(float64)
-		case "ipv4":
-			rec[i] = new(net.IP)
-		case "ipv6":
-			rec[i] = new(net.IP)
-		case "string":
-			rec[i] = new(string)
-		case "binary":
-			rec[i] = new([]byte)
-		}
-	}
-	return rec
 }

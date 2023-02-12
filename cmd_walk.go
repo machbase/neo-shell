@@ -68,7 +68,7 @@ func doWalk(cc Client, cmdLine string) {
 	sqlText := stripQuote(strings.Join(cmd.Query, " "))
 	db := cc.Database()
 
-	walker, err := NewWalker(sqlText, db, GetTimeformat(cmd.Timeformat), cmd.TimeLocation, cmd.Precision)
+	walker, err := NewWalker(sqlText, db, spi.GetTimeformat(cmd.Timeformat), cmd.TimeLocation, cmd.Precision)
 	if err != nil {
 		cc.Println("ERR", err.Error())
 		return
@@ -202,7 +202,7 @@ func (w *Walker) fetchMore() {
 		return
 	}
 
-	buffer := makeBuffer(w.cols)
+	buffer := w.cols.MakeBuffer()
 
 	count := 0
 	nrows := len(w.values)
@@ -240,4 +240,35 @@ func (w *Walker) GetRowCount() int {
 
 func (w *Walker) GetColumnCount() int {
 	return len(w.cols) + 1
+}
+
+func makeValues(rec []any, tz *time.Location, timeformat string, precision int) []string {
+	cols := make([]string, len(rec))
+	for i, r := range rec {
+		if r == nil {
+			cols[i] = "NULL"
+			continue
+		}
+		switch v := r.(type) {
+		case *string:
+			cols[i] = *v
+		case *time.Time:
+			cols[i] = v.In(tz).Format(timeformat)
+		case *float64:
+			if precision < 0 {
+				cols[i] = fmt.Sprintf("%f", *v)
+			} else {
+				cols[i] = fmt.Sprintf("%.*f", precision, *v)
+			}
+		case *int:
+			cols[i] = fmt.Sprintf("%d", *v)
+		case *int32:
+			cols[i] = fmt.Sprintf("%d", *v)
+		case *int64:
+			cols[i] = fmt.Sprintf("%d", *v)
+		default:
+			cols[i] = fmt.Sprintf("%T", r)
+		}
+	}
+	return cols
 }

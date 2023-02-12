@@ -98,7 +98,7 @@ func doChart(cli Client, line string) {
 		cmd.Timestamp = "now"
 	}
 
-	queries, err := buildDataQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, GetTimeformat(cmd.Timeformat), cmd.TimeLocation)
+	queries, err := buildDataQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, spi.GetTimeformat(cmd.Timeformat), cmd.TimeLocation)
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return

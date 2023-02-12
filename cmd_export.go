@@ -85,7 +85,7 @@ func doExport(cli Client, cmdLine string) {
 	var renderCtx = &spi.RowsRendererContext{
 		Sink:         sink,
 		TimeLocation: cmd.TimeLocation,
-		TimeFormat:   GetTimeformat(cmd.TimeFormat),
+		TimeFormat:   spi.GetTimeformat(cmd.TimeFormat),
 		Precision:    cmd.Precision,
 		Rownum:       false,
 		Heading:      cmd.Heading,
