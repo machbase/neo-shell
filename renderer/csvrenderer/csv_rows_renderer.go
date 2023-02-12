@@ -95,6 +95,12 @@ func (ex *Exporter) RenderRow(values []any) error {
 			} else {
 				cols[i] = fmt.Sprintf("%.*f", ex.ctx.Precision, *v)
 			}
+		case float64:
+			if ex.ctx.Precision < 0 {
+				cols[i] = fmt.Sprintf("%f", v)
+			} else {
+				cols[i] = fmt.Sprintf("%.*f", ex.ctx.Precision, v)
+			}
 		case *int:
 			cols[i] = strconv.FormatInt(int64(*v), 10)
 		case int:

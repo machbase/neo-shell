@@ -11,6 +11,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/gdamore/tcell/v2"
 	"github.com/machbase/neo-grpc/spi"
+	"github.com/machbase/neo-shell/util"
 	"github.com/rivo/tview"
 )
 
@@ -65,7 +66,7 @@ func doWalk(cc Client, cmdLine string) {
 		return
 	}
 
-	sqlText := stripQuote(strings.Join(cmd.Query, " "))
+	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))
 	db := cc.Database()
 
 	walker, err := NewWalker(sqlText, db, spi.GetTimeformat(cmd.Timeformat), cmd.TimeLocation, cmd.Precision)

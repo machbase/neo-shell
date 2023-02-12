@@ -88,7 +88,7 @@ func doImport(cli Client, cmdLine string) {
 	}
 
 	db := cli.Database()
-	_desc, err := spi.Describe(db, cmd.Table, false)
+	_desc, err := spi.DoDescribe(db, cmd.Table, false)
 	if err != nil {
 		cli.Printfln("ERR fail to get table info '%s', %s", cmd.Table, err.Error())
 		return

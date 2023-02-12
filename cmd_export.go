@@ -5,8 +5,11 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/spi"
+	"github.com/machbase/neo-shell/renderer/boxrenderer"
 	"github.com/machbase/neo-shell/renderer/csvrenderer"
-	"github.com/machbase/neo-shell/sink/filesink"
+	"github.com/machbase/neo-shell/renderer/jsonrenderer"
+	"github.com/machbase/neo-shell/sink"
+	"github.com/machbase/neo-shell/util"
 )
 
 func init() {
@@ -39,7 +42,7 @@ type ExportCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:""`
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Format       string         `name:"format" short:"f" default:"csv"`
+	Format       string         `name:"format" short:"f" default:"csv" enum:"-,csv,json"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
@@ -53,7 +56,6 @@ func pcExport(cli Client) readline.PrefixCompleterInterface {
 func doExport(cli Client, cmdLine string) {
 	cmd := &ExportCmd{}
 	parser, err := Kong(cmd, func() error { cli.Println(helpExport); cmd.Help = true; return nil })
-
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
@@ -67,15 +69,8 @@ func doExport(cli Client, cmdLine string) {
 		return
 	}
 
-	db := cli.Database()
-	rows, err := db.Query("select * from " + cmd.Table + " order by time")
-	if err != nil {
-		cli.Println("ERR", err.Error())
-		return
-	}
-	defer rows.Close()
-
-	sink, err := filesink.New(cmd.Output)
+	var outputPath = util.StripQuote(cmd.Output)
+	sink, err := sink.MakeSink(outputPath)
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
@@ -90,16 +85,36 @@ func doExport(cli Client, cmdLine string) {
 		Rownum:       false,
 		Heading:      cmd.Heading,
 	}
-
 	switch cmd.Format {
+	default:
+		renderer = boxrenderer.NewRowsRenderer("light", true, true)
 	case "csv":
 		renderer = csvrenderer.NewRowsRenderer(cmd.Delimiter)
+	case "json":
+		renderer = jsonrenderer.NewRowsRenderer()
 	}
-	if renderer == nil {
-		return
+
+	queryCtx := &spi.QueryContext{
+		DB: cli.Database(),
+		OnFetchStart: func(cols spi.Columns) {
+			renderCtx.ColumnNames = cols.Names(cmd.TimeLocation)
+			renderCtx.ColumnTypes = cols.Types()
+			renderer.OpenRender(renderCtx)
+		},
+		OnFetch: func(nrow int64, values []any) bool {
+			err := renderer.RenderRow(values)
+			if err != nil {
+				cli.Println("ERR", err.Error())
+			}
+			return true
+		},
+		OnFetchEnd: func() {
+			renderer.CloseRender()
+		},
 	}
-	cc := cli.(*client)
-	if err := cc.exportRows(renderCtx, rows, renderer, false); err != nil {
+
+	err = spi.DoQuery(queryCtx, "select * from "+cmd.Table+" order by time")
+	if err != nil {
 		cli.Println("ERR", err.Error())
 	}
 }

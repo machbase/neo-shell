@@ -11,8 +11,8 @@ import (
 	"github.com/machbase/neo-shell/renderer/boxrenderer"
 	"github.com/machbase/neo-shell/renderer/csvrenderer"
 	"github.com/machbase/neo-shell/renderer/jsonrenderer"
-	"github.com/machbase/neo-shell/sink/execsink"
-	"github.com/machbase/neo-shell/sink/filesink"
+	"github.com/machbase/neo-shell/sink"
+	"github.com/machbase/neo-shell/util"
 	"golang.org/x/term"
 )
 
@@ -83,41 +83,10 @@ func doSql(cc Client, cmdLine string) {
 		return
 	}
 
-	sqlText := stripQuote(strings.Join(cmd.Query, " "))
-
-	rows, err := cc.Database().Query(sqlText)
+	var outputPath = util.StripQuote(cmd.Output)
+	sink, err := sink.MakeSink(outputPath)
 	if err != nil {
 		cc.Println("ERR", err.Error())
-		return
-	}
-	defer rows.Close()
-
-	cli := cc.(*client)
-	if cc.Interactive() {
-		cli.AddSqlHistory(sqlText)
-	}
-
-	if !rows.IsFetchable() {
-		cli.Println(rows.Message())
-		return
-	}
-
-	var sink spi.Sink
-	var outputPath = stripQuote(cmd.Output)
-	var outputFields = strings.Fields(outputPath)
-	if outputFields[0] == "exec" {
-		binArgs := strings.TrimSpace(strings.TrimPrefix(outputPath, "exec"))
-		sink, err = execsink.New(binArgs)
-		if err != nil {
-			cli.Println("ERR", err.Error())
-			return
-		}
-	} else {
-		sink, err = filesink.New(outputPath)
-		if err != nil {
-			cli.Println("ERR", err.Error())
-			return
-		}
 	}
 
 	if outputPath == "-" {
@@ -126,6 +95,7 @@ func doSql(cc Client, cmdLine string) {
 		cmd.Interactive = false
 	}
 
+	var renderer spi.RowsRenderer
 	var renderCtx = &spi.RowsRendererContext{
 		Sink:         sink,
 		TimeLocation: cmd.TimeLocation,
@@ -134,7 +104,6 @@ func doSql(cc Client, cmdLine string) {
 		Rownum:       cmd.Rownum,
 		Heading:      cmd.Heading,
 	}
-	var renderer spi.RowsRenderer
 	switch cmd.Format {
 	default:
 		renderCtx.HeaderHeight = 4
@@ -146,74 +115,63 @@ func doSql(cc Client, cmdLine string) {
 		renderCtx.HeaderHeight = 0
 		renderer = jsonrenderer.NewRowsRenderer()
 	}
-	if renderer == nil {
-		return
-	}
-
-	if err := cli.exportRows(renderCtx, rows, renderer, cmd.Interactive); err != nil {
-		cli.Println("ERR", err.Error())
-	}
-}
-
-func (cli *client) exportRows(ctx *spi.RowsRendererContext, rows spi.Rows, renderer spi.RowsRenderer, interactive bool) error {
-	cols, err := rows.Columns()
-	if err != nil {
-		return err
-	}
 
 	windowHeight := 0
-	if interactive && term.IsTerminal(0) {
+	if cmd.Interactive && term.IsTerminal(0) {
 		if _, height, err := term.GetSize(0); err == nil {
 			windowHeight = height
 		}
 	}
 	pageHeight := windowHeight - 1
-	if ctx.Heading {
-		pageHeight -= ctx.HeaderHeight
+	if renderCtx.Heading {
+		pageHeight -= renderCtx.HeaderHeight
 	}
-	nextPauseRow := pageHeight
+	nextPauseRow := int64(pageHeight)
 
-	ctx.ColumnNames = cols.Names(ctx.TimeLocation)
-	ctx.ColumnTypes = cols.Types()
-
-	renderer.OpenRender(ctx)
-	defer renderer.CloseRender()
-
-	buf := cols.MakeBuffer()
-	nrow := 0
-	for rows.Next() {
-		err := rows.Scan(buf...)
-		if err != nil {
-			cli.Println("ERR", err.Error())
-			return err
-		}
-		nrow++
-
-		renderer.RenderRow(buf)
-
-		if nextPauseRow > 0 && nextPauseRow == nrow {
-			nextPauseRow += pageHeight
-			renderer.PageFlush(ctx.Heading)
-			if !cli.pauseForMore() {
-				return nil
+	queryCtx := &spi.QueryContext{
+		DB: cc.Database(),
+		OnFetchStart: func(cols spi.Columns) {
+			renderCtx.ColumnNames = cols.Names(cmd.TimeLocation)
+			renderCtx.ColumnTypes = cols.Types()
+			renderer.OpenRender(renderCtx)
+		},
+		OnFetch: func(nrow int64, values []any) bool {
+			err := renderer.RenderRow(values)
+			if err != nil {
+				cc.Println("ERR", err.Error())
 			}
-		}
-
-		if nextPauseRow <= 0 && nrow%1000 == 0 {
-			renderer.PageFlush(false)
-		}
+			if nextPauseRow > 0 && nextPauseRow == nrow {
+				nextPauseRow += int64(pageHeight)
+				renderer.PageFlush(renderCtx.Heading)
+				if !pauseForMore() {
+					return false
+				}
+			}
+			if nextPauseRow <= 0 && nrow%1000 == 0 {
+				renderer.PageFlush(false)
+			}
+			return true
+		},
+		OnFetchEnd: func() {
+			renderer.CloseRender()
+		},
 	}
-	return nil
+
+	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))
+	err = spi.DoQuery(queryCtx, sqlText)
+	if err != nil {
+		cc.Println("ERR", err.Error())
+	}
 }
 
-func (cli *client) pauseForMore() bool {
-	cli.Print(":")
+func pauseForMore() bool {
+	fmt.Fprintf(os.Stdout, ":")
 	// switch stdin into 'raw' mode
 	if oldState, err := term.MakeRaw(int(os.Stdin.Fd())); err == nil {
 		b := make([]byte, 3)
 		if _, err = os.Stdin.Read(b); err == nil {
 			term.Restore(int(os.Stdin.Fd()), oldState)
-			// ':' prompt를 삭제한다.
+			// remove ':' prompt'd line
 			// erase line
 			fmt.Fprintf(os.Stdout, "%s%s", "\x1b", "[2K")
 			// cursor backward

@@ -77,14 +77,3 @@ func splitFields(line string, stripQuote bool) []string {
 	}
 	return fields
 }
-
-func stripQuote(str string) string {
-	if len(str) == 0 {
-		return str
-	}
-	c := []rune(str)[0]
-	if unicode.In(c, unicode.Quotation_Mark) {
-		return strings.Trim(str, string(c))
-	}
-	return str
-}

@@ -55,7 +55,7 @@ func doDescribe(cli Client, line string) {
 
 	db := cli.Database()
 
-	_desc, err := spi.Describe(db, cmd.Table, cmd.ShowAll)
+	_desc, err := spi.DoDescribe(db, cmd.Table, cmd.ShowAll)
 	if err != nil {
 		cli.Println("unable to describe", cmd.Table, "; ERR", err.Error())
 		return
