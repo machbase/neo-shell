@@ -9,12 +9,11 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/spi"
-	"github.com/machbase/neo-shell/api"
-	"github.com/machbase/neo-shell/internal/out_csv"
-	"github.com/machbase/neo-shell/internal/out_default"
-	"github.com/machbase/neo-shell/internal/out_json"
-	"github.com/machbase/neo-shell/internal/sink_exec"
-	"github.com/machbase/neo-shell/internal/sink_file"
+	"github.com/machbase/neo-shell/renderer/boxrenderer"
+	"github.com/machbase/neo-shell/renderer/csvrenderer"
+	"github.com/machbase/neo-shell/renderer/jsonrenderer"
+	"github.com/machbase/neo-shell/sink/execsink"
+	"github.com/machbase/neo-shell/sink/filesink"
 	"golang.org/x/term"
 )
 
@@ -105,18 +104,18 @@ func doSql(cc Client, cmdLine string) {
 		return
 	}
 
-	var sink api.Sink
+	var sink spi.Sink
 	var outputPath = stripQuote(cmd.Output)
 	var outputFields = strings.Fields(outputPath)
 	if outputFields[0] == "exec" {
 		binArgs := strings.TrimSpace(strings.TrimPrefix(outputPath, "exec"))
-		sink, err = sink_exec.New(binArgs)
+		sink, err = execsink.New(binArgs)
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
 		}
 	} else {
-		sink, err = sink_file.New(outputPath)
+		sink, err = filesink.New(outputPath)
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
@@ -129,7 +128,7 @@ func doSql(cc Client, cmdLine string) {
 		cmd.Interactive = false
 	}
 
-	var renderCtx = &api.RowsContext{
+	var renderCtx = &spi.RowsRendererContext{
 		Sink:         sink,
 		TimeLocation: cmd.TimeLocation,
 		TimeFormat:   GetTimeformat(cmd.TimeFormat),
@@ -137,23 +136,17 @@ func doSql(cc Client, cmdLine string) {
 		Rownum:       cmd.Rownum,
 		Heading:      cmd.Heading,
 	}
-	var renderer api.RowsRenderer
+	var renderer spi.RowsRenderer
 	switch cmd.Format {
 	default:
 		renderCtx.HeaderHeight = 4
-		renderer = &out_default.Exporter{
-			Style:           "light",
-			SeparateColumns: cmd.Interactive,
-			DrawBorder:      cmd.Interactive,
-		}
+		renderer = boxrenderer.NewRowsRenderer("light", cmd.Interactive, cmd.Interactive)
 	case "csv":
 		renderCtx.HeaderHeight = 1
-		exporter := &out_csv.Exporter{}
-		exporter.SetDelimiter(cmd.Delimiter)
-		renderer = exporter
+		renderer = csvrenderer.NewRowsRenderer(cmd.Delimiter)
 	case "json":
 		renderCtx.HeaderHeight = 0
-		renderer = &out_json.Exporter{}
+		renderer = jsonrenderer.NewRowsRenderer()
 	}
 	if renderer == nil {
 		return
@@ -164,7 +157,7 @@ func doSql(cc Client, cmdLine string) {
 	}
 }
 
-func (cli *client) exportRows(ctx *api.RowsContext, rows spi.Rows, renderer api.RowsRenderer, interactive bool) error {
+func (cli *client) exportRows(ctx *spi.RowsRendererContext, rows spi.Rows, renderer spi.RowsRenderer, interactive bool) error {
 	cols, err := rows.Columns()
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package sink_exec
+package execsink
 
 import (
 	"errors"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/machbase/neo-shell/api"
-	"github.com/machbase/neo-shell/internal/util"
+	"github.com/machbase/neo-grpc/spi"
+	"github.com/machbase/neo-shell/util"
 )
 
 type sink struct {
@@ -23,7 +23,7 @@ type sink struct {
 	mutex  sync.Mutex
 }
 
-func New(cmdLine string) (api.Sink, error) {
+func New(cmdLine string) (spi.Sink, error) {
 	fields := util.SplitFields(cmdLine, true)
 	if len(fields) == 0 {
 		return nil, errors.New("empty command line")

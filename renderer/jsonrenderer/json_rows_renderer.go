@@ -1,19 +1,23 @@
-package out_json
+package jsonrenderer
 
 import (
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/machbase/neo-shell/api"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 type Exporter struct {
 	nrow int
-	ctx  *api.RowsContext
+	ctx  *spi.RowsRendererContext
 }
 
-func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
+func NewRowsRenderer() spi.RowsRenderer {
+	return &Exporter{}
+}
+
+func (ex *Exporter) OpenRender(ctx *spi.RowsRendererContext) error {
 	ex.ctx = ctx
 
 	names := ctx.ColumnNames

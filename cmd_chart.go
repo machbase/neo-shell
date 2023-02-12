@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-shell/api"
-	"github.com/machbase/neo-shell/internal/ser_chartjs"
-	"github.com/machbase/neo-shell/internal/ser_termchart"
-	"github.com/machbase/neo-shell/internal/sink_file"
+	"github.com/machbase/neo-grpc/spi"
+	"github.com/machbase/neo-shell/renderer/chartjsrenderer"
+	"github.com/machbase/neo-shell/renderer/termdashrenderer"
+	"github.com/machbase/neo-shell/sink/filesink"
 	"github.com/robfig/cron"
 )
 
@@ -104,25 +104,25 @@ func doChart(cli Client, line string) {
 		return
 	}
 
-	var renderer api.SeriesRenderer
+	var renderer spi.SeriesRenderer
 	switch cmd.Format {
 	default:
-		renderer = &ser_termchart.Renderer{}
+		renderer = termdashrenderer.NewSeriesRenderer()
 		// termdash의 경우 refresh cycle이 cmd.Count에 도달하여
 		// 외부에서 close하는 경우 정상적으로 화면이 복구 되지 않는 문제가 있어
 		// Count를 무조건 0 (무한 루프)으로 강제 설정한다.
 		cmd.Count = 0
 	case "json":
-		renderer = &ser_chartjs.JsonRenderer{}
+		renderer = chartjsrenderer.NewJsonSeriesRenderer()
 	case "html":
-		renderer = &ser_chartjs.HtmlRenderer{
-			Options: ser_chartjs.HtmlOptions{
+		renderer = chartjsrenderer.NewHtmlSeriesRenderer(
+			chartjsrenderer.HtmlOptions{
 				Title:    cmd.HtmlTitle,
 				Subtitle: cmd.HtmlSubtitle,
 				Width:    cmd.HtmlWidth,
 				Height:   cmd.HtmlHeight,
 			},
-		}
+		)
 	}
 
 	var scheduler *cron.Cron
@@ -133,7 +133,7 @@ func doChart(cli Client, line string) {
 	runCount := 0
 	runCanceled := false
 	runner := func() {
-		sink, err := sink_file.New(cmd.Output)
+		sink, err := filesink.New(cmd.Output)
 		if err != nil {
 			cli.Println("ERR", err.Error())
 			return
@@ -142,7 +142,7 @@ func doChart(cli Client, line string) {
 
 		db := cli.Database()
 		tz := cmd.TimeLocation
-		series := []*api.SeriesData{}
+		series := []*spi.SeriesData{}
 		// query
 		for _, dq := range queries {
 			if strings.ToUpper(dq.field) == "VALUE" {
@@ -177,7 +177,7 @@ func doChart(cli Client, line string) {
 				labels = append(labels, label)
 				idx++
 			}
-			series = append(series, &api.SeriesData{
+			series = append(series, &spi.SeriesData{
 				Name:   dq.label,
 				Values: values,
 				Labels: labels,
@@ -187,7 +187,7 @@ func doChart(cli Client, line string) {
 
 		if err = renderer.Render(ctx, sink, series); err != nil {
 			runCanceled = true
-			if err != nil && err != api.ErrUserCancel {
+			if err != nil && err != spi.ErrUserCancel {
 				cli.Println("ERR", err.Error())
 			}
 		}

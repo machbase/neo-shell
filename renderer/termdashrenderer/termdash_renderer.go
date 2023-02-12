@@ -1,9 +1,9 @@
-package ser_termchart
+package termdashrenderer
 
 import (
 	"context"
 
-	"github.com/machbase/neo-shell/api"
+	"github.com/machbase/neo-grpc/spi"
 	"github.com/mum4k/termdash"
 	"github.com/mum4k/termdash/cell"
 	"github.com/mum4k/termdash/container"
@@ -22,7 +22,11 @@ type Renderer struct {
 	err        error
 }
 
-func (r *Renderer) Render(ctx context.Context, sink api.Sink, data []*api.SeriesData) error {
+func NewSeriesRenderer() spi.SeriesRenderer {
+	return &Renderer{}
+}
+
+func (r *Renderer) Render(ctx context.Context, sink spi.Sink, data []*spi.SeriesData) error {
 	if r.err != nil {
 		return r.err
 	}
@@ -59,7 +63,7 @@ func (r *Renderer) Render(ctx context.Context, sink api.Sink, data []*api.Series
 
 		quitter := func(k *terminalapi.Keyboard) {
 			if k.Key == keyboard.KeyEsc {
-				r.err = api.ErrUserCancel
+				r.err = spi.ErrUserCancel
 				close(r.quitCh)
 			}
 		}

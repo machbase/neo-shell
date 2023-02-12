@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-shell/api"
-	"github.com/machbase/neo-shell/internal/out_csv"
-	"github.com/machbase/neo-shell/internal/sink_file"
+	"github.com/machbase/neo-grpc/spi"
+	"github.com/machbase/neo-shell/renderer/csvrenderer"
+	"github.com/machbase/neo-shell/sink/filesink"
 )
 
 func init() {
@@ -75,14 +75,14 @@ func doExport(cli Client, cmdLine string) {
 	}
 	defer rows.Close()
 
-	sink, err := sink_file.New(cmd.Output)
+	sink, err := filesink.New(cmd.Output)
 	if err != nil {
 		cli.Println("ERR", err.Error())
 		return
 	}
 
-	var renderer api.RowsRenderer
-	var renderCtx = &api.RowsContext{
+	var renderer spi.RowsRenderer
+	var renderCtx = &spi.RowsRendererContext{
 		Sink:         sink,
 		TimeLocation: cmd.TimeLocation,
 		TimeFormat:   GetTimeformat(cmd.TimeFormat),
@@ -93,9 +93,7 @@ func doExport(cli Client, cmdLine string) {
 
 	switch cmd.Format {
 	case "csv":
-		exporter := &out_csv.Exporter{}
-		exporter.SetDelimiter(cmd.Delimiter)
-		renderer = exporter
+		renderer = csvrenderer.NewRowsRenderer(cmd.Delimiter)
 	}
 	if renderer == nil {
 		return

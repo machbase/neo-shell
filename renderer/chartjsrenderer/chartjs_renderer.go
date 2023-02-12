@@ -1,4 +1,4 @@
-package ser_chartjs
+package chartjsrenderer
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"html/template"
 
-	api "github.com/machbase/neo-shell/api"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 type ChartJsModel struct {
@@ -42,7 +42,7 @@ type ChartJsScale struct {
 	BeginAtZero bool `json:"beginAtZero"`
 }
 
-func convertChartJsModel(data []*api.SeriesData) (*ChartJsModel, error) {
+func convertChartJsModel(data []*spi.SeriesData) (*ChartJsModel, error) {
 	pl := []string{"rgb(44,142,229)", "rgb(251,72,113)", "rgb(63,180,179)", "rgb(252,141,50)", "rgb(133,71,255)", "rgb(253,195,69)", "rgb(189,192,197)"}
 
 	cm := &ChartJsModel{}
@@ -72,7 +72,11 @@ func convertChartJsModel(data []*api.SeriesData) (*ChartJsModel, error) {
 type JsonRenderer struct {
 }
 
-func (r *JsonRenderer) Render(ctx context.Context, sink api.Sink, data []*api.SeriesData) error {
+func NewJsonSeriesRenderer() spi.SeriesRenderer {
+	return &JsonRenderer{}
+}
+
+func (r *JsonRenderer) Render(ctx context.Context, sink spi.Sink, data []*spi.SeriesData) error {
 	model, err := convertChartJsModel(data)
 	if err != nil {
 		return err
@@ -87,6 +91,12 @@ func (r *JsonRenderer) Render(ctx context.Context, sink api.Sink, data []*api.Se
 
 ///////////////////////////////////////////////
 // HTML Renderer
+
+func NewHtmlSeriesRenderer(opts HtmlOptions) spi.SeriesRenderer {
+	return &HtmlRenderer{
+		Options: opts,
+	}
+}
 
 //go:embed chartjs.html
 var chartHtmlTemplate string
@@ -107,7 +117,7 @@ type HtmlRenderer struct {
 	Options HtmlOptions
 }
 
-func (r *HtmlRenderer) Render(ctx context.Context, sink api.Sink, data []*api.SeriesData) error {
+func (r *HtmlRenderer) Render(ctx context.Context, sink spi.Sink, data []*spi.SeriesData) error {
 	tmpl, err := template.New("chart_template").Parse(chartHtmlTemplate)
 	if err != nil {
 		fmt.Println(err.Error())

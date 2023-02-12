@@ -1,54 +1,49 @@
-package out_default
+package csvrenderer
 
 import (
+	"encoding/csv"
 	"fmt"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/machbase/neo-shell/api"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 type Exporter struct {
-	writer table.Writer
 	rownum int64
-	ctx    *api.RowsContext
 
-	Style           string
-	SeparateColumns bool
-	DrawBorder      bool
+	writer *csv.Writer
+	Comma  rune
+
+	ctx *spi.RowsRendererContext
 }
 
-func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
+func NewRowsRenderer(delimiter string) spi.RowsRenderer {
+	rr := &Exporter{}
+	rr.SetDelimiter(delimiter)
+	return rr
+}
+
+func (ex *Exporter) SetDelimiter(delimiter string) {
+	delmiter, _ := utf8.DecodeRuneInString(delimiter)
+	ex.Comma = delmiter
+}
+
+func (ex *Exporter) OpenRender(ctx *spi.RowsRendererContext) error {
 	ex.ctx = ctx
-	ex.writer = table.NewWriter()
-	ex.writer.SetOutputMirror(ctx.Sink)
+	ex.writer = csv.NewWriter(ctx.Sink)
 
-	style := table.StyleDefault
-	switch ex.Style {
-	case "bold":
-		style = table.StyleBold
-	case "double":
-		style = table.StyleDouble
-	case "light":
-		style = table.StyleLight
-	case "round":
-		style = table.StyleRounded
+	if ex.Comma != 0 {
+		ex.writer.Comma = ex.Comma
 	}
-	style.Options.SeparateColumns = ex.SeparateColumns
-	style.Options.DrawBorder = ex.DrawBorder
-
-	ex.writer.SetStyle(style)
 
 	if ctx.Heading {
-		vs := make([]any, len(ctx.ColumnNames))
-		for i, h := range ctx.ColumnNames {
-			vs[i] = h
-		}
-		if ex.ctx.Rownum {
-			ex.writer.AppendHeader(table.Row(append([]any{"#"}, vs...)))
+		// TODO check if write() returns error, when csvWritter.Comma is not valid
+		if ctx.Rownum {
+			ex.writer.Write(append([]string{"#"}, ctx.ColumnNames...))
 		} else {
-			ex.writer.AppendHeader(table.Row(vs))
+			ex.writer.Write(ctx.ColumnNames)
 		}
 	}
 
@@ -56,25 +51,17 @@ func (ex *Exporter) OpenRender(ctx *api.RowsContext) error {
 }
 
 func (ex *Exporter) CloseRender() {
-	if ex.writer.Length() > 0 {
-		ex.writer.Render()
-		ex.writer.ResetRows()
-	}
+	ex.writer.Flush()
 	ex.ctx.Sink.Close()
 }
 
 func (ex *Exporter) PageFlush(heading bool) {
-	ex.writer.Render()
+	ex.writer.Flush()
 	ex.ctx.Sink.Flush()
-
-	ex.writer.ResetRows()
-	if !heading {
-		ex.writer.ResetHeaders()
-	}
 }
 
 func (ex *Exporter) RenderRow(values []any) error {
-	var cols = make([]any, len(values))
+	var cols = make([]string, len(values))
 
 	for i, r := range values {
 		if r == nil {
@@ -128,10 +115,8 @@ func (ex *Exporter) RenderRow(values []any) error {
 	ex.rownum++
 
 	if ex.ctx.Rownum {
-		ex.writer.AppendRow(table.Row(append([]any{strconv.FormatInt(ex.rownum, 10)}, cols...)))
+		return ex.writer.Write(append([]string{strconv.FormatInt(ex.rownum, 10)}, cols...))
 	} else {
-		ex.writer.AppendRow(table.Row(cols))
+		return ex.writer.Write(cols)
 	}
-
-	return nil
 }

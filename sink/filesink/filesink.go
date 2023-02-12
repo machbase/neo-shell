@@ -1,4 +1,4 @@
-package sink_file
+package filesink
 
 import (
 	"bufio"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/machbase/neo-shell/api"
+	"github.com/machbase/neo-grpc/spi"
 )
 
 type sink struct {
@@ -16,7 +16,7 @@ type sink struct {
 	mutex sync.Mutex
 }
 
-func New(path string) (api.Sink, error) {
+func New(path string) (spi.Sink, error) {
 	sink := &sink{
 		path: path,
 	}
