@@ -75,7 +75,7 @@ type Config struct {
 
 type client struct {
 	conf *Config
-	db   *machrpc.Client
+	db   spi.DatabaseClient
 
 	interactive   bool
 	remoteSession bool
@@ -108,8 +108,8 @@ func New(conf *Config, interactive bool) Client {
 }
 
 func (cli *client) Start() error {
-	machcli := machrpc.NewClient(machrpc.QueryTimeout(cli.conf.QueryTimeout))
-	err := machcli.Connect(cli.conf.ServerAddr)
+	machcli := machrpc.NewClient()
+	err := machcli.Connect(cli.conf.ServerAddr, machrpc.QueryTimeout(cli.conf.QueryTimeout))
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package sink
 
 import (
+	"io"
 	"strings"
 
 	"github.com/machbase/neo-shell/sink/execsink"
@@ -23,4 +24,23 @@ func MakeSink(output string) (sink spi.Sink, err error) {
 		}
 	}
 	return
+}
+
+type WriterSink struct {
+	Writer io.Writer
+}
+
+func (s *WriterSink) Write(buf []byte) (int, error) {
+	return s.Writer.Write(buf)
+}
+
+func (s *WriterSink) Flush() error {
+	return nil
+}
+
+func (s *WriterSink) Close() error {
+	if wc, ok := s.Writer.(io.WriteCloser); ok {
+		return wc.Close()
+	}
+	return nil
 }
