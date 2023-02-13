@@ -131,7 +131,7 @@ func doSql(cc Client, cmdLine string) {
 	queryCtx := &spi.QueryContext{
 		DB: cc.Database(),
 		OnFetchStart: func(cols spi.Columns) {
-			renderCtx.ColumnNames = cols.Names(cmd.TimeLocation)
+			renderCtx.ColumnNames = cols.NamesWithTimeLocation(cmd.TimeLocation)
 			renderCtx.ColumnTypes = cols.Types()
 			renderer.OpenRender(renderCtx)
 		},
