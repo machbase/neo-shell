@@ -10,8 +10,8 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/gdamore/tcell/v2"
-	"github.com/machbase/neo-grpc/spi"
 	"github.com/machbase/neo-shell/util"
+	spi "github.com/machbase/neo-spi"
 	"github.com/rivo/tview"
 )
 

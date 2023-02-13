@@ -7,7 +7,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/cemlib/util"
-	"github.com/machbase/neo-grpc/spi"
+	spi "github.com/machbase/neo-spi"
 )
 
 func init() {

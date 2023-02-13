@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/machbase/neo-grpc/spi"
+	spi "github.com/machbase/neo-spi"
 )
 
 type Exporter struct {

@@ -3,7 +3,7 @@ package termdashrenderer
 import (
 	"context"
 
-	"github.com/machbase/neo-grpc/spi"
+	spi "github.com/machbase/neo-spi"
 	"github.com/mum4k/termdash"
 	"github.com/mum4k/termdash/cell"
 	"github.com/mum4k/termdash/container"

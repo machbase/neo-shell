@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/machbase/cemlib/logging"
-	"github.com/machbase/neo-grpc/spi"
+	spi "github.com/machbase/neo-spi"
 )
 
 type Server struct {
@@ -132,7 +132,7 @@ func (svr *Server) checkLogTable() {
 	}
 
 	if createTable {
-		err := svr.db.Exec(
+		result := svr.db.Exec(
 			`CREATE TABLE ` + LogVaultTable + `(
 				ts     datetime,
 				host   varchar(80),
@@ -141,12 +141,12 @@ func (svr *Server) checkLogTable() {
 				labels varchar(1000),
 				line   text
 			)`)
-		if err != nil {
+		if result.Err() != nil {
 			svr.log.Error("fail to create log vault table", LogVaultTable, err.Error())
 		}
 
-		err = svr.db.Exec(`CREATE INDEX ` + LogVaultTable + `_IDX ON ` + LogVaultTable + ` (line) INDEX_TYPE KEYWORD`)
-		if err != nil {
+		result = svr.db.Exec(`CREATE INDEX ` + LogVaultTable + `_IDX ON ` + LogVaultTable + ` (line) INDEX_TYPE KEYWORD`)
+		if result.Err() != nil {
 			svr.log.Error("fail to create log vault index", LogVaultTable, err.Error())
 		}
 	}

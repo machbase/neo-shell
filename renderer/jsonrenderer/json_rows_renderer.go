@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/machbase/neo-grpc/spi"
+	spi "github.com/machbase/neo-spi"
 )
 
 type Exporter struct {

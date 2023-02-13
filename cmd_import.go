@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-grpc/spi"
+	spi "github.com/machbase/neo-spi"
 )
 
 func init() {
@@ -143,8 +143,8 @@ func doImport(cli Client, cmdLine string) {
 			hold = append(hold, "?")
 		}
 		query := fmt.Sprintf("insert into %s values(%s)", cmd.Table, strings.Join(hold, ","))
-		if err := db.Exec(query, vals...); err != nil {
-			cli.Println(err.Error())
+		if result := db.Exec(query, vals...); result.Err() != nil {
+			cli.Println(result.Err().Error())
 			break
 		}
 		written++

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/machbase/neo-grpc/spi"
+	spi "github.com/machbase/neo-spi"
 )
 
 type ChartJsModel struct {

@@ -3,9 +3,9 @@ package sink
 import (
 	"strings"
 
-	"github.com/machbase/neo-grpc/spi"
 	"github.com/machbase/neo-shell/sink/execsink"
 	"github.com/machbase/neo-shell/sink/filesink"
+	spi "github.com/machbase/neo-spi"
 )
 
 func MakeSink(output string) (sink spi.Sink, err error) {

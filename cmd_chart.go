@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-grpc/spi"
 	"github.com/machbase/neo-shell/renderer/chartjsrenderer"
 	"github.com/machbase/neo-shell/renderer/termdashrenderer"
 	"github.com/machbase/neo-shell/sink/filesink"
+	spi "github.com/machbase/neo-spi"
 	"github.com/robfig/cron"
 )
 

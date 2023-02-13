@@ -9,7 +9,8 @@ require (
 	github.com/gin-gonic/gin v1.8.2
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/cemlib v0.0.0-20230124025810-6525e5a45406
-	github.com/machbase/neo-grpc v0.2.1-0.20230213040509-347e09791bfc
+	github.com/machbase/neo-grpc v0.2.1-0.20230213070304-771496782f35
+	github.com/machbase/neo-spi v0.0.0-20230213070106-333b233ae3e7
 	github.com/mum4k/termdash v0.17.0
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
 	github.com/robfig/cron v1.2.0

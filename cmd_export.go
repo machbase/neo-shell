@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-grpc/spi"
 	"github.com/machbase/neo-shell/renderer/boxrenderer"
 	"github.com/machbase/neo-shell/renderer/csvrenderer"
 	"github.com/machbase/neo-shell/renderer/jsonrenderer"
 	"github.com/machbase/neo-shell/sink"
 	"github.com/machbase/neo-shell/util"
+	spi "github.com/machbase/neo-spi"
 )
 
 func init() {

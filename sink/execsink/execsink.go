@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/machbase/neo-grpc/spi"
 	"github.com/machbase/neo-shell/util"
+	spi "github.com/machbase/neo-spi"
 )
 
 type sink struct {
