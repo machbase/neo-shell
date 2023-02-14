@@ -1,6 +1,7 @@
 package codec
 
 import (
+	"io"
 	"time"
 
 	"github.com/machbase/neo-shell/codec/box"
@@ -10,7 +11,7 @@ import (
 )
 
 type EncoderBuilder interface {
-	Build(rendererType string) spi.RowsEncoder
+	Build(encoderType string) spi.RowsEncoder
 	SetSink(s spi.Sink) EncoderBuilder
 	SetTimeLocation(tz *time.Location) EncoderBuilder
 	SetTimeFormat(f string) EncoderBuilder
@@ -25,7 +26,7 @@ type EncoderBuilder interface {
 	SetBoxDrawBorder(flag bool) EncoderBuilder
 }
 
-type builder struct {
+type encBuilder struct {
 	*spi.RowsEncoderContext
 	csvDelimiter       string
 	boxStyle           string
@@ -34,7 +35,7 @@ type builder struct {
 }
 
 func NewEncoderBuilder() EncoderBuilder {
-	return &builder{
+	return &encBuilder{
 		RowsEncoderContext: &spi.RowsEncoderContext{},
 		csvDelimiter:       ",",
 		boxStyle:           "default",
@@ -43,8 +44,8 @@ func NewEncoderBuilder() EncoderBuilder {
 	}
 }
 
-func (b *builder) Build(rendererType string) spi.RowsEncoder {
-	switch rendererType {
+func (b *encBuilder) Build(encoderType string) spi.RowsEncoder {
+	switch encoderType {
 	case "box":
 		return box.NewEncoder(b.RowsEncoderContext, b.boxStyle, b.boxSeparateColumns, b.boxDrawBorder)
 	case "csv":
@@ -54,51 +55,94 @@ func (b *builder) Build(rendererType string) spi.RowsEncoder {
 	}
 }
 
-func (b *builder) SetSink(s spi.Sink) EncoderBuilder {
+func (b *encBuilder) SetSink(s spi.Sink) EncoderBuilder {
 	b.Sink = s
 	return b
 }
 
-func (b *builder) SetTimeLocation(tz *time.Location) EncoderBuilder {
+func (b *encBuilder) SetTimeLocation(tz *time.Location) EncoderBuilder {
 	b.TimeLocation = tz
 	return b
 }
 
-func (b *builder) SetTimeFormat(f string) EncoderBuilder {
+func (b *encBuilder) SetTimeFormat(f string) EncoderBuilder {
 	b.TimeFormat = spi.GetTimeformat(f)
 	return b
 }
 
-func (b *builder) SetPrecision(p int) EncoderBuilder {
+func (b *encBuilder) SetPrecision(p int) EncoderBuilder {
 	b.Precision = p
 	return b
 }
 
-func (b *builder) SetRownum(flag bool) EncoderBuilder {
+func (b *encBuilder) SetRownum(flag bool) EncoderBuilder {
 	b.Rownum = flag
 	return b
 }
 
-func (b *builder) SetHeading(flag bool) EncoderBuilder {
+func (b *encBuilder) SetHeading(flag bool) EncoderBuilder {
 	b.Heading = flag
 	return b
 }
 
-func (b *builder) SetCsvDelimieter(del string) EncoderBuilder {
+func (b *encBuilder) SetCsvDelimieter(del string) EncoderBuilder {
 	b.csvDelimiter = del
 	return b
 }
 
-func (b *builder) SetBoxStyle(style string) EncoderBuilder {
+func (b *encBuilder) SetBoxStyle(style string) EncoderBuilder {
 	b.boxStyle = style
 	return b
 }
-func (b *builder) SetBoxSeparateColumns(flag bool) EncoderBuilder {
+func (b *encBuilder) SetBoxSeparateColumns(flag bool) EncoderBuilder {
 	b.boxSeparateColumns = flag
 	return b
 }
 
-func (b *builder) SetBoxDrawBorder(flag bool) EncoderBuilder {
+func (b *encBuilder) SetBoxDrawBorder(flag bool) EncoderBuilder {
 	b.boxDrawBorder = flag
+	return b
+}
+
+type DecoderBuilder interface {
+	Build(decoderType string) spi.RowsDecoder
+	SetReader(reader io.Reader) DecoderBuilder
+	SetColumns(columns spi.Columns) DecoderBuilder
+	SetCsvDelimieter(del string) DecoderBuilder
+}
+
+type decBuilder struct {
+	*spi.RowsDecoderContext
+	csvDelimiter string
+}
+
+func NewDecoderBuilder() DecoderBuilder {
+	return &decBuilder{
+		RowsDecoderContext: &spi.RowsDecoderContext{},
+		csvDelimiter:       ",",
+	}
+}
+
+func (b *decBuilder) Build(decoderType string) spi.RowsDecoder {
+	switch decoderType {
+	case "csv":
+		return csv.NewDecoder(b.RowsDecoderContext, b.csvDelimiter)
+	default: // "json"
+		return nil
+	}
+}
+
+func (b *decBuilder) SetReader(reader io.Reader) DecoderBuilder {
+	b.Reader = reader
+	return b
+}
+
+func (b *decBuilder) SetColumns(columns spi.Columns) DecoderBuilder {
+	b.RowsDecoderContext.Columns = columns
+	return b
+}
+
+func (b *decBuilder) SetCsvDelimieter(del string) DecoderBuilder {
+	b.csvDelimiter = del
 	return b
 }

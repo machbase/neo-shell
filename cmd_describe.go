@@ -88,7 +88,7 @@ func doDescribe(cli Client, line string) {
 	box := cli.NewBox([]string{"#", "ID", "NAME", "TYPE", "LENGTH"})
 	for _, col := range desc.Columns {
 		nrow++
-		colType := do.ColumnTypeDescription(col.Type)
+		colType := spi.ColumnTypeString(col.Type)
 		box.AppendRow(nrow, col.Id, col.Name, colType, col.Length)
 	}
 

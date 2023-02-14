@@ -2,14 +2,15 @@ package shell
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"net"
+	"io"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/do"
 	spi "github.com/machbase/neo-spi"
 )
@@ -32,6 +33,8 @@ const helpImport = `  import [options] <table>
     --no-header        there is no header, do not skip first line (default)
     --header           first line is header, skip it
     --method           write method [insert|append] (default:'insert')
+	--create-table     create table if it doesn't exist (default:false)
+	--truncate-table   truncate table ahead importing new data (default:false)
     --delimiter,-d     csv delimiter (default:',')
     --tz               timezone for handling datetime
     --timeformat,-t    time format [ns|ms|s|<timeformat>] (default:'ns')
@@ -42,16 +45,18 @@ const helpImport = `  import [options] <table>
     --eof <string>     specify eof line, use any string matches [a-zA-Z0-9]+ (default: '.')`
 
 type ImportCmd struct {
-	Table        string         `arg:"" name:"table"`
-	Input        string         `name:"input" short:"i" default:"-"`
-	HasHeader    bool           `name:"header" negatable:""`
-	EofMark      string         `name:"eof" default:"."`
-	InputFormat  string         `name:"format" short:"f" default:"csv"`
-	Method       string         `name:"method" default:"insert"`
-	Delimiter    string         `name:"delimiter" short:"d" default:","`
-	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
-	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Help         bool           `kong:"-"`
+	Table         string         `arg:"" name:"table"`
+	Input         string         `name:"input" short:"i" default:"-"`
+	HasHeader     bool           `name:"header" negatable:""`
+	EofMark       string         `name:"eof" default:"."`
+	InputFormat   string         `name:"format" short:"f" default:"csv"`
+	Method        string         `name:"method" default:"insert" enum:"insert,append"`
+	CreateTable   bool           `name:"create-table" default:"false"`
+	TruncateTable bool           `name:"truncate-table" default:"false"`
+	Delimiter     string         `name:"delimiter" short:"d" default:","`
+	TimeFormat    string         `name:"timeformat" short:"t" default:"ns"`
+	TimeLocation  *time.Location `name:"tz" default:"UTC"`
+	Help          bool           `kong:"-"`
 }
 
 func pcImport(cli Client) readline.PrefixCompleterInterface {
@@ -98,135 +103,72 @@ func doImport(cli Client, cmdLine string) {
 
 	if cli.Interactive() {
 		cli.Printfln("# Enter %s⏎ to quit", cmd.EofMark)
-		colNames := []string{}
-		for _, col := range desc.Columns {
-			colNames = append(colNames, col.Name)
-		}
-
+		colNames := desc.Columns.Columns().Names()
 		cli.Println("#", strings.Join(colNames, cmd.Delimiter))
-	}
-	buff := []string{}
-	vals := []any{}
-	hold := []string{}
-	lineno := 0
-	written := 0
-	for {
-		bs, ispart, err := r.ReadLine()
-		if err != nil {
-			break
-		}
-		str := string(bs)
-		if str == cmd.EofMark {
-			break
-		}
-		buff = append(buff, str)
 
-		if ispart {
-			continue
-		}
-
-		lineno++
-		line := strings.Join(buff, "")
-		toks := strings.Split(line, cmd.Delimiter)
-		if len(toks) != len(desc.Columns) {
-			cli.Printfln("line %d contains %d columns, but expected %d", lineno, len(toks), len(desc.Columns))
-			break
-		}
-
-		for i := 0; i < len(desc.Columns); i++ {
-			str := strings.TrimSpace(toks[i])
-			v, err := stringToColumnValue(str, desc.Columns[i], cmd.TimeLocation, cmd.TimeFormat)
+		buff := []byte{}
+		for {
+			bs, _, err := r.ReadLine()
 			if err != nil {
-				cli.Printfln("line %d, column %s, %s", lineno, desc.Columns[i].Name, err.Error())
 				break
 			}
-			vals = append(vals, v)
-			hold = append(hold, "?")
+			if string(bs) == cmd.EofMark {
+				break
+			}
+			buff = append(buff, bs...)
 		}
-		query := fmt.Sprintf("insert into %s values(%s)", cmd.Table, strings.Join(hold, ","))
-		if result := db.Exec(query, vals...); result.Err() != nil {
-			cli.Println(result.Err().Error())
+		r = bufio.NewReader(bytes.NewReader(buff))
+	}
+
+	decoder := codec.NewDecoderBuilder().
+		SetReader(r).
+		SetColumns(desc.Columns.Columns()).
+		SetCsvDelimieter(cmd.Delimiter).
+		Build(cmd.InputFormat)
+
+	var appender spi.Appender
+	hold := []string{}
+	lineno := 0
+	for {
+		vals, err := decoder.NextRow()
+		if err != nil {
+			if err != io.EOF {
+				cli.Println("ERR", err.Error())
+			}
 			break
 		}
-		written++
+		lineno++
 
-		buff = buff[:0]
-		vals = vals[:0]
-		hold = hold[:0]
-	}
-	cli.Println("total", written, "record(s) imported")
-}
+		if len(vals) != len(desc.Columns) {
+			cli.Printfln("line %d contains %d columns, but expected %d", lineno, len(vals), len(desc.Columns))
+			break
+		}
+		if cmd.Method == "insert" {
+			for i := 0; i < len(desc.Columns); i++ {
+				hold = append(hold, "?")
+			}
+			query := fmt.Sprintf("insert into %s values(%s)", cmd.Table, strings.Join(hold, ","))
+			if result := db.Exec(query, vals...); result.Err() != nil {
+				cli.Println(result.Err().Error())
+				break
+			}
+			hold = hold[:0]
+		} else { // append
+			if appender == nil {
+				appender, err = db.Appender(cmd.Table)
+				if err != nil {
+					cli.Println("ERR", err.Error())
+					break
+				}
+				defer appender.Close()
+			}
 
-func stringToColumnValue(str string, cd *do.ColumnDescription, tz *time.Location, timeformat string) (any, error) {
-	switch cd.Type {
-	case spi.Int16ColumnType:
-		return strconv.ParseInt(str, 10, 16)
-	case spi.Uint16ColumnType:
-		return strconv.ParseUint(str, 10, 16)
-	case spi.Int32ColumnType:
-		return strconv.ParseInt(str, 10, 32)
-	case spi.Uint32ColumnType:
-		return strconv.ParseUint(str, 10, 32)
-	case spi.Int64ColumnType:
-		return strconv.ParseInt(str, 10, 64)
-	case spi.Uint64ColumnType:
-		return strconv.ParseUint(str, 10, 64)
-	case spi.Float32ColumnType:
-		return strconv.ParseFloat(str, 32)
-	case spi.Float64ColumnType:
-		return strconv.ParseFloat(str, 64)
-	case spi.VarcharColumnType:
-		return str, nil
-	case spi.TextColumnType:
-		return str, nil
-	case spi.ClobColumnType:
-		return str, nil
-	case spi.BlobColumnType:
-		return str, nil
-	case spi.BinaryColumnType:
-		return str, nil
-	case spi.DatetimeColumnType:
-		switch timeformat {
-		case "ns":
-			v, err := strconv.ParseInt(str, 10, 64)
+			err = appender.Append(vals...)
 			if err != nil {
-				return nil, err
+				cli.Println("ERR", err.Error())
+				break
 			}
-			return time.Unix(0, v), nil
-		case "ms":
-			v, err := strconv.ParseInt(str, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			return time.Unix(0, v*int64(time.Millisecond)), nil
-		case "us":
-			v, err := strconv.ParseInt(str, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			return time.Unix(0, v*int64(time.Microsecond)), nil
-		case "s":
-			v, err := strconv.ParseInt(str, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			return time.Unix(v, 0), nil
-		default:
-			return time.ParseInLocation(timeformat, str, tz)
 		}
-	case spi.IpV4ColumnType:
-		if ip := net.ParseIP(str); ip != nil {
-			return ip, nil
-		} else {
-			return nil, fmt.Errorf("unable to parse as ip address %s", str)
-		}
-	case spi.IpV6ColumnType:
-		if ip := net.ParseIP(str); ip != nil {
-			return ip, nil
-		} else {
-			return nil, fmt.Errorf("unable to parse as ip address %s", str)
-		}
-	default:
-		return nil, fmt.Errorf("unknown column type %d", cd.Type)
 	}
+	cli.Printfln("import total %d record(s) %sed", lineno, cmd.Method)
 }

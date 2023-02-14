@@ -25,7 +25,7 @@ const helpExport = `  export [options] <table>
     table               table name to read
   options:
     --output,-o <file>   output file (default:'-' stdout)
-    --format,-f <format> output format [csv] (default:'csv')
+    --format,-f <format> output format [csv,json] (default:'csv')
     --[no-]header        export header (default:false)
     --delimiter,-d      csv delimiter (default:',')
     --tz                timezone for handling datetime
@@ -41,7 +41,7 @@ type ExportCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:""`
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Format       string         `name:"format" short:"f" default:"csv" enum:"-,csv,json"`
+	Format       string         `name:"format" short:"f" default:"csv" enum:"box,csv,json"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
@@ -102,6 +102,7 @@ func doExport(cli Client, cmdLine string) {
 		},
 		OnFetchEnd: func() {
 			encoder.Close()
+			sink.Close()
 		},
 	}
 
