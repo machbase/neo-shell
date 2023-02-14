@@ -94,7 +94,7 @@ func doSql(cc Client, cmdLine string) {
 		cmd.Interactive = false
 	}
 
-	encoder := codec.NewEncoderBuilder().
+	encoder := codec.NewEncoderBuilder(cmd.Format).
 		SetSink(sink).
 		SetTimeLocation(cmd.TimeLocation).
 		SetTimeFormat(cmd.TimeFormat).
@@ -105,7 +105,7 @@ func doSql(cc Client, cmdLine string) {
 		SetBoxSeparateColumns(cmd.Interactive).
 		SetBoxDrawBorder(cmd.Interactive).
 		SetCsvDelimieter(cmd.Delimiter).
-		Build(cmd.Format)
+		Build()
 
 	headerHeight := 0
 	switch cmd.Format {

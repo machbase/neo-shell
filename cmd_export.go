@@ -75,7 +75,7 @@ func doExport(cli Client, cmdLine string) {
 		return
 	}
 
-	encoder := codec.NewEncoderBuilder().
+	encoder := codec.NewEncoderBuilder(cmd.Format).
 		SetSink(sink).
 		SetTimeLocation(cmd.TimeLocation).
 		SetTimeFormat(cmd.TimeFormat).
@@ -86,7 +86,7 @@ func doExport(cli Client, cmdLine string) {
 		SetBoxSeparateColumns(true).
 		SetBoxDrawBorder(true).
 		SetCsvDelimieter(cmd.Delimiter).
-		Build(cmd.Format)
+		Build()
 
 	queryCtx := &do.QueryContext{
 		DB: cli.Database(),

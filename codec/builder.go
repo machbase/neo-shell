@@ -11,7 +11,7 @@ import (
 )
 
 type EncoderBuilder interface {
-	Build(encoderType string) spi.RowsEncoder
+	Build() spi.RowsEncoder
 	SetSink(s spi.Sink) EncoderBuilder
 	SetTimeLocation(tz *time.Location) EncoderBuilder
 	SetTimeFormat(f string) EncoderBuilder
@@ -28,15 +28,17 @@ type EncoderBuilder interface {
 
 type encBuilder struct {
 	*spi.RowsEncoderContext
+	encoderType        string
 	csvDelimiter       string
 	boxStyle           string
 	boxSeparateColumns bool
 	boxDrawBorder      bool
 }
 
-func NewEncoderBuilder() EncoderBuilder {
+func NewEncoderBuilder(encoderType string) EncoderBuilder {
 	return &encBuilder{
 		RowsEncoderContext: &spi.RowsEncoderContext{},
+		encoderType:        encoderType,
 		csvDelimiter:       ",",
 		boxStyle:           "default",
 		boxSeparateColumns: true,
@@ -44,8 +46,8 @@ func NewEncoderBuilder() EncoderBuilder {
 	}
 }
 
-func (b *encBuilder) Build(encoderType string) spi.RowsEncoder {
-	switch encoderType {
+func (b *encBuilder) Build() spi.RowsEncoder {
+	switch b.encoderType {
 	case "box":
 		return box.NewEncoder(b.RowsEncoderContext, b.boxStyle, b.boxSeparateColumns, b.boxDrawBorder)
 	case "csv":

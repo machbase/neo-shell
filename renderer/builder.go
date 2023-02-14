@@ -7,25 +7,26 @@ import (
 )
 
 type ChartRendererBuilder interface {
-	Build(format string) spi.Renderer
+	Build() spi.Renderer
 	SetTitle(string) ChartRendererBuilder
 	SetSubtitle(string) ChartRendererBuilder
 	SetSize(width, height string) ChartRendererBuilder
 }
 
 type chartbuilder struct {
-	title    string
-	subtitle string
-	width    string
-	height   string
+	chartType string
+	title     string
+	subtitle  string
+	width     string
+	height    string
 }
 
-func NewChartRendererBuilder() ChartRendererBuilder {
-	return &chartbuilder{}
+func NewChartRendererBuilder(format string) ChartRendererBuilder {
+	return &chartbuilder{chartType: format}
 }
 
-func (cb *chartbuilder) Build(format string) spi.Renderer {
-	switch format {
+func (cb *chartbuilder) Build() spi.Renderer {
+	switch cb.chartType {
 	case "json":
 		return jschart.NewJsonSeriesRenderer()
 	case "html":

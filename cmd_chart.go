@@ -104,11 +104,11 @@ func doChart(cli Client, line string) {
 		return
 	}
 
-	render := renderer.NewChartRendererBuilder().
+	render := renderer.NewChartRendererBuilder(cmd.Format).
 		SetTitle(cmd.HtmlTitle).
 		SetSubtitle(cmd.HtmlSubtitle).
 		SetSize(cmd.HtmlWidth, cmd.HtmlHeight).
-		Build(cmd.Format)
+		Build()
 
 	switch cmd.Format {
 	default:
