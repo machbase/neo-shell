@@ -71,7 +71,12 @@ func doHelp(cli Client, line string) {
 
 func helpTimeFormat(cli Client) {
 	cli.Println(`
-  timeformat  
+  timeformat
+    epoch
+      ns             nanoseconds
+      us             microseconds
+      ms             milliseconds
+      s              seconds
     abbreviations
       Default,-      2006-01-02 15:04:05.999
       Numeric        01/02 03:04:05PM '06 -0700
@@ -91,11 +96,11 @@ func helpTimeFormat(cli Client) {
       StampMicro     Jan _2 15:04:05.000000
       StampNano      Jan _2 15:04:05.000000000
     custom format
-       year   2006
-       month  01
-       day    02
-       hour   03 or 15
-       minute 04
-       second 05 or with sub-seconds '05.999999'
+       year          2006
+       month         01
+       day           02
+       hour          03 or 15
+       minute        04
+       second        05 or with sub-seconds '05.999999'
 `)
 }
