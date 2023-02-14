@@ -47,8 +47,10 @@ const helpChart = `  chart [options] <tag_path>...
         none     terminal chart (default)
         json     json format
         html     generate chart page in html format
-    --html-title <title>     title text for html output (default:"Chart")
-    --html-subtitle <title>  sub title text for html output (default:"")`
+    --title <title>          title text for html output (default:"Chart")
+    --subtitle <title>       sub title text for html output (default:"")
+	--width <string>         chart width for html output (default:"1600")
+	--height <string>        chart height (default:"900")`
 
 type ChartCmd struct {
 	TagPaths     []string       `arg:"" name:"tags"`
@@ -60,10 +62,10 @@ type ChartCmd struct {
 	Count        int            `name:"count" short:"n" default:"0"`
 	Output       string         `name:"output" short:"o" default:"-"`
 	Format       string         `name:"format" short:"f" enum:"none,json,html" default:"none"`
-	HtmlTitle    string         `name:"html-title" default:"Chart"`
-	HtmlSubtitle string         `name:"html-subtitle" default:""`
-	HtmlWidth    string         `name:"html-width" default:"1600"`
-	HtmlHeight   string         `name:"html-height" default:"900"`
+	HtmlTitle    string         `name:"title" default:"Chart"`
+	HtmlSubtitle string         `name:"subtitle" default:""`
+	HtmlWidth    string         `name:"width" default:"1600"`
+	HtmlHeight   string         `name:"height" default:"900"`
 	Help         bool           `kong:"-"`
 }
 
