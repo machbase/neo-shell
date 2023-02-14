@@ -75,7 +75,7 @@ func doExport(cli Client, cmdLine string) {
 		return
 	}
 
-	renderer := codec.NewBuilder().
+	encoder := codec.NewEncoderBuilder().
 		SetSink(sink).
 		SetTimeLocation(cmd.TimeLocation).
 		SetTimeFormat(cmd.TimeFormat).
@@ -91,17 +91,17 @@ func doExport(cli Client, cmdLine string) {
 	queryCtx := &do.QueryContext{
 		DB: cli.Database(),
 		OnFetchStart: func(cols spi.Columns) {
-			renderer.Open(cols)
+			encoder.Open(cols)
 		},
 		OnFetch: func(nrow int64, values []any) bool {
-			err := renderer.AddRow(values)
+			err := encoder.AddRow(values)
 			if err != nil {
 				cli.Println("ERR", err.Error())
 			}
 			return true
 		},
 		OnFetchEnd: func() {
-			renderer.Close()
+			encoder.Close()
 		},
 	}
 

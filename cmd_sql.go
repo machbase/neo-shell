@@ -94,7 +94,7 @@ func doSql(cc Client, cmdLine string) {
 		cmd.Interactive = false
 	}
 
-	renderer := codec.NewBuilder().
+	encoder := codec.NewEncoderBuilder().
 		SetSink(sink).
 		SetTimeLocation(cmd.TimeLocation).
 		SetTimeFormat(cmd.TimeFormat).
@@ -132,27 +132,27 @@ func doSql(cc Client, cmdLine string) {
 	queryCtx := &do.QueryContext{
 		DB: cc.Database(),
 		OnFetchStart: func(cols spi.Columns) {
-			renderer.Open(cols)
+			encoder.Open(cols)
 		},
 		OnFetch: func(nrow int64, values []any) bool {
-			err := renderer.AddRow(values)
+			err := encoder.AddRow(values)
 			if err != nil {
 				cc.Println("ERR", err.Error())
 			}
 			if nextPauseRow > 0 && nextPauseRow == nrow {
 				nextPauseRow += int64(pageHeight)
-				renderer.Flush(cmd.Heading)
+				encoder.Flush(cmd.Heading)
 				if !pauseForMore() {
 					return false
 				}
 			}
 			if nextPauseRow <= 0 && nrow%1000 == 0 {
-				renderer.Flush(false)
+				encoder.Flush(false)
 			}
 			return true
 		},
 		OnFetchEnd: func() {
-			renderer.Close()
+			encoder.Close()
 		},
 	}
 

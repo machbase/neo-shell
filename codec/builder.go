@@ -33,7 +33,7 @@ type builder struct {
 	boxDrawBorder      bool
 }
 
-func NewBuilder() EncoderBuilder {
+func NewEncoderBuilder() EncoderBuilder {
 	return &builder{
 		RowsEncoderContext: &spi.RowsEncoderContext{},
 		csvDelimiter:       ",",

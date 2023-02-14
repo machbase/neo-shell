@@ -76,6 +76,10 @@ func NewJsonSeriesRenderer() spi.Renderer {
 	return &JsonRenderer{}
 }
 
+func (r *JsonRenderer) ContentType() string {
+	return "application/json"
+}
+
 func (r *JsonRenderer) Render(ctx context.Context, sink spi.Sink, data []*spi.RenderingData) error {
 	model, err := convertChartJsModel(data)
 	if err != nil {
@@ -96,6 +100,10 @@ func NewHtmlSeriesRenderer(opts HtmlOptions) spi.Renderer {
 	return &HtmlRenderer{
 		Options: opts,
 	}
+}
+
+func (r *HtmlRenderer) ContentType() string {
+	return "text/html"
 }
 
 //go:embed chartjs.html
