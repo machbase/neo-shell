@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/do"
 	spi "github.com/machbase/neo-spi"
 )
 
@@ -88,12 +89,12 @@ func doImport(cli Client, cmdLine string) {
 	}
 
 	db := cli.Database()
-	_desc, err := spi.DoDescribe(db, cmd.Table, false)
+	_desc, err := do.Describe(db, cmd.Table, false)
 	if err != nil {
 		cli.Printfln("ERR fail to get table info '%s', %s", cmd.Table, err.Error())
 		return
 	}
-	desc := (_desc).(*spi.TableDescription)
+	desc := (_desc).(*do.TableDescription)
 
 	if cli.Interactive() {
 		cli.Printfln("# Enter %s⏎ to quit", cmd.EofMark)
@@ -156,7 +157,7 @@ func doImport(cli Client, cmdLine string) {
 	cli.Println("total", written, "record(s) imported")
 }
 
-func stringToColumnValue(str string, cd *spi.ColumnDescription, tz *time.Location, timeformat string) (any, error) {
+func stringToColumnValue(str string, cd *do.ColumnDescription, tz *time.Location, timeformat string) (any, error) {
 	switch cd.Type {
 	case spi.Int16ColumnType:
 		return strconv.ParseInt(str, 10, 16)

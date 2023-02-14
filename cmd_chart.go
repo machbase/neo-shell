@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-shell/renderer/chartjsrenderer"
-	"github.com/machbase/neo-shell/renderer/termdashrenderer"
+	"github.com/machbase/neo-shell/renderer/jschart"
+	"github.com/machbase/neo-shell/renderer/termchart"
 	"github.com/machbase/neo-shell/sink/filesink"
 	spi "github.com/machbase/neo-spi"
 	"github.com/robfig/cron"
@@ -104,19 +104,19 @@ func doChart(cli Client, line string) {
 		return
 	}
 
-	var renderer spi.SeriesRenderer
+	var renderer spi.Renderer
 	switch cmd.Format {
 	default:
-		renderer = termdashrenderer.NewSeriesRenderer()
+		renderer = termchart.NewSeriesRenderer()
 		// termdash의 경우 refresh cycle이 cmd.Count에 도달하여
 		// 외부에서 close하는 경우 정상적으로 화면이 복구 되지 않는 문제가 있어
 		// Count를 무조건 0 (무한 루프)으로 강제 설정한다.
 		cmd.Count = 0
 	case "json":
-		renderer = chartjsrenderer.NewJsonSeriesRenderer()
+		renderer = jschart.NewJsonSeriesRenderer()
 	case "html":
-		renderer = chartjsrenderer.NewHtmlSeriesRenderer(
-			chartjsrenderer.HtmlOptions{
+		renderer = jschart.NewHtmlSeriesRenderer(
+			jschart.HtmlOptions{
 				Title:    cmd.HtmlTitle,
 				Subtitle: cmd.HtmlSubtitle,
 				Width:    cmd.HtmlWidth,
@@ -142,7 +142,7 @@ func doChart(cli Client, line string) {
 
 		db := cli.Database()
 		tz := cmd.TimeLocation
-		series := []*spi.SeriesData{}
+		series := []*spi.RenderingData{}
 		// query
 		for _, dq := range queries {
 			if strings.ToUpper(dq.field) == "VALUE" {
@@ -177,7 +177,7 @@ func doChart(cli Client, line string) {
 				labels = append(labels, label)
 				idx++
 			}
-			series = append(series, &spi.SeriesData{
+			series = append(series, &spi.RenderingData{
 				Name:   dq.label,
 				Values: values,
 				Labels: labels,

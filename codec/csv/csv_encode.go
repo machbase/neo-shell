@@ -1,4 +1,4 @@
-package csvrenderer
+package csv
 
 import (
 	"encoding/csv"
@@ -16,11 +16,11 @@ type Exporter struct {
 	writer *csv.Writer
 	Comma  rune
 
-	ctx *spi.RowsRendererContext
+	ctx *spi.RowsEncoderContext
 }
 
-func NewRowsRenderer(delimiter string) spi.RowsRenderer {
-	rr := &Exporter{}
+func NewEncoder(ctx *spi.RowsEncoderContext, delimiter string) spi.RowsEncoder {
+	rr := &Exporter{ctx: ctx}
 	rr.SetDelimiter(delimiter)
 	return rr
 }
@@ -30,37 +30,41 @@ func (ex *Exporter) SetDelimiter(delimiter string) {
 	ex.Comma = delmiter
 }
 
-func (ex *Exporter) OpenRender(ctx *spi.RowsRendererContext) error {
-	ex.ctx = ctx
-	ex.writer = csv.NewWriter(ctx.Sink)
+func (ex *Exporter) ContentType() string {
+	return "text/csv"
+}
+
+func (ex *Exporter) Open(cols spi.Columns) error {
+	ex.writer = csv.NewWriter(ex.ctx.Sink)
 
 	if ex.Comma != 0 {
 		ex.writer.Comma = ex.Comma
 	}
 
-	if ctx.Heading {
+	colNames := cols.Names()
+	if ex.ctx.Heading {
 		// TODO check if write() returns error, when csvWritter.Comma is not valid
-		if ctx.Rownum {
-			ex.writer.Write(append([]string{"#"}, ctx.ColumnNames...))
+		if ex.ctx.Rownum {
+			ex.writer.Write(append([]string{"ROWNUM"}, colNames...))
 		} else {
-			ex.writer.Write(ctx.ColumnNames)
+			ex.writer.Write(colNames)
 		}
 	}
 
 	return nil
 }
 
-func (ex *Exporter) CloseRender() {
+func (ex *Exporter) Close() {
 	ex.writer.Flush()
 	ex.ctx.Sink.Close()
 }
 
-func (ex *Exporter) PageFlush(heading bool) {
+func (ex *Exporter) Flush(heading bool) {
 	ex.writer.Flush()
 	ex.ctx.Sink.Flush()
 }
 
-func (ex *Exporter) RenderRow(values []any) error {
+func (ex *Exporter) AddRow(values []any) error {
 	var cols = make([]string, len(values))
 
 	for i, r := range values {

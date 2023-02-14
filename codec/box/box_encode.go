@@ -1,4 +1,4 @@
-package boxrenderer
+package box
 
 import (
 	"fmt"
@@ -12,25 +12,29 @@ import (
 type Exporter struct {
 	writer table.Writer
 	rownum int64
-	ctx    *spi.RowsRendererContext
+	ctx    *spi.RowsEncoderContext
 
 	Style           string
 	SeparateColumns bool
 	DrawBorder      bool
 }
 
-func NewRowsRenderer(style string, separateColumns bool, drawBorder bool) spi.RowsRenderer {
+func NewEncoder(ctx *spi.RowsEncoderContext, style string, separateColumns bool, drawBorder bool) spi.RowsEncoder {
 	return &Exporter{
+		ctx:             ctx,
 		Style:           style,
 		SeparateColumns: separateColumns,
 		DrawBorder:      drawBorder,
 	}
 }
 
-func (ex *Exporter) OpenRender(ctx *spi.RowsRendererContext) error {
-	ex.ctx = ctx
+func (ex *Exporter) ContentType() string {
+	return "plain/text"
+}
+
+func (ex *Exporter) Open(cols spi.Columns) error {
 	ex.writer = table.NewWriter()
-	ex.writer.SetOutputMirror(ctx.Sink)
+	ex.writer.SetOutputMirror(ex.ctx.Sink)
 
 	style := table.StyleDefault
 	switch ex.Style {
@@ -42,19 +46,22 @@ func (ex *Exporter) OpenRender(ctx *spi.RowsRendererContext) error {
 		style = table.StyleLight
 	case "round":
 		style = table.StyleRounded
+	default:
+		style = table.StyleDefault
 	}
 	style.Options.SeparateColumns = ex.SeparateColumns
 	style.Options.DrawBorder = ex.DrawBorder
 
 	ex.writer.SetStyle(style)
 
-	if ctx.Heading {
-		vs := make([]any, len(ctx.ColumnNames))
-		for i, h := range ctx.ColumnNames {
+	colNames := cols.NamesWithTimeLocation(ex.ctx.TimeLocation)
+	if ex.ctx.Heading {
+		vs := make([]any, len(colNames))
+		for i, h := range colNames {
 			vs[i] = h
 		}
 		if ex.ctx.Rownum {
-			ex.writer.AppendHeader(table.Row(append([]any{"#"}, vs...)))
+			ex.writer.AppendHeader(table.Row(append([]any{"ROWNUM"}, vs...)))
 		} else {
 			ex.writer.AppendHeader(table.Row(vs))
 		}
@@ -63,7 +70,7 @@ func (ex *Exporter) OpenRender(ctx *spi.RowsRendererContext) error {
 	return nil
 }
 
-func (ex *Exporter) CloseRender() {
+func (ex *Exporter) Close() {
 	if ex.writer.Length() > 0 {
 		ex.writer.Render()
 		ex.writer.ResetRows()
@@ -71,7 +78,7 @@ func (ex *Exporter) CloseRender() {
 	ex.ctx.Sink.Close()
 }
 
-func (ex *Exporter) PageFlush(heading bool) {
+func (ex *Exporter) Flush(heading bool) {
 	ex.writer.Render()
 	ex.ctx.Sink.Flush()
 
@@ -81,7 +88,7 @@ func (ex *Exporter) PageFlush(heading bool) {
 	}
 }
 
-func (ex *Exporter) RenderRow(values []any) error {
+func (ex *Exporter) AddRow(values []any) error {
 	var cols = make([]any, len(values))
 
 	for i, r := range values {

@@ -1,4 +1,4 @@
-package termdashrenderer
+package termchart
 
 import (
 	"context"
@@ -22,11 +22,11 @@ type Renderer struct {
 	err        error
 }
 
-func NewSeriesRenderer() spi.SeriesRenderer {
+func NewSeriesRenderer() spi.Renderer {
 	return &Renderer{}
 }
 
-func (r *Renderer) Render(ctx context.Context, sink spi.Sink, data []*spi.SeriesData) error {
+func (r *Renderer) Render(ctx context.Context, sink spi.Sink, data []*spi.RenderingData) error {
 	if r.err != nil {
 		return r.err
 	}

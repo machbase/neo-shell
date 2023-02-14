@@ -4,9 +4,8 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-shell/renderer/boxrenderer"
-	"github.com/machbase/neo-shell/renderer/csvrenderer"
-	"github.com/machbase/neo-shell/renderer/jsonrenderer"
+	"github.com/machbase/neo-shell/codec"
+	"github.com/machbase/neo-shell/do"
 	"github.com/machbase/neo-shell/sink"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
@@ -76,44 +75,37 @@ func doExport(cli Client, cmdLine string) {
 		return
 	}
 
-	var renderer spi.RowsRenderer
-	var renderCtx = &spi.RowsRendererContext{
-		Sink:         sink,
-		TimeLocation: cmd.TimeLocation,
-		TimeFormat:   spi.GetTimeformat(cmd.TimeFormat),
-		Precision:    cmd.Precision,
-		Rownum:       false,
-		Heading:      cmd.Heading,
-	}
-	switch cmd.Format {
-	default:
-		renderer = boxrenderer.NewRowsRenderer("light", true, true)
-	case "csv":
-		renderer = csvrenderer.NewRowsRenderer(cmd.Delimiter)
-	case "json":
-		renderer = jsonrenderer.NewRowsRenderer()
-	}
+	renderer := codec.NewBuilder().
+		SetSink(sink).
+		SetTimeLocation(cmd.TimeLocation).
+		SetTimeFormat(cmd.TimeFormat).
+		SetPrecision(cmd.Precision).
+		SetRownum(false).
+		SetHeading(cmd.Heading).
+		SetBoxStyle("light").
+		SetBoxSeparateColumns(true).
+		SetBoxDrawBorder(true).
+		SetCsvDelimieter(cmd.Delimiter).
+		Build(cmd.Format)
 
-	queryCtx := &spi.QueryContext{
+	queryCtx := &do.QueryContext{
 		DB: cli.Database(),
 		OnFetchStart: func(cols spi.Columns) {
-			renderCtx.ColumnNames = cols.NamesWithTimeLocation(cmd.TimeLocation)
-			renderCtx.ColumnTypes = cols.Types()
-			renderer.OpenRender(renderCtx)
+			renderer.Open(cols)
 		},
 		OnFetch: func(nrow int64, values []any) bool {
-			err := renderer.RenderRow(values)
+			err := renderer.AddRow(values)
 			if err != nil {
 				cli.Println("ERR", err.Error())
 			}
 			return true
 		},
 		OnFetchEnd: func() {
-			renderer.CloseRender()
+			renderer.Close()
 		},
 	}
 
-	err = spi.DoQuery(queryCtx, "select * from "+cmd.Table+" order by time")
+	err = do.Query(queryCtx, "select * from "+cmd.Table+" order by time")
 	if err != nil {
 		cli.Println("ERR", err.Error())
 	}

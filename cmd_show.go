@@ -7,6 +7,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/cemlib/util"
+	"github.com/machbase/neo-shell/do"
 	spi "github.com/machbase/neo-spi"
 )
 
@@ -97,7 +98,7 @@ func (cli *client) doShowTables(showAll bool) {
 		}
 		nrow++
 
-		desc := spi.TableTypeDescription(spi.TableType(typ), flg)
+		desc := do.TableTypeDescription(spi.TableType(typ), flg)
 		t.AppendRow(nrow, id, name, desc)
 	}
 	t.Render()

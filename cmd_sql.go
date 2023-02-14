@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/neo-shell/renderer/boxrenderer"
-	"github.com/machbase/neo-shell/renderer/csvrenderer"
-	"github.com/machbase/neo-shell/renderer/jsonrenderer"
+	"github.com/machbase/neo-shell/codec"
+	"github.com/machbase/neo-shell/do"
 	"github.com/machbase/neo-shell/sink"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
@@ -32,7 +31,7 @@ const helpSql string = `  sql [options] <query>
   options:
     --output,-o <file>     output file (default:'-' stdout)
     --format,-f <format>   output format
-      -          default format
+	  box        box format (default)
       csv        csv format
       json       json format
     --delimiter,-d       csv delimiter (default:',')
@@ -50,7 +49,7 @@ type SqlCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:"" default:"true"`
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Format       string         `name:"format" short:"f" default:"-" enum:"-,csv,json"`
+	Format       string         `name:"format" short:"f" default:"box" enum:"box,csv,json"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
 	TimeFormat   string         `name:"timeformat" short:"t" default:"default"`
@@ -95,25 +94,27 @@ func doSql(cc Client, cmdLine string) {
 		cmd.Interactive = false
 	}
 
-	var renderer spi.RowsRenderer
-	var renderCtx = &spi.RowsRendererContext{
-		Sink:         sink,
-		TimeLocation: cmd.TimeLocation,
-		TimeFormat:   spi.GetTimeformat(cmd.TimeFormat),
-		Precision:    cmd.Precision,
-		Rownum:       cmd.Rownum,
-		Heading:      cmd.Heading,
-	}
+	renderer := codec.NewBuilder().
+		SetSink(sink).
+		SetTimeLocation(cmd.TimeLocation).
+		SetTimeFormat(cmd.TimeFormat).
+		SetPrecision(cmd.Precision).
+		SetRownum(cmd.Rownum).
+		SetHeading(cmd.Heading).
+		SetBoxStyle("light").
+		SetBoxSeparateColumns(cmd.Interactive).
+		SetBoxDrawBorder(cmd.Interactive).
+		SetCsvDelimieter(cmd.Delimiter).
+		Build(cmd.Format)
+
+	headerHeight := 0
 	switch cmd.Format {
-	default:
-		renderCtx.HeaderHeight = 4
-		renderer = boxrenderer.NewRowsRenderer("light", cmd.Interactive, cmd.Interactive)
+	default: // "box"
+		headerHeight = 4
 	case "csv":
-		renderCtx.HeaderHeight = 1
-		renderer = csvrenderer.NewRowsRenderer(cmd.Delimiter)
+		headerHeight = 1
 	case "json":
-		renderCtx.HeaderHeight = 0
-		renderer = jsonrenderer.NewRowsRenderer()
+		headerHeight = 0
 	}
 
 	windowHeight := 0
@@ -123,42 +124,40 @@ func doSql(cc Client, cmdLine string) {
 		}
 	}
 	pageHeight := windowHeight - 1
-	if renderCtx.Heading {
-		pageHeight -= renderCtx.HeaderHeight
+	if cmd.Heading {
+		pageHeight -= headerHeight
 	}
 	nextPauseRow := int64(pageHeight)
 
-	queryCtx := &spi.QueryContext{
+	queryCtx := &do.QueryContext{
 		DB: cc.Database(),
 		OnFetchStart: func(cols spi.Columns) {
-			renderCtx.ColumnNames = cols.NamesWithTimeLocation(cmd.TimeLocation)
-			renderCtx.ColumnTypes = cols.Types()
-			renderer.OpenRender(renderCtx)
+			renderer.Open(cols)
 		},
 		OnFetch: func(nrow int64, values []any) bool {
-			err := renderer.RenderRow(values)
+			err := renderer.AddRow(values)
 			if err != nil {
 				cc.Println("ERR", err.Error())
 			}
 			if nextPauseRow > 0 && nextPauseRow == nrow {
 				nextPauseRow += int64(pageHeight)
-				renderer.PageFlush(renderCtx.Heading)
+				renderer.Flush(cmd.Heading)
 				if !pauseForMore() {
 					return false
 				}
 			}
 			if nextPauseRow <= 0 && nrow%1000 == 0 {
-				renderer.PageFlush(false)
+				renderer.Flush(false)
 			}
 			return true
 		},
 		OnFetchEnd: func() {
-			renderer.CloseRender()
+			renderer.Close()
 		},
 	}
 
 	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))
-	err = spi.DoQuery(queryCtx, sqlText)
+	err = do.Query(queryCtx, sqlText)
 	if err != nil {
 		cc.Println("ERR", err.Error())
 	}
