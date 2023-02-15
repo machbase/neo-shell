@@ -34,7 +34,7 @@ func (ex *Exporter) ContentType() string {
 
 func (ex *Exporter) Open(cols spi.Columns) error {
 	ex.writer = table.NewWriter()
-	ex.writer.SetOutputMirror(ex.ctx.Sink)
+	ex.writer.SetOutputMirror(ex.ctx.Output)
 
 	style := table.StyleDefault
 	switch ex.Style {
@@ -75,12 +75,12 @@ func (ex *Exporter) Close() {
 		ex.writer.Render()
 		ex.writer.ResetRows()
 	}
-	ex.ctx.Sink.Close()
+	ex.ctx.Output.Close()
 }
 
 func (ex *Exporter) Flush(heading bool) {
 	ex.writer.Render()
-	ex.ctx.Sink.Flush()
+	ex.ctx.Output.Flush()
 
 	ex.writer.ResetRows()
 	if !heading {

@@ -1,24 +1,24 @@
-package sink
+package stream
 
 import (
 	"io"
 	"strings"
 
-	"github.com/machbase/neo-shell/sink/execsink"
-	"github.com/machbase/neo-shell/sink/filesink"
+	"github.com/machbase/neo-shell/stream/fio"
+	"github.com/machbase/neo-shell/stream/pio"
 	spi "github.com/machbase/neo-spi"
 )
 
-func MakeSink(output string) (sink spi.Sink, err error) {
+func NewOutputStream(output string) (sink spi.OutputStream, err error) {
 	var outputFields = strings.Fields(output)
 	if len(outputFields) > 0 && outputFields[0] == "exec" {
 		binArgs := strings.TrimSpace(strings.TrimPrefix(output, "exec"))
-		sink, err = execsink.New(binArgs)
+		sink, err = pio.New(binArgs)
 		if err != nil {
 			return
 		}
 	} else {
-		sink, err = filesink.New(output)
+		sink, err = fio.New(output)
 		if err != nil {
 			return
 		}
@@ -26,19 +26,19 @@ func MakeSink(output string) (sink spi.Sink, err error) {
 	return
 }
 
-type WriterSink struct {
+type WriterOutputStream struct {
 	Writer io.Writer
 }
 
-func (s *WriterSink) Write(buf []byte) (int, error) {
+func (s *WriterOutputStream) Write(buf []byte) (int, error) {
 	return s.Writer.Write(buf)
 }
 
-func (s *WriterSink) Flush() error {
+func (s *WriterOutputStream) Flush() error {
 	return nil
 }
 
-func (s *WriterSink) Close() error {
+func (s *WriterOutputStream) Close() error {
 	if wc, ok := s.Writer.(io.WriteCloser); ok {
 		return wc.Close()
 	}

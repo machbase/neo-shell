@@ -35,7 +35,7 @@ func (ex *Exporter) ContentType() string {
 }
 
 func (ex *Exporter) Open(cols spi.Columns) error {
-	ex.writer = csv.NewWriter(ex.ctx.Sink)
+	ex.writer = csv.NewWriter(ex.ctx.Output)
 
 	if ex.Comma != 0 {
 		ex.writer.Comma = ex.Comma
@@ -56,12 +56,12 @@ func (ex *Exporter) Open(cols spi.Columns) error {
 
 func (ex *Exporter) Close() {
 	ex.writer.Flush()
-	ex.ctx.Sink.Close()
+	ex.ctx.Output.Close()
 }
 
 func (ex *Exporter) Flush(heading bool) {
 	ex.writer.Flush()
-	ex.ctx.Sink.Flush()
+	ex.ctx.Output.Flush()
 }
 
 func (ex *Exporter) AddRow(values []any) error {

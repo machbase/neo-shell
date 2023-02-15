@@ -12,7 +12,7 @@ import (
 
 type EncoderBuilder interface {
 	Build() spi.RowsEncoder
-	SetSink(s spi.Sink) EncoderBuilder
+	SetOutputStream(s spi.OutputStream) EncoderBuilder
 	SetTimeLocation(tz *time.Location) EncoderBuilder
 	SetTimeFormat(f string) EncoderBuilder
 	SetPrecision(p int) EncoderBuilder
@@ -57,8 +57,8 @@ func (b *encBuilder) Build() spi.RowsEncoder {
 	}
 }
 
-func (b *encBuilder) SetSink(s spi.Sink) EncoderBuilder {
-	b.Sink = s
+func (b *encBuilder) SetOutputStream(s spi.OutputStream) EncoderBuilder {
+	b.Output = s
 	return b
 }
 

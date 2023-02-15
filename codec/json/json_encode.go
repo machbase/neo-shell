@@ -34,19 +34,19 @@ func (ex *Exporter) Open(cols spi.Columns) error {
 
 	header := fmt.Sprintf(`{"data":{"columns":%s,"types":%s,"rows":[`,
 		string(columnsJson), string(typesJson))
-	ex.ctx.Sink.Write([]byte(header))
+	ex.ctx.Output.Write([]byte(header))
 
 	return nil
 }
 
 func (ex *Exporter) Close() {
 	footer := "]}}\n"
-	ex.ctx.Sink.Write([]byte(footer))
-	ex.ctx.Sink.Close()
+	ex.ctx.Output.Write([]byte(footer))
+	ex.ctx.Output.Close()
 }
 
 func (ex *Exporter) Flush(heading bool) {
-	ex.ctx.Sink.Flush()
+	ex.ctx.Output.Flush()
 }
 
 func (ex *Exporter) AddRow(source []any) error {
@@ -87,9 +87,9 @@ func (ex *Exporter) AddRow(source []any) error {
 	}
 
 	if ex.nrow > 1 {
-		ex.ctx.Sink.Write([]byte(","))
+		ex.ctx.Output.Write([]byte(","))
 	}
-	ex.ctx.Sink.Write(recJson)
+	ex.ctx.Output.Write(recJson)
 
 	return nil
 }

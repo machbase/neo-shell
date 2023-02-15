@@ -7,7 +7,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/renderer"
-	"github.com/machbase/neo-shell/sink/filesink"
+	"github.com/machbase/neo-shell/stream/fio"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 	"github.com/robfig/cron"
@@ -127,12 +127,12 @@ func doChart(ctx *client.ActionContext) {
 	runCount := 0
 	runCanceled := false
 	runner := func() {
-		sink, err := filesink.New(cmd.Output)
+		output, err := fio.New(cmd.Output)
 		if err != nil {
 			ctx.Println("ERR", err.Error())
 			return
 		}
-		defer sink.Close()
+		defer output.Close()
 
 		series := []*spi.RenderingData{}
 		// query
@@ -146,7 +146,7 @@ func doChart(ctx *client.ActionContext) {
 		}
 		runCount++
 
-		if err = render.Render(ctx, sink, series); err != nil {
+		if err = render.Render(ctx, output, series); err != nil {
 			runCanceled = true
 			if err != nil && err != spi.ErrUserCancel {
 				ctx.Println("ERR", err.Error())

@@ -1,4 +1,4 @@
-package execsink
+package pio
 
 import (
 	"errors"
@@ -13,7 +13,7 @@ import (
 	spi "github.com/machbase/neo-spi"
 )
 
-type sink struct {
+type pout struct {
 	bin  string
 	args []string
 
@@ -23,24 +23,24 @@ type sink struct {
 	mutex  sync.Mutex
 }
 
-func New(cmdLine string) (spi.Sink, error) {
+func New(cmdLine string) (spi.OutputStream, error) {
 	fields := util.SplitFields(cmdLine, true)
 	if len(fields) == 0 {
 		return nil, errors.New("empty command line")
 	}
-	sink := &sink{bin: fields[0]}
+	out := &pout{bin: fields[0]}
 
 	if len(fields) > 1 {
-		sink.args = fields[1:]
+		out.args = fields[1:]
 	}
 
-	if err := sink.reset(); err != nil {
+	if err := out.reset(); err != nil {
 		return nil, err
 	}
-	return sink, nil
+	return out, nil
 }
 
-func (s *sink) Write(p []byte) (n int, err error) {
+func (s *pout) Write(p []byte) (n int, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -51,11 +51,11 @@ func (s *sink) Write(p []byte) (n int, err error) {
 	return s.stdin.Write(p)
 }
 
-func (s *sink) Flush() error {
+func (s *pout) Flush() error {
 	return nil
 }
 
-func (s *sink) Close() error {
+func (s *pout) Close() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -80,7 +80,7 @@ func (s *sink) Close() error {
 	return nil
 }
 
-func (s *sink) reset() error {
+func (s *pout) reset() error {
 	s.Close()
 
 	s.mutex.Lock()

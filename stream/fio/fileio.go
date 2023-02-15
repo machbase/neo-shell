@@ -1,4 +1,4 @@
-package filesink
+package fio
 
 import (
 	"bufio"
@@ -9,31 +9,31 @@ import (
 	spi "github.com/machbase/neo-spi"
 )
 
-type sink struct {
+type fout struct {
 	path  string
 	w     io.WriteCloser
 	buf   *bufio.Writer
 	mutex sync.Mutex
 }
 
-func New(path string) (spi.Sink, error) {
-	sink := &sink{
+func New(path string) (spi.OutputStream, error) {
+	out := &fout{
 		path: path,
 	}
-	if err := sink.Reset(); err != nil {
+	if err := out.Reset(); err != nil {
 		return nil, err
 	}
-	return sink, nil
+	return out, nil
 }
 
-func (s *sink) Write(p []byte) (n int, err error) {
+func (s *fout) Write(p []byte) (n int, err error) {
 	if s.buf == nil {
 		return 0, io.EOF
 	}
 	return s.buf.Write(p)
 }
 
-func (s *sink) Flush() error {
+func (s *fout) Flush() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -44,7 +44,7 @@ func (s *sink) Flush() error {
 }
 
 // Deprecated do not call from outside.
-func (s *sink) Reset() error {
+func (s *fout) Reset() error {
 	s.Close()
 
 	s.mutex.Lock()
@@ -63,7 +63,7 @@ func (s *sink) Reset() error {
 	return nil
 }
 
-func (s *sink) Close() error {
+func (s *fout) Close() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

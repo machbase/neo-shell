@@ -7,7 +7,7 @@ import (
 	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/do"
-	"github.com/machbase/neo-shell/sink"
+	"github.com/machbase/neo-shell/stream"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
@@ -70,14 +70,14 @@ func doExport(ctx *client.ActionContext) {
 	}
 
 	var outputPath = util.StripQuote(cmd.Output)
-	sink, err := sink.MakeSink(outputPath)
+	output, err := stream.NewOutputStream(outputPath)
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 		return
 	}
 
 	encoder := codec.NewEncoderBuilder(cmd.Format).
-		SetSink(sink).
+		SetOutputStream(output).
 		SetTimeLocation(cmd.TimeLocation).
 		SetTimeFormat(cmd.TimeFormat).
 		SetPrecision(cmd.Precision).
@@ -103,7 +103,7 @@ func doExport(ctx *client.ActionContext) {
 		},
 		OnFetchEnd: func() {
 			encoder.Close()
-			sink.Close()
+			output.Close()
 		},
 	}
 

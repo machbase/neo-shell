@@ -30,7 +30,7 @@ func (r *Renderer) ContentType() string {
 	return "application/octet-stream"
 }
 
-func (r *Renderer) Render(ctx context.Context, sink spi.Sink, data []*spi.RenderingData) error {
+func (r *Renderer) Render(ctx context.Context, output spi.OutputStream, data []*spi.RenderingData) error {
 	if r.err != nil {
 		return r.err
 	}

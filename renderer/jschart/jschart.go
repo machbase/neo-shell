@@ -80,7 +80,7 @@ func (r *JsonRenderer) ContentType() string {
 	return "application/json"
 }
 
-func (r *JsonRenderer) Render(ctx context.Context, sink spi.Sink, data []*spi.RenderingData) error {
+func (r *JsonRenderer) Render(ctx context.Context, output spi.OutputStream, data []*spi.RenderingData) error {
 	model, err := convertChartJsModel(data)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (r *JsonRenderer) Render(ctx context.Context, sink spi.Sink, data []*spi.Re
 	if err != nil {
 		return err
 	}
-	sink.Write(buf)
+	output.Write(buf)
 	return nil
 }
 
@@ -125,7 +125,7 @@ type HtmlRenderer struct {
 	Options HtmlOptions
 }
 
-func (r *HtmlRenderer) Render(ctx context.Context, sink spi.Sink, data []*spi.RenderingData) error {
+func (r *HtmlRenderer) Render(ctx context.Context, output spi.OutputStream, data []*spi.RenderingData) error {
 	tmpl, err := template.New("chart_template").Parse(chartHtmlTemplate)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -151,6 +151,6 @@ func (r *HtmlRenderer) Render(ctx context.Context, sink spi.Sink, data []*spi.Re
 		return err
 	}
 
-	sink.Write(buff.Bytes())
+	output.Write(buff.Bytes())
 	return nil
 }
