@@ -9,12 +9,13 @@ import (
 )
 
 type Exporter struct {
+	tick time.Time
 	nrow int
 	ctx  *spi.RowsEncoderContext
 }
 
 func NewEncoder(ctx *spi.RowsEncoderContext) spi.RowsEncoder {
-	return &Exporter{ctx: ctx}
+	return &Exporter{ctx: ctx, tick: time.Now()}
 }
 
 func (ex *Exporter) ContentType() string {
@@ -40,7 +41,7 @@ func (ex *Exporter) Open(cols spi.Columns) error {
 }
 
 func (ex *Exporter) Close() {
-	footer := "]}}\n"
+	footer := fmt.Sprintf(`]}, "success":true, "reason":"success", "elapse":"%s"}`, time.Since(ex.tick).String())
 	ex.ctx.Output.Write([]byte(footer))
 	ex.ctx.Output.Close()
 }

@@ -8,6 +8,14 @@ import (
 )
 
 func Insert(db spi.Database, tableName string, columns []string, rows [][]any) spi.Result {
+	if len(rows) == 0 {
+		// fields의 value가 string 일 경우 입력할 값이 없을 수 있다.
+		return &InsertResult{
+			rowsAffected: 0,
+			message:      "no row inserted",
+		}
+	}
+
 	vf := make([]string, len(columns))
 	for i := range vf {
 		vf[i] = "?"
@@ -28,9 +36,16 @@ func Insert(db spi.Database, tableName string, columns []string, rows [][]any) s
 		}
 		nrows++
 	}
+
+	message := fmt.Sprintf("%d rows inserted", nrows)
+	if nrows == 0 {
+		message = "no row inserted"
+	} else if nrows == 1 {
+		message = "a row inserted"
+	}
 	return &InsertResult{
 		rowsAffected: nrows,
-		message:      fmt.Sprintf("%d rows inserted", nrows),
+		message:      message,
 	}
 }
 
