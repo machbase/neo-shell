@@ -1,7 +1,6 @@
 package codec
 
 import (
-	"io"
 	"time"
 
 	"github.com/machbase/neo-shell/codec/box"
@@ -108,7 +107,7 @@ func (b *encBuilder) SetBoxDrawBorder(flag bool) EncoderBuilder {
 
 type DecoderBuilder interface {
 	Build() spi.RowsDecoder
-	SetInputStream(reader io.Reader) DecoderBuilder
+	SetInputStream(reader spi.InputStream) DecoderBuilder
 	SetTimeFormat(f string) DecoderBuilder
 	SetTimeLocation(tz *time.Location) DecoderBuilder
 	SetColumns(columns spi.Columns) DecoderBuilder
@@ -138,7 +137,7 @@ func (b *decBuilder) Build() spi.RowsDecoder {
 	}
 }
 
-func (b *decBuilder) SetInputStream(reader io.Reader) DecoderBuilder {
+func (b *decBuilder) SetInputStream(reader spi.InputStream) DecoderBuilder {
 	b.Reader = reader
 	return b
 }

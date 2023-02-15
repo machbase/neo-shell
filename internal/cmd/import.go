@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/do"
+	"github.com/machbase/neo-shell/stream"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
@@ -85,18 +85,12 @@ func doImport(ctx *client.ActionContext) {
 		return
 	}
 
-	var r *bufio.Reader
-	if cmd.Input == "-" {
-		r = bufio.NewReader(ctx.Stdin)
-	} else {
-		f, err := os.Open(cmd.Input)
-		if err != nil {
-			ctx.Println(err.Error())
-			return
-		}
-		defer f.Close()
-		r = bufio.NewReader(f)
+	in, err := stream.NewInputStream(cmd.Input)
+	if err != nil {
+		ctx.Println(err.Error())
+		return
 	}
+	defer in.Close()
 
 	exists, created, truncated, err := do.ExistsTableOrCreate(ctx.DB, cmd.Table, cmd.CreateTable, cmd.TruncateTable)
 	if err != nil {
@@ -129,7 +123,8 @@ func doImport(ctx *client.ActionContext) {
 
 		buff := []byte{}
 		for {
-			bs, _, err := r.ReadLine()
+			bufferedIn := bufio.NewReader(in)
+			bs, _, err := bufferedIn.ReadLine()
 			if err != nil {
 				break
 			}
@@ -138,21 +133,21 @@ func doImport(ctx *client.ActionContext) {
 			}
 			buff = append(buff, bs...)
 		}
-		r = bufio.NewReader(bytes.NewReader(buff))
+		in = &stream.ReaderInputStream{Reader: bytes.NewReader(buff)}
 	} else {
 		if cmd.Compress == "gzip" {
-			gr, err := gzip.NewReader(r)
+			gr, err := gzip.NewReader(in)
 			if err != nil {
 				ctx.Println("ERR", err.Error())
 				return
 			}
-			r = bufio.NewReader(gr)
+			in = &stream.ReaderInputStream{Reader: gr}
 			defer gr.Close()
 		}
 	}
 
 	decoder := codec.NewDecoderBuilder(cmd.InputFormat).
-		SetInputStream(r).
+		SetInputStream(in).
 		SetColumns(desc.Columns.Columns()).
 		SetTimeFormat(cmd.TimeFormat).
 		SetTimeLocation(cmd.TimeLocation).

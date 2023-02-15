@@ -10,7 +10,7 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/cemlib v0.0.0-20230124025810-6525e5a45406
 	github.com/machbase/neo-grpc v0.2.1-0.20230213103137-d93c126485ad
-	github.com/machbase/neo-spi v0.0.0-20230215015527-e7affd8f7087
+	github.com/machbase/neo-spi v0.0.0-20230215102041-ce33f66f46e0
 	github.com/mum4k/termdash v0.17.0
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
