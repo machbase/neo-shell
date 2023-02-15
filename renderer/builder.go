@@ -28,9 +28,9 @@ func NewChartRendererBuilder(format string) ChartRendererBuilder {
 func (cb *chartbuilder) Build() spi.Renderer {
 	switch cb.chartType {
 	case "json":
-		return jschart.NewJsonSeriesRenderer()
+		return jschart.NewJsonRenderer()
 	case "html":
-		return jschart.NewHtmlSeriesRenderer(
+		return jschart.NewHtmlRenderer(
 			jschart.HtmlOptions{
 				Title:    cb.title,
 				Subtitle: cb.subtitle,
@@ -38,8 +38,10 @@ func (cb *chartbuilder) Build() spi.Renderer {
 				Height:   cb.height,
 			},
 		)
-	default: // "term"
-		return termchart.NewSeriesRenderer()
+	case "term":
+		return termchart.NewRenderer()
+	default:
+		return nil
 	}
 }
 

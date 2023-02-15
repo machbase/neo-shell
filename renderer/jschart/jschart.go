@@ -72,7 +72,7 @@ func convertChartJsModel(data []*spi.RenderingData) (*ChartJsModel, error) {
 type JsonRenderer struct {
 }
 
-func NewJsonSeriesRenderer() spi.Renderer {
+func NewJsonRenderer() spi.Renderer {
 	return &JsonRenderer{}
 }
 
@@ -96,7 +96,7 @@ func (r *JsonRenderer) Render(ctx context.Context, output spi.OutputStream, data
 ///////////////////////////////////////////////
 // HTML Renderer
 
-func NewHtmlSeriesRenderer(opts HtmlOptions) spi.Renderer {
+func NewHtmlRenderer(opts HtmlOptions) spi.Renderer {
 	return &HtmlRenderer{
 		Options: opts,
 	}

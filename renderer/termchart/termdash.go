@@ -22,7 +22,7 @@ type Renderer struct {
 	err        error
 }
 
-func NewSeriesRenderer() spi.Renderer {
+func NewRenderer() spi.Renderer {
 	return &Renderer{}
 }
 

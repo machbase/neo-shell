@@ -111,6 +111,10 @@ func doChart(ctx *client.ActionContext) {
 		SetSize(cmd.HtmlWidth, cmd.HtmlHeight).
 		Build()
 
+	if render == nil {
+		ctx.Println("ERR", "no renderer found for", cmd.Format)
+		return
+	}
 	switch cmd.Format {
 	default:
 		// termdash의 경우 refresh cycle이 cmd.Count에 도달하여
