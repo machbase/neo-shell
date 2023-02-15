@@ -7,7 +7,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/renderer"
-	"github.com/machbase/neo-shell/stream/fio"
+	"github.com/machbase/neo-shell/stream"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 	"github.com/robfig/cron"
@@ -127,7 +127,7 @@ func doChart(ctx *client.ActionContext) {
 	runCount := 0
 	runCanceled := false
 	runner := func() {
-		output, err := fio.New(cmd.Output)
+		output, err := stream.NewOutputStream(cmd.Output)
 		if err != nil {
 			ctx.Println("ERR", err.Error())
 			return
