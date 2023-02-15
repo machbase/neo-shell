@@ -73,10 +73,10 @@ github.com/machbase/cemlib v0.0.0-20230124025810-6525e5a45406 h1:SrrZz4ulccOZZTu
 github.com/machbase/cemlib v0.0.0-20230124025810-6525e5a45406/go.mod h1:KEJ+XFaL6oxJvZP7gVl7L/HHeWiCWRU79ShCEpCLIn4=
 github.com/machbase/cemlib-msg v0.0.0-20230117083805-54bf72ab6e6e h1:yHlyHIigSS+EeChYH+j0Ul3KLBg7xBSlS0Vzm41Dsw4=
 github.com/machbase/cemlib-msg v0.0.0-20230117083805-54bf72ab6e6e/go.mod h1:QLuMmqbm+qhXxq1gc0zEM6zKmv7AvGEfXW7SoFXeCjc=
-github.com/machbase/neo-grpc v0.2.1-0.20230213070304-771496782f35 h1:/bRcIthcBUcbyXTUW4oprhxNdha9XizmdtczjDBYGwE=
-github.com/machbase/neo-grpc v0.2.1-0.20230213070304-771496782f35/go.mod h1:VJAt+FneyqtaXjw3cQLL21rPBCCFY50qAmdRsR5/oqM=
-github.com/machbase/neo-spi v0.0.0-20230214031719-4ea19b6b3a88 h1:e0psTg2r6xZxxzNgcmXBgevioaApeTdlFGOH4k0iExg=
-github.com/machbase/neo-spi v0.0.0-20230214031719-4ea19b6b3a88/go.mod h1:jmzExsS84LOY0f097WhbXw1avVgl64/tHm6CdW/P+zM=
+github.com/machbase/neo-grpc v0.2.1-0.20230213103137-d93c126485ad h1:7IXtM2orDW0oqUvSMks3ph3/lNZ67CP0sZjk6fdcxvs=
+github.com/machbase/neo-grpc v0.2.1-0.20230213103137-d93c126485ad/go.mod h1:57lwEEA+Kk4hkMt0q8lhnSzKebUh1ljVVbqP9CKD+uE=
+github.com/machbase/neo-spi v0.0.0-20230215015527-e7affd8f7087 h1:ulXmcxXeNbS6vl3TbtZbiOuqEWaP8XdQFvBdlCusYdc=
+github.com/machbase/neo-spi v0.0.0-20230215015527-e7affd8f7087/go.mod h1:jmzExsS84LOY0f097WhbXw1avVgl64/tHm6CdW/P+zM=
 github.com/mattn/go-isatty v0.0.17 h1:BTarxUcIeDqL27Mc+vyvdWYSL28zpIhv3RoTdsLMPng=
 github.com/mattn/go-isatty v0.0.17/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=

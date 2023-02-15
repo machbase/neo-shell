@@ -107,26 +107,30 @@ func (b *encBuilder) SetBoxDrawBorder(flag bool) EncoderBuilder {
 }
 
 type DecoderBuilder interface {
-	Build(decoderType string) spi.RowsDecoder
-	SetReader(reader io.Reader) DecoderBuilder
+	Build() spi.RowsDecoder
+	SetInputStream(reader io.Reader) DecoderBuilder
+	SetTimeFormat(f string) DecoderBuilder
+	SetTimeLocation(tz *time.Location) DecoderBuilder
 	SetColumns(columns spi.Columns) DecoderBuilder
 	SetCsvDelimieter(del string) DecoderBuilder
 }
 
 type decBuilder struct {
 	*spi.RowsDecoderContext
+	decoderType  string
 	csvDelimiter string
 }
 
-func NewDecoderBuilder() DecoderBuilder {
+func NewDecoderBuilder(decoderType string) DecoderBuilder {
 	return &decBuilder{
 		RowsDecoderContext: &spi.RowsDecoderContext{},
+		decoderType:        decoderType,
 		csvDelimiter:       ",",
 	}
 }
 
-func (b *decBuilder) Build(decoderType string) spi.RowsDecoder {
-	switch decoderType {
+func (b *decBuilder) Build() spi.RowsDecoder {
+	switch b.decoderType {
 	case "csv":
 		return csv.NewDecoder(b.RowsDecoderContext, b.csvDelimiter)
 	default: // "json"
@@ -134,8 +138,18 @@ func (b *decBuilder) Build(decoderType string) spi.RowsDecoder {
 	}
 }
 
-func (b *decBuilder) SetReader(reader io.Reader) DecoderBuilder {
+func (b *decBuilder) SetInputStream(reader io.Reader) DecoderBuilder {
 	b.Reader = reader
+	return b
+}
+
+func (b *decBuilder) SetTimeFormat(f string) DecoderBuilder {
+	b.RowsDecoderContext.TimeFormat = f
+	return b
+}
+
+func (b *decBuilder) SetTimeLocation(tz *time.Location) DecoderBuilder {
+	b.RowsDecoderContext.TimeLocation = tz
 	return b
 }
 

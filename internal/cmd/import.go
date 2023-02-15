@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
@@ -32,6 +33,7 @@ const helpImport = `  import [options] <table>
   options:
     --input,-i <file>  input file, (default: '-' stdin)
     --format,-f        file format [csv] (default:'csv')
+	--compress <alg>   input data is compressed in <alg> (support:gzip)
     --no-header        there is no header, do not skip first line (default)
     --header           first line is header, skip it
     --method           write method [insert|append] (default:'insert')
@@ -49,9 +51,10 @@ const helpImport = `  import [options] <table>
 type ImportCmd struct {
 	Table         string         `arg:"" name:"table"`
 	Input         string         `name:"input" short:"i" default:"-"`
+	Compress      string         `name:"compress" short:"z" default:"-" enum:"-,gzip"`
 	HasHeader     bool           `name:"header" negatable:""`
 	EofMark       string         `name:"eof" default:"."`
-	InputFormat   string         `name:"format" short:"f" default:"csv"`
+	InputFormat   string         `name:"format" short:"f" default:"csv" enum:"csv"`
 	Method        string         `name:"method" default:"insert" enum:"insert,append"`
 	CreateTable   bool           `name:"create-table" default:"false"`
 	TruncateTable bool           `name:"truncate-table" default:"false"`
@@ -95,12 +98,29 @@ func doImport(ctx *client.ActionContext) {
 		r = bufio.NewReader(f)
 	}
 
-	_desc, err := do.Describe(ctx.DB, cmd.Table, false)
+	exists, created, truncated, err := do.ExistsTableOrCreate(ctx.DB, cmd.Table, cmd.CreateTable, cmd.TruncateTable)
 	if err != nil {
-		ctx.Printfln("ERR fail to get table info '%s', %s", cmd.Table, err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
-	desc := (_desc).(*do.TableDescription)
+	if !exists {
+		ctx.Printfln("Table '%s' does not exist", cmd.Table)
+		return
+	}
+	if created {
+		ctx.Printfln("Table '%s' created", cmd.Table)
+	}
+	if truncated {
+		ctx.Printfln("Table '%s' truncated", cmd.Table)
+	}
+
+	var desc *do.TableDescription
+	if desc0, err := do.Describe(ctx.DB, cmd.Table, false); err != nil {
+		ctx.Printfln("ERR fail to get table info '%s', %s", cmd.Table, err.Error())
+		return
+	} else {
+		desc = desc0.(*do.TableDescription)
+	}
 
 	if ctx.Interactive {
 		ctx.Printfln("# Enter %s⏎ to quit", cmd.EofMark)
@@ -119,13 +139,25 @@ func doImport(ctx *client.ActionContext) {
 			buff = append(buff, bs...)
 		}
 		r = bufio.NewReader(bytes.NewReader(buff))
+	} else {
+		if cmd.Compress == "gzip" {
+			gr, err := gzip.NewReader(r)
+			if err != nil {
+				ctx.Println("ERR", err.Error())
+				return
+			}
+			r = bufio.NewReader(gr)
+			defer gr.Close()
+		}
 	}
 
-	decoder := codec.NewDecoderBuilder().
-		SetReader(r).
+	decoder := codec.NewDecoderBuilder(cmd.InputFormat).
+		SetInputStream(r).
 		SetColumns(desc.Columns.Columns()).
+		SetTimeFormat(cmd.TimeFormat).
+		SetTimeLocation(cmd.TimeLocation).
 		SetCsvDelimieter(cmd.Delimiter).
-		Build(cmd.InputFormat)
+		Build()
 
 	var appender spi.Appender
 	hold := []string{}
