@@ -1,10 +1,9 @@
-package shell
+package client
 
 import (
 	"reflect"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/alecthomas/kong"
 )
@@ -45,35 +44,4 @@ func KongOptions(helpFunc func() error) []kong.Option {
 
 func Kong(grammar any, helpFunc func() error) (*kong.Kong, error) {
 	return kong.New(grammar, KongOptions(helpFunc)...)
-}
-
-// /////////////////
-// utilites
-func splitFields(line string, stripQuote bool) []string {
-	lastQuote := rune(0)
-	f := func(c rune) bool {
-		switch {
-		case c == lastQuote:
-			lastQuote = rune(0)
-			return false
-		case lastQuote != rune(0):
-			return false
-		case unicode.In(c, unicode.Quotation_Mark):
-			lastQuote = c
-			return false
-		default:
-			return unicode.IsSpace(c)
-		}
-	}
-	fields := strings.FieldsFunc(line, f)
-
-	if stripQuote {
-		for i, f := range fields {
-			c := []rune(f)[0]
-			if unicode.In(c, unicode.Quotation_Mark) {
-				fields[i] = strings.Trim(f, string(c))
-			}
-		}
-	}
-	return fields
 }

@@ -1,4 +1,4 @@
-package shell
+package cmd
 
 import (
 	"fmt"
@@ -7,12 +7,14 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/cemlib/util"
+	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/do"
+	neoutil "github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "show",
 		PcFunc: pcShow,
 		Action: doShow,
@@ -35,52 +37,50 @@ type ShowCmd struct {
 	Help bool `kong:"-"`
 }
 
-func pcShow(c Client) readline.PrefixCompleterInterface {
+func pcShow() readline.PrefixCompleterInterface {
 	return readline.PcItem("show",
 		readline.PcItem("tables"),
 		readline.PcItem("info"),
 	)
 }
 
-func doShow(cc Client, line string) {
+func doShow(ctx *client.ActionContext) {
 	cmd := &ShowCmd{}
 
-	parser, err := Kong(cmd, func() error { cc.Println(helpShow); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpShow); cmd.Help = true; return nil })
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
-	ctx, err := parser.Parse(splitFields(line, false))
+	parserCtx, err := parser.Parse(neoutil.SplitFields(ctx.Line, false))
 	if cmd.Help {
 		return
 	}
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
-	switch ctx.Command() {
+	switch parserCtx.Command() {
 	case "info":
-		cli := cc.(*client)
-		cli.doShowInfo()
+		doShowInfo(ctx)
 	case "tables":
-		cli := cc.(*client)
-		cli.doShowTables(cmd.Tables.ShowAll)
+		doShowTables(ctx, cmd.Tables.ShowAll)
 	default:
-		cc.Println(helpShow)
+		ctx.Println(helpShow)
 		return
 	}
 }
 
-func (cli *client) doShowTables(showAll bool) {
-	rows, err := cli.db.Query("select NAME, TYPE, FLAG, ID from M$SYS_TABLES order by ID")
+func doShowTables(ctx *client.ActionContext, showAll bool) {
+	rows, err := ctx.DB.Query("select NAME, TYPE, FLAG, ID from M$SYS_TABLES order by ID")
 	if err != nil {
-		cli.Printfln("ERR select m$sys_tables fail; %s", err.Error())
+		ctx.Printfln("ERR select m$sys_tables fail; %s", err.Error())
 		return
 	}
 	defer rows.Close()
 
-	t := cli.NewBox([]string{"#", "ID", "NAME", "TYPE"})
+	t := ctx.NewBox([]string{"#", "ID", "NAME", "TYPE"})
 
 	nrow := 0
 	for rows.Next() {
@@ -90,7 +90,7 @@ func (cli *client) doShowTables(showAll bool) {
 		var id int
 		err := rows.Scan(&name, &typ, &flg, &id)
 		if err != nil {
-			cli.Println("ERR", err.Error())
+			ctx.Println("ERR", err.Error())
 			return
 		}
 		if !showAll && strings.HasPrefix(name, "_") {
@@ -104,16 +104,16 @@ func (cli *client) doShowTables(showAll bool) {
 	t.Render()
 }
 
-func (cli *client) doShowInfo() {
-	nfo, err := cli.db.GetServerInfo()
+func doShowInfo(ctx *client.ActionContext) {
+	nfo, err := ctx.DB.GetServerInfo()
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
 	uptime := time.Duration(nfo.Runtime.UptimeInSecond) * time.Second
 
-	box := cli.NewBox([]string{"NAME", "VALUE"})
+	box := ctx.NewBox([]string{"NAME", "VALUE"})
 
 	box.AppendRow("build.version", fmt.Sprintf("v%d.%d.%d", nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch))
 	box.AppendRow("build.hash", fmt.Sprintf("#%s", nfo.Version.GitSHA))
@@ -126,12 +126,12 @@ func (cli *client) doShowInfo() {
 	box.AppendRow("runtime.uptime", util.HumanizeDurationWithFormat(uptime, util.HumanizeDurationFormatSimple))
 	box.AppendRow("runtime.goroutines", nfo.Runtime.Goroutines)
 
-	box.AppendRow("mem.sys", cli.bytesUnit(nfo.Runtime.MemSys))
-	box.AppendRow("mem.heap.sys", cli.bytesUnit(nfo.Runtime.MemHeapSys))
-	box.AppendRow("mem.heap.alloc", cli.bytesUnit(nfo.Runtime.MemHeapAlloc))
-	box.AppendRow("mem.heap.in-use", cli.bytesUnit(nfo.Runtime.MemHeapInUse))
-	box.AppendRow("mem.stack.sys", cli.bytesUnit(nfo.Runtime.MemStackSys))
-	box.AppendRow("mem.stack.in-use", cli.bytesUnit(nfo.Runtime.MemStackInUse))
+	box.AppendRow("mem.sys", neoutil.BytesUnit(nfo.Runtime.MemSys, ctx.Lang))
+	box.AppendRow("mem.heap.sys", neoutil.BytesUnit(nfo.Runtime.MemHeapSys, ctx.Lang))
+	box.AppendRow("mem.heap.alloc", neoutil.BytesUnit(nfo.Runtime.MemHeapAlloc, ctx.Lang))
+	box.AppendRow("mem.heap.in-use", neoutil.BytesUnit(nfo.Runtime.MemHeapInUse, ctx.Lang))
+	box.AppendRow("mem.stack.sys", neoutil.BytesUnit(nfo.Runtime.MemStackSys, ctx.Lang))
+	box.AppendRow("mem.stack.in-use", neoutil.BytesUnit(nfo.Runtime.MemStackInUse, ctx.Lang))
 
 	box.Render()
 }

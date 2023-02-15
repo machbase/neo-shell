@@ -1,19 +1,8 @@
-package shell
+package client
 
 import (
 	"fmt"
-	"io"
 )
-
-func (cli *client) Stdin() io.Reader {
-	return cli.conf.Stdin
-}
-func (cli *client) Stdout() io.Writer {
-	return cli.conf.Stdout
-}
-func (cli *client) Stderr() io.Writer {
-	return cli.conf.Stderr
-}
 
 func (cli *client) Write(p []byte) (int, error) {
 	return cli.conf.Stdout.Write(p)

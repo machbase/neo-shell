@@ -1,16 +1,18 @@
-package shell
+package cmd
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/do"
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "desc",
 		PcFunc: pcDescribe,
 		Action: doDescribe,
@@ -30,62 +32,60 @@ type DescribeCmd struct {
 	Help    bool   `kong:"-"`
 }
 
-func pcDescribe(c Client) readline.PrefixCompleterInterface {
-	cli := c.(*client)
-	return readline.PcItem("desc",
-		readline.PcItemDynamic(cli.listTables()),
-	)
+func pcDescribe() readline.PrefixCompleterInterface {
+	return readline.PcItem("desc")
+	// return readline.PcItem("desc",
+	// 	readline.PcItemDynamic(do.ListTables(c.Database())),
+	// )
 }
 
-func doDescribe(cli Client, line string) {
+func doDescribe(ctx *client.ActionContext) {
 	cmd := &DescribeCmd{}
 
-	parser, err := Kong(cmd, func() error { cli.Println(helpDescribe); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpDescribe); cmd.Help = true; return nil })
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
-	_, err = parser.Parse(splitFields(line, false))
+	_, err = parser.Parse(util.SplitFields(ctx.Line, false))
 	if cmd.Help {
 		return
 	}
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
-	db := cli.Database()
-
-	_desc, err := do.Describe(db, cmd.Table, cmd.ShowAll)
+	_desc, err := do.Describe(ctx.DB, cmd.Table, cmd.ShowAll)
 	if err != nil {
-		cli.Println("unable to describe", cmd.Table, "; ERR", err.Error())
+		ctx.Println("unable to describe", cmd.Table, "; ERR", err.Error())
 		return
 	}
 	desc := _desc.(*do.TableDescription)
 
-	cli.Println("TABLE   ", desc.Name)
-	cli.Println("TYPE    ", desc.TypeString())
+	ctx.Println("TABLE   ", desc.Name)
+	ctx.Println("TYPE    ", desc.TypeString())
 	if desc.Type == spi.TagTableType {
 		tags := []string{}
-		rows, err := db.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(cmd.Table)))
+		rows, err := ctx.DB.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(cmd.Table)))
 		if err != nil {
-			cli.Println("ERR", err.Error())
+			ctx.Println("ERR", err.Error())
 			return
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var name string
 			if err := rows.Scan(&name); err != nil {
-				cli.Println("ERR", err.Error())
+				ctx.Println("ERR", err.Error())
 				return
 			}
 			tags = append(tags, name)
 		}
-		cli.Println("TAGS    ", strings.Join(tags, ", "))
+		ctx.Println("TAGS    ", strings.Join(tags, ", "))
 	}
 
 	nrow := 0
-	box := cli.NewBox([]string{"#", "ID", "NAME", "TYPE", "LENGTH"})
+	box := ctx.NewBox([]string{"#", "ID", "NAME", "TYPE", "LENGTH"})
 	for _, col := range desc.Columns {
 		nrow++
 		colType := spi.ColumnTypeString(col.Type)

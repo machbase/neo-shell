@@ -1,4 +1,4 @@
-package shell
+package client
 
 import (
 	"errors"
@@ -6,11 +6,13 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/machbase/neo-grpc/machrpc"
 	"github.com/machbase/neo-grpc/mgmt"
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 	"golang.org/x/net/context"
 	"golang.org/x/text/language"
@@ -18,8 +20,6 @@ import (
 )
 
 type Client interface {
-	Boxer
-
 	Start() error
 	Stop()
 
@@ -33,12 +33,10 @@ type Client interface {
 	Println(args ...any)
 	Printfln(format string, args ...any)
 
-	Stdin() io.Reader
-	Stdout() io.Writer
-	Stderr() io.Writer
-
 	Database() spi.Database
 }
+
+type ShutdownServerFunc func() error
 
 var Formats = struct {
 	Default string
@@ -150,10 +148,12 @@ func (cli *client) ShutdownServer() error {
 	if cli.remoteSession {
 		return errors.New("remote session is not allowed to shutdown")
 	}
-	mgmtcli, err := cli.NewManagementClient()
+
+	conn, err := machrpc.MakeGrpcConn(cli.conf.ServerAddr)
 	if err != nil {
 		return err
 	}
+	mgmtcli := mgmt.NewManagementClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -162,14 +162,6 @@ func (cli *client) ShutdownServer() error {
 		return err
 	}
 	return nil
-}
-
-func (cli *client) NewManagementClient() (mgmt.ManagementClient, error) {
-	conn, err := machrpc.MakeGrpcConn(cli.conf.ServerAddr)
-	if err != nil {
-		return nil, err
-	}
-	return mgmt.NewManagementClient(conn), nil
 }
 
 func (cli *client) Run(command string) {
@@ -188,10 +180,83 @@ func (cli *client) Config() *Config {
 	return cli.conf
 }
 
+type ActionContext struct {
+	Line         string
+	Client       Client
+	DB           spi.Database
+	Lang         language.Tag
+	TimeLocation *time.Location
+	TimeFormat   string
+	Interactive  bool
+	BoxStyle     string
+
+	Stdin  io.ReadCloser
+	Stdout io.Writer
+	Stderr io.Writer
+
+	parent     context.Context
+	cancelFunc func()
+	cli        *client
+}
+
+func (ctx *ActionContext) Deadline() (deadline time.Time, ok bool) {
+	return ctx.parent.Deadline()
+}
+
+func (ctx *ActionContext) Done() <-chan struct{} {
+	return ctx.parent.Done()
+}
+
+func (ctx *ActionContext) Err() error {
+	return ctx.parent.Err()
+}
+
+func (ctx *ActionContext) Value(key any) any {
+	return ctx.parent.Value(key)
+}
+
+func (ctx *ActionContext) Cancel() {
+	ctx.cancelFunc()
+}
+
+func (ctx *ActionContext) Write(p []byte) (int, error) {
+	return ctx.Client.Write(p)
+}
+func (ctx *ActionContext) Print(args ...any) {
+	ctx.Client.Print(args...)
+}
+func (ctx *ActionContext) Printf(format string, args ...any) {
+	ctx.Client.Printf(format, args...)
+}
+func (ctx *ActionContext) Println(args ...any) {
+	ctx.Client.Println(args...)
+}
+func (ctx *ActionContext) Printfln(format string, args ...any) {
+	ctx.Client.Printfln(format, args...)
+}
+
+func (ctx *ActionContext) Config() *Config {
+	return ctx.cli.conf
+}
+
+func (ctx *ActionContext) NewManagementClient() (mgmt.ManagementClient, error) {
+	conn, err := machrpc.MakeGrpcConn(ctx.cli.conf.ServerAddr)
+	if err != nil {
+		return nil, err
+	}
+	return mgmt.NewManagementClient(conn), nil
+}
+
+// ShutdownServerFunc returns callable function to shutdown server if this instance has ability of shutdown server
+// otherwise return nil
+func (ctx *ActionContext) ShutdownServerFunc() ShutdownServerFunc {
+	return ctx.cli.ShutdownServer
+}
+
 type Cmd struct {
 	Name   string
-	PcFunc func(cli Client) readline.PrefixCompleterInterface
-	Action func(cli Client, line string)
+	PcFunc func() readline.PrefixCompleterInterface
+	Action func(ctx *ActionContext)
 	Desc   string
 	Usage  string
 }
@@ -206,24 +271,49 @@ func (cli *client) completer() readline.PrefixCompleterInterface {
 	pc := make([]readline.PrefixCompleterInterface, 0)
 	for _, cmd := range commands {
 		if cmd.PcFunc != nil {
-			pc = append(pc, cmd.PcFunc(cli))
+			pc = append(pc, cmd.PcFunc())
 		}
 	}
 	return readline.NewPrefixCompleter(pc...)
 }
 
 func (cli *client) Process(line string) {
-	fields := splitFields(line, true)
+	fields := util.SplitFields(line, true)
 	if len(fields) == 0 {
 		return
 	}
 
 	cmdName := fields[0]
-	if cmd, ok := commands[cmdName]; ok {
+	var cmd *Cmd
+	var ok bool
+	if cmd, ok = commands[cmdName]; ok {
 		line = strings.TrimSpace(line[len(cmdName):])
-		cmd.Action(cli, line)
 	} else {
-		doSql(cli, line)
+		cmd, ok = commands["sql"]
+	}
+
+	if ok && cmd != nil {
+		actCtx := &ActionContext{
+			Line:         line,
+			Client:       cli,
+			DB:           cli.db,
+			Lang:         cli.conf.Lang,
+			TimeLocation: time.UTC,
+			TimeFormat:   "ns",
+			Interactive:  cli.interactive,
+			BoxStyle:     cli.conf.BoxStyle,
+			Stdin:        cli.conf.Stdin,
+			Stdout:       cli.conf.Stdout,
+			Stderr:       cli.conf.Stderr,
+		}
+		actCtx.parent, actCtx.cancelFunc = context.WithCancel(context.Background())
+		actCtx.cli = cli
+
+		defer actCtx.cancelFunc()
+
+		cmd.Action(actCtx)
+	} else {
+		cli.Println("command not found", cmdName)
 	}
 }
 
@@ -306,50 +396,17 @@ func filterInput(r rune) (rune, bool) {
 	return r, true
 }
 
-func (cli *client) listTables() func(string) []string {
-	return func(line string) []string {
-		rows, err := cli.db.Query("select NAME, TYPE, FLAG from M$SYS_TABLES order by NAME")
-		if err != nil {
-			return nil
-		}
-		defer rows.Close()
-		rt := []string{}
-		for rows.Next() {
-			var name string
-			var typ int
-			var flg int
-			rows.Scan(&name, &typ, &flg)
-			rt = append(rt, name)
-		}
-		return rt
-	}
-}
-
-func (cli *client) bytesUnit(v uint64) string {
-	p := message.NewPrinter(cli.conf.Lang)
-	f := float64(v)
-	u := ""
-	switch {
-	case v > 1024*1024*1024:
-		f = f / (1024 * 1024 * 1024)
-		u = "GB"
-	case v > 1024*1024:
-		f = f / (1024 * 1024)
-		u = "MB"
-	case v > 1024:
-		f = f / 1024
-		u = "KB"
-	}
-	return p.Sprintf("%.1f %s", f, u)
-}
-
 func (cli *client) Printer() *message.Printer {
 	return message.NewPrinter(cli.conf.Lang)
 }
 
 var sqlHistory = make([]string, 0)
+var sqlHistoryLock = sync.Mutex{}
 
-func (cli *client) AddSqlHistory(sqlText string) {
+func AddSqlHistory(sqlText string) {
+	sqlHistoryLock.Lock()
+	defer sqlHistoryLock.Unlock()
+
 	if len(sqlHistory) > 10 {
 		sqlHistory = sqlHistory[len(sqlHistory)-10:]
 	}
@@ -357,6 +414,6 @@ func (cli *client) AddSqlHistory(sqlText string) {
 	sqlHistory = append(sqlHistory, sqlText)
 }
 
-func (cli *client) SqlHistory(line string) []string {
+func SqlHistory(line string) []string {
 	return sqlHistory
 }

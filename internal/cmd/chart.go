@@ -1,19 +1,20 @@
-package shell
+package cmd
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/renderer"
 	"github.com/machbase/neo-shell/sink/filesink"
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 	"github.com/robfig/cron"
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "chart",
 		PcFunc: pcChart,
 		Action: doChart,
@@ -69,28 +70,28 @@ type ChartCmd struct {
 	Help         bool           `kong:"-"`
 }
 
-func pcChart(cli Client) readline.PrefixCompleterInterface {
+func pcChart() readline.PrefixCompleterInterface {
 	return readline.PcItem("chart")
 }
 
-func doChart(cli Client, line string) {
+func doChart(ctx *client.ActionContext) {
 	cmd := &ChartCmd{}
-	parser, err := Kong(cmd, func() error { cli.Println(helpSql); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpSql); cmd.Help = true; return nil })
 	if err != nil {
-		cli.Println(err.Error())
+		ctx.Println(err.Error())
 		return
 	}
-	_, err = parser.Parse(splitFields(line, true))
+	_, err = parser.Parse(util.SplitFields(ctx.Line, true))
 	if cmd.Help {
 		return
 	}
 	if err != nil {
-		cli.Println(err.Error())
+		ctx.Println(err.Error())
 		return
 	}
 
 	if len(cmd.TagPaths) == 0 {
-		cli.Println("at least one tag_path should be specified")
+		ctx.Println("at least one tag_path should be specified")
 		return
 	}
 
@@ -100,7 +101,7 @@ func doChart(cli Client, line string) {
 
 	queries, err := renderer.BuildChartQueries(cmd.TagPaths, cmd.Timestamp, cmd.Range, cmd.Timeformat, cmd.TimeLocation)
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
@@ -122,24 +123,21 @@ func doChart(cli Client, line string) {
 
 	var scheduler *cron.Cron
 	var quitCh = make(chan bool, 1)
-	var ctx, cancel = context.WithCancel(context.Background())
-	defer cancel()
 
 	runCount := 0
 	runCanceled := false
 	runner := func() {
 		sink, err := filesink.New(cmd.Output)
 		if err != nil {
-			cli.Println("ERR", err.Error())
+			ctx.Println("ERR", err.Error())
 			return
 		}
 		defer sink.Close()
 
-		db := cli.Database()
 		series := []*spi.RenderingData{}
 		// query
 		for _, dq := range queries {
-			data, err := dq.Query(db)
+			data, err := dq.Query(ctx.DB)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -151,7 +149,7 @@ func doChart(cli Client, line string) {
 		if err = render.Render(ctx, sink, series); err != nil {
 			runCanceled = true
 			if err != nil && err != spi.ErrUserCancel {
-				cli.Println("ERR", err.Error())
+				ctx.Println("ERR", err.Error())
 			}
 		}
 		if runCanceled || cmd.Count > 0 && cmd.Count <= runCount {
@@ -167,7 +165,7 @@ func doChart(cli Client, line string) {
 		go func() {
 			<-quitCh
 			scheduler.Stop()
-			cancel()
+			ctx.Cancel()
 		}()
 
 		if err := scheduler.AddFunc(fmt.Sprintf("@every %s", cmd.Refresh.String()), runner); err != nil {

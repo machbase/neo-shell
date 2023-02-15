@@ -1,4 +1,4 @@
-package shell
+package cmd
 
 import (
 	"fmt"
@@ -10,13 +10,14 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/gdamore/tcell/v2"
+	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 	"github.com/rivo/tview"
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "walk",
 		PcFunc: pcWalk,
 		Action: doWalk,
@@ -45,36 +46,36 @@ type WalkCmd struct {
 	Query        []string       `arg:"" name:"query" passthrough:""`
 }
 
-func pcWalk(c Client) readline.PrefixCompleterInterface {
-	cli := c.(*client)
-	return readline.PcItem("walk", readline.PcItemDynamic(cli.SqlHistory))
+func pcWalk() readline.PrefixCompleterInterface {
+	return readline.PcItem("walk", readline.PcItemDynamic(client.SqlHistory))
 }
 
-func doWalk(cc Client, cmdLine string) {
+func doWalk(ctx *client.ActionContext) {
 	cmd := &WalkCmd{}
-	parser, err := Kong(cmd, func() error { cc.Println(helpWalk); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpWalk); cmd.Help = true; return nil })
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
-	_, err = parser.Parse(splitFields(cmdLine, false))
+	_, err = parser.Parse(util.SplitFields(ctx.Line, false))
 	if cmd.Help {
 		return
 	}
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
 	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))
-	db := cc.Database()
 
-	walker, err := NewWalker(sqlText, db, spi.GetTimeformat(cmd.Timeformat), cmd.TimeLocation, cmd.Precision)
+	walker, err := NewWalker(sqlText, ctx.DB, spi.GetTimeformat(cmd.Timeformat), cmd.TimeLocation, cmd.Precision)
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 	defer walker.Close()
+
+	client.AddSqlHistory(sqlText)
 
 	app := tview.NewApplication()
 	table := tview.NewTable()
@@ -95,7 +96,7 @@ func doWalk(cc Client, cmdLine string) {
 		return evt
 	})
 	if err := app.SetRoot(table, true).SetFocus(table).Run(); err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 }

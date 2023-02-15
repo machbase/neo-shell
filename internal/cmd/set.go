@@ -1,13 +1,15 @@
-package shell
+package cmd
 
 import (
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/client"
+	"github.com/machbase/neo-shell/util"
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "set",
 		PcFunc: pcSet,
 		Action: doSet,
@@ -17,7 +19,7 @@ func init() {
 	})
 }
 
-func pcSet(c Client) readline.PrefixCompleterInterface {
+func pcSet() readline.PrefixCompleterInterface {
 	return readline.PcItem("set",
 		// readline.PcItem("tz",
 		// 	readline.PcItem("UTC"),
@@ -46,9 +48,8 @@ func pcSet(c Client) readline.PrefixCompleterInterface {
 	)
 }
 
-func doSet(c Client, line string) {
-	cli := c.(*client)
-	args := splitFields(line, true)
+func doSet(ctx *client.ActionContext) {
+	args := util.SplitFields(ctx.Line, true)
 	onoff := func(t bool) string {
 		if t {
 			return "on"
@@ -66,22 +67,23 @@ func doSet(c Client, line string) {
 		} else if b == "off" {
 			*flag = false
 		}
-		cli.Println(args[0], onoff(*flag))
+		ctx.Println(args[0], onoff(*flag))
 	}
 
+	conf := ctx.Config()
 	if len(args) == 0 {
-		box := cli.NewBox([]string{"NAME", "VALUE"})
-		box.AppendRow("vi-mode", onoff(cli.conf.VimMode))
-		box.AppendRow("box-style", cli.conf.BoxStyle)
+		box := ctx.NewBox([]string{"NAME", "VALUE"})
+		box.AppendRow("vi-mode", onoff(conf.VimMode))
+		box.AppendRow("box-style", conf.BoxStyle)
 		box.Render()
 		return
 	}
 	switch strings.ToLower(args[0]) {
 	case "vi-mode":
-		parseflag(&cli.conf.VimMode)
+		parseflag(&conf.VimMode)
 	case "box-style":
-		cli.conf.BoxStyle = parseBoxStyle(args[1])
-		cli.Println("box-style", cli.conf.BoxStyle)
+		conf.BoxStyle = parseBoxStyle(args[1])
+		ctx.Println("box-style", conf.BoxStyle)
 	}
 }
 

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/machbase/neo-shell/client"
+	_ "github.com/machbase/neo-shell/internal/cmd"
 )
 
 type ShellCmd struct {
@@ -14,7 +17,7 @@ type ShellCmd struct {
 }
 
 func Shell(cmd *ShellCmd) {
-	clientConf := DefaultConfig()
+	clientConf := client.DefaultConfig()
 	clientConf.ServerAddr = cmd.ServerAddr
 	clientConf.BoxStyle = cmd.BoxStyle
 
@@ -32,7 +35,7 @@ func Shell(cmd *ShellCmd) {
 	}
 	interactive := len(command) == 0
 
-	client := New(clientConf, interactive)
+	client := client.New(clientConf, interactive)
 	if err := client.Start(); err != nil {
 		fmt.Fprintln(os.Stdout, "ERR", err.Error())
 		return

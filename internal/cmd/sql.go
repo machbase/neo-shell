@@ -1,4 +1,4 @@
-package shell
+package cmd
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/do"
 	"github.com/machbase/neo-shell/sink"
@@ -16,7 +17,7 @@ import (
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "sql",
 		PcFunc: pcSql,
 		Action: doSql,
@@ -59,37 +60,36 @@ type SqlCmd struct {
 	Query        []string       `arg:"" name:"query" passthrough:""`
 }
 
-func pcSql(cc Client) readline.PrefixCompleterInterface {
-	cli := cc.(*client)
+func pcSql() readline.PrefixCompleterInterface {
 	return readline.PcItem("sql",
-		readline.PcItemDynamic(cli.SqlHistory),
+		readline.PcItemDynamic(client.SqlHistory),
 	)
 }
 
-func doSql(cc Client, cmdLine string) {
+func doSql(ctx *client.ActionContext) {
 	cmd := &SqlCmd{}
-	parser, err := Kong(cmd, func() error { cc.Println(helpSql); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpSql); cmd.Help = true; return nil })
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
-	_, err = parser.Parse(splitFields(cmdLine, false))
+	_, err = parser.Parse(util.SplitFields(ctx.Line, false))
 	if cmd.Help {
 		return
 	}
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
 	var outputPath = util.StripQuote(cmd.Output)
 	sink, err := sink.MakeSink(outputPath)
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 	}
 
 	if outputPath == "-" {
-		cmd.Interactive = cc.Interactive()
+		cmd.Interactive = ctx.Interactive
 	} else {
 		cmd.Interactive = false
 	}
@@ -130,14 +130,14 @@ func doSql(cc Client, cmdLine string) {
 	nextPauseRow := int64(pageHeight)
 
 	queryCtx := &do.QueryContext{
-		DB: cc.Database(),
+		DB: ctx.DB,
 		OnFetchStart: func(cols spi.Columns) {
 			encoder.Open(cols)
 		},
 		OnFetch: func(nrow int64, values []any) bool {
 			err := encoder.AddRow(values)
 			if err != nil {
-				cc.Println("ERR", err.Error())
+				ctx.Println("ERR", err.Error())
 			}
 			if nextPauseRow > 0 && nextPauseRow == nrow {
 				nextPauseRow += int64(pageHeight)
@@ -159,8 +159,9 @@ func doSql(cc Client, cmdLine string) {
 	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))
 	err = do.Query(queryCtx, sqlText)
 	if err != nil {
-		cc.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 	}
+	client.AddSqlHistory(sqlText)
 }
 
 func pauseForMore() bool {

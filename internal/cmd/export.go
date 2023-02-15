@@ -1,9 +1,10 @@
-package shell
+package cmd
 
 import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/do"
 	"github.com/machbase/neo-shell/sink"
@@ -12,7 +13,7 @@ import (
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "export",
 		PcFunc: pcExport,
 		Action: doExport,
@@ -48,30 +49,30 @@ type ExportCmd struct {
 	Help         bool           `kong:"-"`
 }
 
-func pcExport(cli Client) readline.PrefixCompleterInterface {
+func pcExport() readline.PrefixCompleterInterface {
 	return readline.PcItem("export")
 }
 
-func doExport(cli Client, cmdLine string) {
+func doExport(ctx *client.ActionContext) {
 	cmd := &ExportCmd{}
-	parser, err := Kong(cmd, func() error { cli.Println(helpExport); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpExport); cmd.Help = true; return nil })
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
-	_, err = parser.Parse(splitFields(cmdLine, false))
+	_, err = parser.Parse(util.SplitFields(ctx.Line, false))
 	if cmd.Help {
 		return
 	}
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
 	var outputPath = util.StripQuote(cmd.Output)
 	sink, err := sink.MakeSink(outputPath)
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 		return
 	}
 
@@ -89,14 +90,14 @@ func doExport(cli Client, cmdLine string) {
 		Build()
 
 	queryCtx := &do.QueryContext{
-		DB: cli.Database(),
+		DB: ctx.DB,
 		OnFetchStart: func(cols spi.Columns) {
 			encoder.Open(cols)
 		},
 		OnFetch: func(nrow int64, values []any) bool {
 			err := encoder.AddRow(values)
 			if err != nil {
-				cli.Println("ERR", err.Error())
+				ctx.Println("ERR", err.Error())
 			}
 			return true
 		},
@@ -108,6 +109,6 @@ func doExport(cli Client, cmdLine string) {
 
 	err = do.Query(queryCtx, "select * from "+cmd.Table+" order by time")
 	if err != nil {
-		cli.Println("ERR", err.Error())
+		ctx.Println("ERR", err.Error())
 	}
 }

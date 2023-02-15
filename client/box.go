@@ -1,4 +1,4 @@
-package shell
+package client
 
 import (
 	"io"
@@ -18,15 +18,15 @@ type Box interface {
 	Render() string
 }
 
-func (cli *client) NewCompactBox(header []string) Box {
-	return cli.newBox(header, true, true, "-", cli.conf.Stdout)
+func (ctx *ActionContext) NewCompactBox(header []string) Box {
+	return ctx.newBox(header, true, true, "-", ctx.Stdout)
 }
 
-func (cli *client) NewBox(header []string) Box {
-	return cli.newBox(header, false, true, "-", cli.conf.Stdout)
+func (ctx *ActionContext) NewBox(header []string) Box {
+	return ctx.newBox(header, false, true, "-", ctx.Stdout)
 }
 
-func (cli *client) newBox(header []string, compact bool, heading bool, format string, mirror io.Writer) Box {
+func (ctx *ActionContext) newBox(header []string, compact bool, heading bool, format string, mirror io.Writer) Box {
 	b := &box{
 		w:      table.NewWriter(),
 		format: format,
@@ -34,7 +34,7 @@ func (cli *client) newBox(header []string, compact bool, heading bool, format st
 	b.w.SetOutputMirror(mirror)
 
 	style := table.StyleDefault
-	switch cli.conf.BoxStyle {
+	switch ctx.BoxStyle {
 	case "bold":
 		style = table.StyleBold
 	case "double":

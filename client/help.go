@@ -1,10 +1,11 @@
-package shell
+package client
 
 import (
 	"sort"
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/util"
 )
 
 func init() {
@@ -16,7 +17,7 @@ func init() {
 	})
 }
 
-func pcHelp(cli Client) readline.PrefixCompleterInterface {
+func pcHelp() readline.PrefixCompleterInterface {
 	return readline.PcItem("help", readline.PcItemDynamic(func(line string) []string {
 		lst := make([]string, 0)
 		for k := range commands {
@@ -28,28 +29,28 @@ func pcHelp(cli Client) readline.PrefixCompleterInterface {
 	}))
 }
 
-func doHelp(cli Client, line string) {
-	fields := splitFields(line, true)
+func doHelp(ctx *ActionContext) {
+	fields := util.SplitFields(ctx.Line, true)
 	if len(fields) > 0 {
 		if cmd, ok := commands[fields[0]]; ok {
-			cli.Println(cmd.Desc)
+			ctx.Println(cmd.Desc)
 
 			if len(cmd.Usage) > 0 {
-				cli.Println("Usage:")
+				ctx.Println("Usage:")
 				lines := strings.Split(cmd.Usage, "\n")
 				for _, l := range lines {
-					cli.Println(l)
+					ctx.Println(l)
 				}
 			}
 			return
 		}
 		switch fields[0] {
 		case "timeformat":
-			helpTimeFormat(cli)
+			ctx.Println(helpTimeFormat)
 			return
 		}
 	}
-	cli.Println("commands")
+	ctx.Println("commands")
 	keys := make([]string, 0, len(commands))
 	for k := range commands {
 		keys = append(keys, k)
@@ -64,13 +65,12 @@ func doHelp(cli Client, line string) {
 	})
 	for _, k := range keys {
 		cmd := commands[k]
-		cli.Printfln("    %-*s %s", 10, cmd.Name, cmd.Desc)
+		ctx.Printfln("    %-*s %s", 10, cmd.Name, cmd.Desc)
 	}
-	cli.Printfln("    %-*s %s", 10, "exit", "Exit shell")
+	ctx.Printfln("    %-*s %s", 10, "exit", "Exit shell")
 }
 
-func helpTimeFormat(cli Client) {
-	cli.Println(`
+var helpTimeFormat = `
   timeformat
     epoch
       ns             nanoseconds
@@ -102,5 +102,4 @@ func helpTimeFormat(cli Client) {
        hour          03 or 15
        minute        04
        second        05 or with sub-seconds '05.999999'
-`)
-}
+`

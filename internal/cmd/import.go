@@ -1,4 +1,4 @@
-package shell
+package cmd
 
 import (
 	"bufio"
@@ -10,13 +10,15 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/do"
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
 
 func init() {
-	RegisterCmd(&Cmd{
+	client.RegisterCmd(&client.Cmd{
 		Name:   "import",
 		PcFunc: pcImport,
 		Action: doImport,
@@ -59,52 +61,51 @@ type ImportCmd struct {
 	Help          bool           `kong:"-"`
 }
 
-func pcImport(cli Client) readline.PrefixCompleterInterface {
+func pcImport() readline.PrefixCompleterInterface {
 	return readline.PcItem("import")
 }
 
-func doImport(cli Client, cmdLine string) {
+func doImport(ctx *client.ActionContext) {
 	cmd := &ImportCmd{}
-	parser, err := Kong(cmd, func() error { cli.Println(helpImport); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpImport); cmd.Help = true; return nil })
 	if err != nil {
-		cli.Println(err.Error())
+		ctx.Println(err.Error())
 		return
 	}
 
-	_, err = parser.Parse(splitFields(cmdLine, true))
+	_, err = parser.Parse(util.SplitFields(ctx.Line, true))
 	if cmd.Help {
 		return
 	}
 	if err != nil {
-		cli.Println(err.Error())
+		ctx.Println(err.Error())
 		return
 	}
 
 	var r *bufio.Reader
 	if cmd.Input == "-" {
-		r = bufio.NewReader(cli.Stdin())
+		r = bufio.NewReader(ctx.Stdin)
 	} else {
 		f, err := os.Open(cmd.Input)
 		if err != nil {
-			cli.Println(err.Error())
+			ctx.Println(err.Error())
 			return
 		}
 		defer f.Close()
 		r = bufio.NewReader(f)
 	}
 
-	db := cli.Database()
-	_desc, err := do.Describe(db, cmd.Table, false)
+	_desc, err := do.Describe(ctx.DB, cmd.Table, false)
 	if err != nil {
-		cli.Printfln("ERR fail to get table info '%s', %s", cmd.Table, err.Error())
+		ctx.Printfln("ERR fail to get table info '%s', %s", cmd.Table, err.Error())
 		return
 	}
 	desc := (_desc).(*do.TableDescription)
 
-	if cli.Interactive() {
-		cli.Printfln("# Enter %s⏎ to quit", cmd.EofMark)
+	if ctx.Interactive {
+		ctx.Printfln("# Enter %s⏎ to quit", cmd.EofMark)
 		colNames := desc.Columns.Columns().Names()
-		cli.Println("#", strings.Join(colNames, cmd.Delimiter))
+		ctx.Println("#", strings.Join(colNames, cmd.Delimiter))
 
 		buff := []byte{}
 		for {
@@ -133,14 +134,14 @@ func doImport(cli Client, cmdLine string) {
 		vals, err := decoder.NextRow()
 		if err != nil {
 			if err != io.EOF {
-				cli.Println("ERR", err.Error())
+				ctx.Println("ERR", err.Error())
 			}
 			break
 		}
 		lineno++
 
 		if len(vals) != len(desc.Columns) {
-			cli.Printfln("line %d contains %d columns, but expected %d", lineno, len(vals), len(desc.Columns))
+			ctx.Printfln("line %d contains %d columns, but expected %d", lineno, len(vals), len(desc.Columns))
 			break
 		}
 		if cmd.Method == "insert" {
@@ -148,16 +149,16 @@ func doImport(cli Client, cmdLine string) {
 				hold = append(hold, "?")
 			}
 			query := fmt.Sprintf("insert into %s values(%s)", cmd.Table, strings.Join(hold, ","))
-			if result := db.Exec(query, vals...); result.Err() != nil {
-				cli.Println(result.Err().Error())
+			if result := ctx.DB.Exec(query, vals...); result.Err() != nil {
+				ctx.Println(result.Err().Error())
 				break
 			}
 			hold = hold[:0]
 		} else { // append
 			if appender == nil {
-				appender, err = db.Appender(cmd.Table)
+				appender, err = ctx.DB.Appender(cmd.Table)
 				if err != nil {
-					cli.Println("ERR", err.Error())
+					ctx.Println("ERR", err.Error())
 					break
 				}
 				defer appender.Close()
@@ -165,10 +166,10 @@ func doImport(cli Client, cmdLine string) {
 
 			err = appender.Append(vals...)
 			if err != nil {
-				cli.Println("ERR", err.Error())
+				ctx.Println("ERR", err.Error())
 				break
 			}
 		}
 	}
-	cli.Printfln("import total %d record(s) %sed", lineno, cmd.Method)
+	ctx.Printfln("import total %d record(s) %sed", lineno, cmd.Method)
 }
