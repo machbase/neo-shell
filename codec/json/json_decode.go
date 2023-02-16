@@ -117,17 +117,27 @@ func (dec *Decoder) nextRow0() ([]any, error) {
 			return nil, errors.New("invalid top level delimiter")
 		}
 		// find "data" field
-		foundDataField := false
+		found := false
 		for {
 			if tok, err := dec.reader.Token(); err != nil {
 				return nil, err
 			} else if key, ok := tok.(string); ok && key == "data" {
-				foundDataField = true
+				found = true
 				break
 			}
 		}
-		if !foundDataField {
+		if !found {
 			return nil, errors.New("'data' field not found")
+		}
+		// find "rows" field
+		found = false
+		for {
+			if tok, err := dec.reader.Token(); err != nil {
+				return nil, err
+			} else if key, ok := tok.(string); ok && key == "rows" {
+				found = true
+				break
+			}
 		}
 		// find data's array '['
 		if tok, err := dec.reader.Token(); err != nil {

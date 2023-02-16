@@ -139,7 +139,7 @@ func (b *decBuilder) Build() spi.RowsDecoder {
 	case CSV:
 		return csv.NewDecoder(b.RowsDecoderContext, b.csvDelimiter, b.csvHeading)
 	default: // "json"
-		return nil
+		return json.NewDecoder(b.RowsDecoderContext)
 	}
 }
 

@@ -15,10 +15,13 @@ import (
 func TestDecoder(t *testing.T) {
 	input := bytes.NewBufferString(`{
 		"table":"sometable", 
-		"data":[
-			["name1", 1676528839, 0.1234],
-			["name2", 1676528840, 0.2345]
-		],
+		"data":{ 
+			"rows": [
+				["name1", 1676528839, 0.1234],
+				["name2", 1676528840, 0.2345]
+		    ],
+			"columns": ["name", "time", "value"]
+		},
 		"other": 999
 	}`)
 
