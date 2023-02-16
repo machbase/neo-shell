@@ -13,6 +13,7 @@ require (
 	github.com/machbase/neo-grpc v0.2.1-0.20230213103137-d93c126485ad
 	github.com/machbase/neo-spi v0.0.0-20230215102041-ce33f66f46e0
 	github.com/mum4k/termdash v0.17.0
+	github.com/orcaman/concurrent-map v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
 	github.com/robfig/cron v1.2.0
@@ -65,4 +66,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
