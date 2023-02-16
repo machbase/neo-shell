@@ -1,7 +1,10 @@
-.PHONY: all release
+.PHONY: all test release
 
 all:
 	go build -o ./tmp/neoshell main/*.go
+
+test:
+	go test -count=1 ./codec/json
 
 release:
 	GOOS=linux GOARCH=amd64 go build -o ./tmp/neoshell_linux_amd64 main/*.go
