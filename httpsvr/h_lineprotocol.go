@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/influxdata/line-protocol/v2/lineprotocol"
-	"github.com/machbase/neo-shell/msg"
+	"github.com/machbase/neo-shell/do"
 )
 
 // Configure telegraf.conf

@@ -11,7 +11,6 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/cemlib v1.0.0
 	github.com/machbase/neo-grpc v0.2.1-0.20230213103137-d93c126485ad
-	github.com/machbase/neo-server v0.2.2
 	github.com/machbase/neo-spi v0.0.0-20230215102041-ce33f66f46e0
 	github.com/mum4k/termdash v0.17.0
 	github.com/pkg/errors v0.9.1
