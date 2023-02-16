@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/influxdata/line-protocol/v2/lineprotocol"
-	"github.com/machbase/neo-server/mods/msg"
+	"github.com/machbase/neo-shell/msg"
 )
 
 // Configure telegraf.conf
@@ -124,7 +124,7 @@ func (svr *Server) handleLineWrite(ctx *gin.Context) {
 			return
 		}
 
-		result := msg.WriteLineProtocol(svr.db, dbName, measurement, fields, tags, ts)
+		result := do.WriteLineProtocol(svr.db, dbName, measurement, fields, tags, ts)
 		if result.Err() != nil {
 			svr.log.Warnf("lineprotocol fail: %s", err.Error())
 			ctx.JSON(
