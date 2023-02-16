@@ -15,22 +15,22 @@ import (
 
 type Decoder struct {
 	reader      *csv.Reader
-	comma       rune
 	columnTypes []string
 	ctx         *spi.RowsDecoderContext
 }
 
-func NewDecoder(ctx *spi.RowsDecoderContext, delimiter string) spi.RowsDecoder {
+func NewDecoder(ctx *spi.RowsDecoderContext, delimiter string, heading bool) spi.RowsDecoder {
+	delmiter, _ := utf8.DecodeRuneInString(delimiter)
+
 	rr := &Decoder{ctx: ctx}
 	rr.reader = csv.NewReader(ctx.Reader)
-	rr.SetDelimiter(delimiter)
+	rr.reader.Comma = delmiter
 	rr.columnTypes = ctx.Columns.Types()
-	return rr
-}
 
-func (dec *Decoder) SetDelimiter(delimiter string) {
-	delmiter, _ := utf8.DecodeRuneInString(delimiter)
-	dec.comma = delmiter
+	if heading { // skip first line
+		rr.reader.Read()
+	}
+	return rr
 }
 
 func (dec *Decoder) NextRow() ([]any, error) {
@@ -43,7 +43,7 @@ func (dec *Decoder) NextRow() ([]any, error) {
 		return nil, err
 	}
 	if len(fields) > len(dec.columnTypes) {
-		return nil, fmt.Errorf("too many columns (%d); table %s has %d columns",
+		return nil, fmt.Errorf("too many columns (%d); table '%s' has %d columns",
 			len(fields), dec.ctx.TableName, len(dec.columnTypes))
 	}
 

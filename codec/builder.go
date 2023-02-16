@@ -9,6 +9,10 @@ import (
 	spi "github.com/machbase/neo-spi"
 )
 
+const BOX = "box"
+const CSV = "csv"
+const JSON = "json"
+
 type EncoderBuilder interface {
 	Build() spi.RowsEncoder
 	SetOutputStream(s spi.OutputStream) EncoderBuilder
@@ -47,9 +51,9 @@ func NewEncoderBuilder(encoderType string) EncoderBuilder {
 
 func (b *encBuilder) Build() spi.RowsEncoder {
 	switch b.encoderType {
-	case "box":
+	case BOX:
 		return box.NewEncoder(b.RowsEncoderContext, b.boxStyle, b.boxSeparateColumns, b.boxDrawBorder)
-	case "csv":
+	case CSV:
 		return csv.NewEncoder(b.RowsEncoderContext, b.csvDelimiter)
 	default: // "json"
 		return json.NewEncoder(b.RowsEncoderContext)
@@ -111,6 +115,7 @@ type DecoderBuilder interface {
 	SetTimeFormat(f string) DecoderBuilder
 	SetTimeLocation(tz *time.Location) DecoderBuilder
 	SetColumns(columns spi.Columns) DecoderBuilder
+	SetCsvHeading(heading bool) DecoderBuilder
 	SetCsvDelimieter(del string) DecoderBuilder
 }
 
@@ -118,6 +123,7 @@ type decBuilder struct {
 	*spi.RowsDecoderContext
 	decoderType  string
 	csvDelimiter string
+	csvHeading   bool
 }
 
 func NewDecoderBuilder(decoderType string) DecoderBuilder {
@@ -130,8 +136,8 @@ func NewDecoderBuilder(decoderType string) DecoderBuilder {
 
 func (b *decBuilder) Build() spi.RowsDecoder {
 	switch b.decoderType {
-	case "csv":
-		return csv.NewDecoder(b.RowsDecoderContext, b.csvDelimiter)
+	case CSV:
+		return csv.NewDecoder(b.RowsDecoderContext, b.csvDelimiter, b.csvHeading)
 	default: // "json"
 		return nil
 	}
@@ -159,5 +165,10 @@ func (b *decBuilder) SetColumns(columns spi.Columns) DecoderBuilder {
 
 func (b *decBuilder) SetCsvDelimieter(del string) DecoderBuilder {
 	b.csvDelimiter = del
+	return b
+}
+
+func (b *decBuilder) SetCsvHeading(heading bool) DecoderBuilder {
+	b.csvHeading = heading
 	return b
 }
