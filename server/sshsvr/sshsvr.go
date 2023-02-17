@@ -1,6 +1,7 @@
 package sshsvr
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 type Server interface {
 	GetGrpcAddresses() []string
+	ValidateSshPublicKey(keyType string, key string) bool
 }
 
 type Config struct {
@@ -76,6 +78,7 @@ func (svr *MachShell) Start() error {
 		s.SetShellProvider(svr.shellProvider)
 		s.SetMotdProvider(svr.motdProvider)
 		s.SetPasswordHandler(svr.passwordProvider)
+		s.SetPublicKeyHandler(svr.publicKeyProvider)
 		go func() {
 			err := s.ListenAndServe()
 			if err != nil {
@@ -126,4 +129,11 @@ func (svr *MachShell) passwordProvider(ctx ssh.Context, password string) bool {
 		return false
 	}
 	return ok
+}
+
+func (svr *MachShell) publicKeyProvider(ctx ssh.Context, key ssh.PublicKey) bool {
+	if svr.Server == nil {
+		return false
+	}
+	return svr.Server.ValidateSshPublicKey(key.Type(), base64.StdEncoding.EncodeToString(key.Marshal()))
 }
