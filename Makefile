@@ -1,18 +1,36 @@
-.PHONY: all test release
+.PHONY: all test release package
+
+targets := $(shell ls main)
+uname_s := $(shell uname -s)
+uname_m := $(shell uname -m)
+nextver := $(shell ./scripts/buildversion.sh)
 
 all:
-	go build -o ./tmp/neoshell main/*.go
+	@for tg in $(targets) ; do \
+		make $$tg; \
+	done
 
-test:
+cleanpackage:
+	@rm -rf packages/*
+
+tmpdir:
+	@mkdir -p tmp
+
+test: tmpdir
 	@go test -count=1 \
 		./codec/json \
 		./util/glob \
 		./server/security \
 		./server/mqttsvr/mqtt
 
-release:
-	GOOS=linux GOARCH=amd64 go build -o ./tmp/neoshell_linux_amd64 main/*.go
-	GOOS=linux GOARCH=arm64 go build -o ./tmp/neoshell_linux_arm64 main/*.go
-	GOOS=darwin GOARCH=amd64 go build -o ./tmp/neoshell_darwin_amd64 main/*.go
-	GOOS=darwin GOARCH=arm64 go build -o ./tmp/neoshell_darwin_arm64 main/*.go
+%:
+	@./scripts/build.sh $@ $(nextver)
 
+release:
+	@echo "release" $*
+	./scripts/package.sh neoshell linux amd64 $(nextver)
+	./scripts/package.sh neoshell linux arm64 $(nextver)
+	./scripts/package.sh neoshell linux arm $(nextver)
+	./scripts/package.sh neoshell darwin arm64 $(nextver)
+	./scripts/package.sh neoshell darwin amd64 $(nextver)
+	./scripts/package.sh neoshell windows amd64 $(nextver)

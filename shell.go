@@ -5,21 +5,28 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/machbase/neo-shell/client"
 	_ "github.com/machbase/neo-shell/internal/cmd"
 )
 
 type ShellCmd struct {
 	Args       []string `arg:"" optional:"" name:"ARGS" passthrough:""`
+	Version    bool     `name:"version" default:"false" help:"show version"`
 	ServerAddr string   `name:"server" short:"s" default:"tcp://127.0.0.1:5655" help:"server address"`
 	User       string   `name:"user" short:"u" default:"sys"`
-	BoxStyle   string   `name:"box-style" default:"light" enum:"simple,bold,double,light,round" help:"box table style [simple|bold|double|light|round]"`
 }
 
 func Shell(cmd *ShellCmd) {
+	if cmd.Version {
+		fmt.Fprintf(os.Stdout, "neoshell %s (%s %s)\n", versionString, buildTimestamp, versionGitSHA)
+		return
+	}
 	clientConf := client.DefaultConfig()
 	clientConf.ServerAddr = cmd.ServerAddr
-	clientConf.BoxStyle = cmd.BoxStyle
+
+	// enum:"simple,bold,double,light,round"
+	clientConf.BoxStyle = "light"
 
 	var command = ""
 	if len(cmd.Args) > 0 {
@@ -43,4 +50,49 @@ func Shell(cmd *ShellCmd) {
 	defer client.Stop()
 
 	client.Run(command)
+}
+
+var (
+	versionString   = ""
+	versionGitSHA   = ""
+	buildTimestamp  = ""
+	goVersionString = ""
+)
+
+type Version struct {
+	Major  int    `json:"major"`
+	Minor  int    `json:"minor"`
+	Patch  int    `json:"patch"`
+	GitSHA string `json:"git"`
+}
+
+var _version *Version
+
+func GetVersion() *Version {
+	if _version == nil {
+		v, err := semver.NewVersion(versionString)
+		if err != nil {
+			_version = &Version{}
+		} else {
+			_version = &Version{
+				Major:  int(v.Major()),
+				Minor:  int(v.Minor()),
+				Patch:  int(v.Patch()),
+				GitSHA: versionGitSHA,
+			}
+		}
+	}
+	return _version
+}
+
+func VersionString() string {
+	return fmt.Sprintf("%s (%v, %v)", versionString, versionGitSHA, buildTimestamp)
+}
+
+func BuildCompiler() string {
+	return goVersionString
+}
+
+func BuildTimestamp() string {
+	return buildTimestamp
 }
