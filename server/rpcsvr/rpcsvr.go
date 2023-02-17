@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/machbase/cemlib/logging"
 	"github.com/machbase/neo-grpc/machrpc"
+	logging "github.com/machbase/neo-logging"
 	spi "github.com/machbase/neo-spi"
 	cmap "github.com/orcaman/concurrent-map"
 	"google.golang.org/grpc/stats"

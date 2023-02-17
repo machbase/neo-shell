@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/machbase/cemlib/logging"
+	logging "github.com/machbase/neo-logging"
 	spi "github.com/machbase/neo-spi"
 )
 

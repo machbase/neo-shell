@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/do"
-	"github.com/machbase/neo-shell/msg"
+	"github.com/machbase/neo-shell/server/msg"
 	"github.com/machbase/neo-shell/stream"
 	spi "github.com/machbase/neo-spi"
 )

@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/machbase/cemlib/allowance"
-	"github.com/machbase/cemlib/logging"
 	"github.com/machbase/cemlib/mqtt"
+	logging "github.com/machbase/neo-logging"
 	spi "github.com/machbase/neo-spi"
 	cmap "github.com/orcaman/concurrent-map"
 )

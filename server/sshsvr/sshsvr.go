@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gliderlabs/ssh"
-	"github.com/machbase/cemlib/logging"
 	"github.com/machbase/cemlib/ssh/sshd"
+	logging "github.com/machbase/neo-logging"
 	spi "github.com/machbase/neo-spi"
 	"github.com/pkg/errors"
 )

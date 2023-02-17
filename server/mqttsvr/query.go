@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/machbase/neo-shell/msg"
+	"github.com/machbase/neo-shell/server/msg"
 	spi "github.com/machbase/neo-spi"
 )
 

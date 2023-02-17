@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/machbase/cemlib/mqtt"
-	"github.com/machbase/neo-shell/msg"
+	"github.com/machbase/neo-shell/server/msg"
 	spi "github.com/machbase/neo-spi"
 	"github.com/tidwall/gjson"
 )
