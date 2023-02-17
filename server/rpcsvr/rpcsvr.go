@@ -127,6 +127,9 @@ func (s *svr) Explain(pctx context.Context, req *machrpc.ExplainRequest) (*machr
 	rsp := &machrpc.ExplainResponse{}
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Explain panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 
@@ -143,6 +146,9 @@ func (s *svr) Exec(pctx context.Context, req *machrpc.ExecRequest) (*machrpc.Exe
 	rsp := &machrpc.ExecResponse{}
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Exec panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 
@@ -163,6 +169,9 @@ func (s *svr) QueryRow(pctx context.Context, req *machrpc.QueryRowRequest) (*mac
 
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("QueryRow panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 
@@ -193,6 +202,9 @@ func (s *svr) Query(pctx context.Context, req *machrpc.QueryRequest) (*machrpc.Q
 
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Query panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 
@@ -234,6 +246,9 @@ func (s *svr) Columns(ctx context.Context, rows *machrpc.RowsHandle) (*machrpc.C
 	rsp := &machrpc.ColumnsResponse{}
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Columns panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 
@@ -272,6 +287,9 @@ func (s *svr) RowsFetch(ctx context.Context, rows *machrpc.RowsHandle) (*machrpc
 	rsp := &machrpc.RowsFetchResponse{}
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("RowsFetch panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 
@@ -323,6 +341,9 @@ func (s *svr) RowsClose(ctx context.Context, rows *machrpc.RowsHandle) (*machrpc
 	rsp := &machrpc.RowsCloseResponse{}
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("RowsClose panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 
@@ -347,6 +368,9 @@ func (s *svr) Appender(ctx context.Context, req *machrpc.AppenderRequest) (*mach
 	rsp := &machrpc.AppenderResponse{}
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Appender panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 	realAppender, err := s.machbase.Appender(req.TableName)
@@ -386,6 +410,9 @@ type appenderWrap struct {
 func (s *svr) Append(stream machrpc.Machbase_AppendServer) error {
 	var wrap *appenderWrap
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Append panic recover", panic)
+		}
 		if wrap == nil {
 			return
 		}
@@ -435,9 +462,15 @@ func (s *svr) Append(stream machrpc.Machbase_AppendServer) error {
 }
 
 func (s *svr) GetServerInfo(pctx context.Context, req *machrpc.ServerInfoRequest) (*machrpc.ServerInfo, error) {
-	rsp := &machrpc.ServerInfo{}
+	rsp := &machrpc.ServerInfo{
+		Runtime: &machrpc.Runtime{},
+		Version: &machrpc.Version{},
+	}
 	tick := time.Now()
 	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("GetServerInfo panic recover", panic)
+		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
 	nfo, err := s.machbase.GetServerInfo()
