@@ -30,20 +30,35 @@ type MachShell struct {
 
 	db spi.Database
 
-	VersionString string
-	EditionString string
-	Server        Server // injection point
+	versionString string
+	gitSHA        string
+	editionString string
+
+	Server Server // injection point
 }
 
-func New(dbauth spi.Database, conf *Config) *MachShell {
+func New(db spi.Database, conf *Config) *MachShell {
 	return &MachShell{
 		conf: conf,
+		db:   db,
 	}
 }
 
 func (svr *MachShell) Start() error {
 	svr.log = logging.GetLog("neoshell")
 	svr.sshds = make([]sshd.Server, 0)
+
+	if svr.db == nil {
+		return errors.New("no database instance")
+	}
+	if nfo, err := svr.db.GetServerInfo(); err != nil {
+		return errors.Wrap(err, "no database info")
+	} else {
+		svr.editionString = nfo.Version.Engine
+		svr.versionString = fmt.Sprintf("v%d.%d.%d",
+			nfo.Version.Major, nfo.Version.Minor, nfo.Version.Patch)
+		svr.gitSHA = nfo.Version.GitSHA
+	}
 
 	for _, listen := range svr.conf.Listeners {
 		listenAddress := strings.TrimPrefix(listen, "tcp://")
@@ -94,13 +109,15 @@ func (svr *MachShell) shellProvider(user string) *sshd.Shell {
 }
 
 func (svr *MachShell) motdProvider(user string) string {
-	return fmt.Sprintf("Greetings, %s\r\nmachbase-neo %v %s\r\n", strings.ToUpper(user), svr.EditionString, svr.VersionString)
+	return fmt.Sprintf("Greetings, %s\r\nmachbase-neo %s (%s) %s\r\n",
+		strings.ToUpper(user), svr.versionString, svr.gitSHA, svr.editionString)
 }
 
 func (svr *MachShell) passwordProvider(ctx ssh.Context, password string) bool {
 	mdb, ok := svr.db.(spi.DatabaseAuth)
 	if !ok {
 		svr.log.Errorf("user auth - unknown database instance")
+		return false
 	}
 	user := ctx.User()
 	ok, err := mdb.UserAuth(user, password)
