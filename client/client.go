@@ -93,11 +93,6 @@ func DefaultConfig() *Config {
 	}
 }
 
-// func (c *Config) TimeZone() string {
-// 	zone, _ := time.Now().In(c.TimeLocation).Zone()
-// 	return zone
-// }
-
 func New(conf *Config, interactive bool) Client {
 	return &client{
 		conf:        conf,

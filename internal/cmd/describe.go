@@ -34,9 +34,6 @@ type DescribeCmd struct {
 
 func pcDescribe() readline.PrefixCompleterInterface {
 	return readline.PcItem("desc")
-	// return readline.PcItem("desc",
-	// 	readline.PcItemDynamic(do.ListTables(c.Database())),
-	// )
 }
 
 func doDescribe(ctx *client.ActionContext) {

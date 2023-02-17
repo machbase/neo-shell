@@ -224,8 +224,6 @@ func (svr *server) publicKeyHandler(ctx ssh.Context, key ssh.PublicKey) bool {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		// this.log.Infof("claim: %s", claim)
-		// this.log.Infof("line : %s", line)
 		if line == claim {
 			return true
 		}
@@ -455,14 +453,13 @@ func (svr *server) shellHandler(ss ssh.Session) {
 		if err != nil {
 			svr.log.Warnf("session push %s", err.Error())
 		}
-		// 설정된 IdleTimeout으로 session이 close되면
-		// 가장 먼저 여기 goroutine의 io.Copy()가 반환된다.
-		// 그리고 shell process를 kill 하여 강제 종료해야지만
-		// 아래의 io.Copy(ss, fn)이 반환되면서 할당된 goroutine과 리소스가
-		// 모두 해제된다.
-		// ssh.Session이 IdleTimeout으로 close되더라도 shell process를
-		// 이렇게 명시적으로 정리하지 않으면 아래의 io.Copy(ss, fn) go routine이 계속 남아있을 뿐만 아니라
-		// cmd.Wait()에서 block되며 시스템상의 shell process가 누적되어 남게 된다.
+		// At the time the session closed by exceeding Idletimeout,
+		// First, this go-routine's io.Copy() returned.
+		// Then the shell process should be killed by force
+		// so that io.Copy() below can be returned and relase go-routine and resources.
+		//
+		// If we do not EXPLICITLY kill the process here, the go-routine below's io.Copy(ss,fn) keep remaining
+		// and cmd.Wait() is blocked, which leads shell processes will be cummulated on the OS.
 		cmd.Process.Kill()
 	}()
 	go func() {

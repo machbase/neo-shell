@@ -39,6 +39,7 @@ func signerFromPem(pemBytes []byte, password []byte) (ssh.Signer, error) {
 
 	if password != nil {
 		// decrypt PEM
+		// TODO legacy PEM RFC1423 is insecure
 		pemBlock.Bytes, err = x509.DecryptPEMBlock(pemBlock, []byte(password))
 		if err != nil {
 			return nil, fmt.Errorf("decrypting PEM block failed %v", err)
