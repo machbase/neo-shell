@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/influxdata/line-protocol/v2/lineprotocol"
-	"github.com/machbase/cemlib/mqtt"
 	"github.com/machbase/neo-shell/do"
+	"github.com/machbase/neo-shell/server/mqttsvr/mqtt"
 )
 
 func (svr *Server) onLineprotocol(evt *mqtt.EvtMessage, prefix string) {

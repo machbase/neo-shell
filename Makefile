@@ -6,7 +6,9 @@ all:
 test:
 	@go test -count=1 \
 		./codec/json \
-		./util/glob
+		./util/glob \
+		./server/security \
+		./server/mqttsvr/mqtt
 
 release:
 	GOOS=linux GOARCH=amd64 go build -o ./tmp/neoshell_linux_amd64 main/*.go

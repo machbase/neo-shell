@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/machbase/cemlib/allowance"
-	"github.com/machbase/cemlib/mqtt"
 	logging "github.com/machbase/neo-logging"
+	"github.com/machbase/neo-shell/server/allowance"
+	"github.com/machbase/neo-shell/server/mqttsvr/mqtt"
 	spi "github.com/machbase/neo-spi"
 	cmap "github.com/orcaman/concurrent-map"
 )

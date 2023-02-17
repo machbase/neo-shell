@@ -11,8 +11,8 @@ import (
 	"github.com/teris-io/shortid"
 )
 
-const LOGGING = "cemlib/ginlog"
-const TRACKID = "cemlib/trackid"
+const LOGGING = "neo-shell/ginlog"
+const TRACKID = "neo-shell/trackid"
 const HEADER_TRACKID = "x-agwd-trackid"
 
 func RecoveryWithLogging(log logging.Log, recovery ...gin.RecoveryFunc) gin.HandlerFunc {
