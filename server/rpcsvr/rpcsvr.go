@@ -223,7 +223,6 @@ func (s *svr) Query(pctx context.Context, req *machrpc.QueryRequest) (*machrpc.Q
 			rows: realRows,
 			release: func() {
 				s.ctxMap.RemoveCb(handle, func(key string, v interface{}, exists bool) bool {
-					// fmt.Printf("close rows: %v\n", handle)
 					realRows.Close()
 					return true
 				})

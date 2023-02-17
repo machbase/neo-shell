@@ -100,7 +100,7 @@ func logger(log logging.Log, filter HttpLoggerFilter) gin.HandlerFunc {
 
 		StatusCode := c.Writer.Status()
 
-		// filter가 존재하고 log를 남기지 않도록 false를 반환한 경우
+		// filter exists, and it returns false not to leave log
 		if filter != nil && !filter(c.Request, StatusCode, Latency) {
 			return
 		}
