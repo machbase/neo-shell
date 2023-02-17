@@ -10,7 +10,7 @@ import (
 	"github.com/machbase/neo-shell/stream"
 	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 )
 
 func init() {
@@ -172,7 +172,7 @@ func doChart(ctx *client.ActionContext) {
 			ctx.Cancel()
 		}()
 
-		if err := scheduler.AddFunc(fmt.Sprintf("@every %s", cmd.Refresh.String()), runner); err != nil {
+		if _, err := scheduler.AddFunc(fmt.Sprintf("@every %s", cmd.Refresh.String()), runner); err != nil {
 			fmt.Println(err.Error())
 			return
 		}
