@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/machbase/cemlib/util"
 	"github.com/machbase/neo-shell/client"
 	"github.com/machbase/neo-shell/do"
-	neoutil "github.com/machbase/neo-shell/util"
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
 
@@ -52,7 +51,7 @@ func doShow(ctx *client.ActionContext) {
 		ctx.Println("ERR", err.Error())
 		return
 	}
-	parserCtx, err := parser.Parse(neoutil.SplitFields(ctx.Line, false))
+	parserCtx, err := parser.Parse(util.SplitFields(ctx.Line, false))
 	if cmd.Help {
 		return
 	}
@@ -126,12 +125,12 @@ func doShowInfo(ctx *client.ActionContext) {
 	box.AppendRow("runtime.uptime", util.HumanizeDurationWithFormat(uptime, util.HumanizeDurationFormatSimple))
 	box.AppendRow("runtime.goroutines", nfo.Runtime.Goroutines)
 
-	box.AppendRow("mem.sys", neoutil.BytesUnit(nfo.Runtime.MemSys, ctx.Lang))
-	box.AppendRow("mem.heap.sys", neoutil.BytesUnit(nfo.Runtime.MemHeapSys, ctx.Lang))
-	box.AppendRow("mem.heap.alloc", neoutil.BytesUnit(nfo.Runtime.MemHeapAlloc, ctx.Lang))
-	box.AppendRow("mem.heap.in-use", neoutil.BytesUnit(nfo.Runtime.MemHeapInUse, ctx.Lang))
-	box.AppendRow("mem.stack.sys", neoutil.BytesUnit(nfo.Runtime.MemStackSys, ctx.Lang))
-	box.AppendRow("mem.stack.in-use", neoutil.BytesUnit(nfo.Runtime.MemStackInUse, ctx.Lang))
+	box.AppendRow("mem.sys", util.BytesUnit(nfo.Runtime.MemSys, ctx.Lang))
+	box.AppendRow("mem.heap.sys", util.BytesUnit(nfo.Runtime.MemHeapSys, ctx.Lang))
+	box.AppendRow("mem.heap.alloc", util.BytesUnit(nfo.Runtime.MemHeapAlloc, ctx.Lang))
+	box.AppendRow("mem.heap.in-use", util.BytesUnit(nfo.Runtime.MemHeapInUse, ctx.Lang))
+	box.AppendRow("mem.stack.sys", util.BytesUnit(nfo.Runtime.MemStackSys, ctx.Lang))
+	box.AppendRow("mem.stack.in-use", util.BytesUnit(nfo.Runtime.MemStackInUse, ctx.Lang))
 
 	box.Render()
 }
