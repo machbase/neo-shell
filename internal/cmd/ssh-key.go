@@ -16,7 +16,7 @@ func init() {
 		PcFunc: pcSshKey,
 		Action: doSshKey,
 		Desc:   "Manage ssh keys",
-		Usage:  helpKey,
+		Usage:  helpSshKey,
 	})
 }
 
