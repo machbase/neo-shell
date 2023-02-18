@@ -1,6 +1,7 @@
 package do
 
 import (
+	"fmt"
 	"strings"
 
 	spi "github.com/machbase/neo-spi"
@@ -15,20 +16,24 @@ func Describe(db spi.Database, name string, includeHiddenColumns bool) (Descript
 	var tableType int
 	var colCount int
 	var colType int
-	r := db.QueryRow("select name, type, flag, id, colcount from M$SYS_TABLES where name = ?", strings.ToUpper(name))
+	tableName := strings.ToUpper(name)
+
+	tablesTable := "M$SYS_TABLES"
+	columnsTable := "M$SYS_COLUMNS"
+	if strings.HasPrefix(tableName, "V$") {
+		tablesTable = "V$TABLES"
+		columnsTable = "V$COLUMNS"
+	} else if strings.HasPrefix(tableName, "M$") {
+		tablesTable = "M$TABLES"
+		columnsTable = "M$COLUMNS"
+	}
+	r := db.QueryRow(fmt.Sprintf("select name, type, flag, id, colcount from %s where name = ?", tablesTable), tableName)
 	if err := r.Scan(&d.Name, &tableType, &d.Flag, &d.Id, &colCount); err != nil {
 		return nil, err
 	}
 	d.Type = spi.TableType(tableType)
 
-	rows, err := db.Query(`
-		select
-			name, type, length, id
-		from
-			M$SYS_COLUMNS
-		where
-			table_id = ? 
-		order by id`, d.Id)
+	rows, err := db.Query(fmt.Sprintf(`select name, type, length, id from %s where table_id = ? order by id`, columnsTable), d.Id)
 	if err != nil {
 		return nil, err
 	}

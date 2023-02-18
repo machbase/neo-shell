@@ -90,7 +90,7 @@ func doKeyList(ctx *client.ActionContext) {
 		return
 	}
 
-	box := ctx.NewBox([]string{"#", "ID", "VALID FROM", "EXPIRE"})
+	box := ctx.NewBox([]string{"ROWNUM", "ID", "VALID FROM", "EXPIRE"})
 	for i, k := range rsp.Keys {
 		nb := time.Unix(k.NotBefore, 0).UTC()
 		na := time.Unix(k.NotAfter, 0).UTC()
