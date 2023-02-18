@@ -41,6 +41,8 @@ type Shell struct {
 	Envs map[string]string
 }
 
+type CommandParser func(user string, cmd []string) []string
+
 // message of the day provider
 type MotdProvider func(user string) string
 
@@ -57,6 +59,7 @@ type Server interface {
 
 	SetHandler(handler ssh.Handler)
 	SetShellProvider(provider ShellProvider)
+	SetCommandParser(parser CommandParser)
 	SetMotdProvider(provider MotdProvider)
 	SetPasswordHandler(func(ctx ssh.Context, password string) bool)
 	SetPublicKeyHandler(func(ctx ssh.Context, key ssh.PublicKey) bool)
@@ -74,6 +77,7 @@ type server struct {
 	svr           *ssh.Server
 	alive         bool
 	shellProvider ShellProvider
+	commandParser CommandParser
 	motdProvider  MotdProvider
 	childrenLock  sync.Mutex
 	children      map[int]*os.Process
@@ -187,6 +191,10 @@ func (svr *server) SetShellProvider(provider ShellProvider) {
 	svr.shellProvider = provider
 }
 
+func (svr *server) SetCommandParser(parser CommandParser) {
+	svr.commandParser = parser
+}
+
 func (svr *server) SetMotdProvider(provider MotdProvider) {
 	svr.motdProvider = provider
 }
@@ -292,6 +300,9 @@ func (svr *server) defaultHandler(ss ssh.Session) {
 
 func (svr *server) commandHandler(ss ssh.Session) {
 	cmdArr := ss.Command()
+	if svr.commandParser != nil {
+		cmdArr = svr.commandParser(ss.User(), cmdArr)
+	}
 	if len(cmdArr) == 0 {
 		io.WriteString(ss, "Invalid Command\n")
 		ss.Exit(1)
