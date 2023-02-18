@@ -36,14 +36,24 @@ type MachShell struct {
 	gitSHA        string
 	editionString string
 
+	shellCmd []string
+
 	Server Server // injection point
 }
 
 func New(db spi.Database, conf *Config) *MachShell {
-	return &MachShell{
+	sh := &MachShell{
 		conf: conf,
 		db:   db,
 	}
+	if len(os.Args) > 0 {
+		sh.shellCmd = []string{os.Args[0]}
+
+		if strings.HasSuffix(sh.shellCmd[0], "machbase-neo") {
+			sh.shellCmd = append(sh.shellCmd, "shell")
+		}
+	}
+	return sh
 }
 
 func (svr *MachShell) Start() error {
@@ -76,6 +86,7 @@ func (svr *MachShell) Start() error {
 			return errors.Wrap(err, "machsell")
 		}
 		s.SetShellProvider(svr.shellProvider)
+		s.SetCommandParser(svr.commandParser)
 		s.SetMotdProvider(svr.motdProvider)
 		s.SetPasswordHandler(svr.passwordProvider)
 		s.SetPublicKeyHandler(svr.publicKeyProvider)
@@ -96,19 +107,34 @@ func (svr *MachShell) Stop() {
 	}
 }
 
-func (svr *MachShell) shellProvider(user string) *sshd.Shell {
+func (svr *MachShell) makeShellCommand(user string, args ...string) []string {
 	grpcAddrs := svr.Server.GetGrpcAddresses()
 	if len(grpcAddrs) == 0 {
 		return nil
 	}
-	return &sshd.Shell{
-		Cmd: os.Args[0],
-		Args: []string{
-			"shell",
-			"--server", grpcAddrs[0],
-			"--user", user,
-		},
+	result := append(svr.shellCmd,
+		"--server", grpcAddrs[0],
+		"--user", user,
+	)
+	if len(args) > 0 {
+		result = append(result, args...)
 	}
+	return result
+}
+
+func (svr *MachShell) shellProvider(user string) *sshd.Shell {
+	parsed := svr.makeShellCommand(user)
+	if len(parsed) == 0 {
+		return nil
+	}
+	return &sshd.Shell{
+		Cmd:  parsed[0],
+		Args: parsed[1:],
+	}
+}
+
+func (svr *MachShell) commandParser(user string, cmd []string) []string {
+	return svr.makeShellCommand(user, cmd...)
 }
 
 func (svr *MachShell) motdProvider(user string) string {
