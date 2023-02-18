@@ -88,7 +88,7 @@ func DefaultConfig() *Config {
 		PromptCont:   "\033[37m>\033[0m  ",
 		HistoryFile:  "/tmp/readline.tmp",
 		VimMode:      false,
-		QueryTimeout: 30 * time.Second,
+		QueryTimeout: 0 * time.Second,
 		Lang:         language.English,
 	}
 }
