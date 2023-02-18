@@ -66,6 +66,11 @@ type PeerStat struct {
 }
 
 type peer struct {
+	// bytes alignment in the struct is important
+	// https://github.com/machbase/neo/issues/22
+	// https://pkg.go.dev/sync/atomic#pkg-note-BUG
+	netstat peerNetStat
+
 	name string
 	log  logging.Log
 
@@ -93,16 +98,18 @@ type peer struct {
 
 	maxMessageSizeLimit int
 
-	readCount  uint64
-	readBytes  uint64
-	writeCount uint64
-	writeBytes uint64
-
 	topicAliases     map[uint16]string
 	allowedPublish   []string
 	allowedSubscribe []string
 
 	values map[string]string
+}
+
+type peerNetStat struct {
+	readCount  uint64
+	readBytes  uint64
+	writeCount uint64
+	writeBytes uint64
 }
 
 func NewPeer(svr Server, conn Connection) Peer {
@@ -599,13 +606,13 @@ func (p *peer) Publish(topic string, QoS byte, payload []byte) {
 }
 
 func (p *peer) incWrite(nbytes uint64) {
-	atomic.AddUint64(&p.writeCount, 1)
-	atomic.AddUint64(&p.writeBytes, nbytes)
+	atomic.AddUint64(&p.netstat.writeCount, 1)
+	atomic.AddUint64(&p.netstat.writeBytes, nbytes)
 }
 
 func (p *peer) incRead(nbytes uint64) {
-	atomic.AddUint64(&p.readCount, 1)
-	atomic.AddUint64(&p.readBytes, nbytes)
+	atomic.AddUint64(&p.netstat.readCount, 1)
+	atomic.AddUint64(&p.netstat.readBytes, nbytes)
 }
 
 func (p *peer) Stat(stat *PeerStat) {
@@ -615,10 +622,10 @@ func (p *peer) Stat(stat *PeerStat) {
 
 	stat.CertCommonName = p.x509CommonName
 	stat.CreateTime = p.cretime
-	stat.ReadBytes = p.readBytes
-	stat.ReadCount = p.readCount
-	stat.WriteBytes = p.writeBytes
-	stat.WriteCount = p.writeCount
+	stat.ReadBytes = p.netstat.readBytes
+	stat.ReadCount = p.netstat.readCount
+	stat.WriteBytes = p.netstat.writeBytes
+	stat.WriteCount = p.netstat.writeCount
 }
 
 func (p *peer) SetValue(key, val string) {
