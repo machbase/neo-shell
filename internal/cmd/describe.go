@@ -60,8 +60,7 @@ func doDescribe(ctx *client.ActionContext) {
 	}
 	desc := _desc.(*do.TableDescription)
 
-	ctx.Println("TABLE   ", desc.Name)
-	ctx.Println("TYPE    ", desc.TypeString())
+	ctx.Printfln("TABLE  %s  %s", desc.Name, desc.TypeString())
 	if desc.Type == spi.TagTableType {
 		tags := []string{}
 		rows, err := ctx.DB.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(cmd.Table)))
@@ -82,7 +81,7 @@ func doDescribe(ctx *client.ActionContext) {
 	}
 
 	nrow := 0
-	box := ctx.NewBox([]string{"#", "ID", "NAME", "TYPE", "LENGTH"})
+	box := ctx.NewBox([]string{"ROWNUM", "ID", "NAME", "TYPE", "LENGTH"})
 	for _, col := range desc.Columns {
 		nrow++
 		colType := spi.ColumnTypeString(col.Type)

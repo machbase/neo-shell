@@ -160,7 +160,7 @@ func (w *Walker) Reload() error {
 
 	values := make([][]string, 1)
 	values[0] = make([]string, len(cols)+1)
-	values[0][0] = "#"
+	values[0][0] = "ROWNUM"
 	for i := range cols {
 		if cols[i].Type == "datetime" {
 			values[0][i+1] = fmt.Sprintf("%s(%s)", cols[i].Name, w.tz.String())

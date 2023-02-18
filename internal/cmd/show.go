@@ -26,20 +26,26 @@ const helpShow = `  show [options] <command>
   commands:
     info             show server info
     tables           list tables
-      --all,-a       includes all hidden tables`
+      --all,-a       includes all hidden tables
+    meta-tables      show meta tables
+    virtual-tables   show virtual tables`
 
 type ShowCmd struct {
 	Info   struct{} `cmd:""`
 	Tables struct {
 		ShowAll bool `name:"all" short:"a"`
 	} `cmd:""`
-	Help bool `kong:"-"`
+	MetaTables    struct{} `cmd:""`
+	VirtualTables struct{} `cmd:""`
+	Help          bool     `kong:"-"`
 }
 
 func pcShow() readline.PrefixCompleterInterface {
 	return readline.PcItem("show",
-		readline.PcItem("tables"),
 		readline.PcItem("info"),
+		readline.PcItem("tables"),
+		readline.PcItem("meta-tables"),
+		readline.PcItem("virtual-tables"),
 	)
 }
 
@@ -64,22 +70,26 @@ func doShow(ctx *client.ActionContext) {
 	case "info":
 		doShowInfo(ctx)
 	case "tables":
-		doShowTables(ctx, cmd.Tables.ShowAll)
+		doShowTables(ctx, "M$SYS_TABLES", cmd.Tables.ShowAll)
+	case "meta-tables":
+		doShowTables(ctx, "M$TABLES", false)
+	case "virtual-tables":
+		doShowTables(ctx, "V$TABLES", false)
 	default:
 		ctx.Println(helpShow)
 		return
 	}
 }
 
-func doShowTables(ctx *client.ActionContext, showAll bool) {
-	rows, err := ctx.DB.Query("select NAME, TYPE, FLAG, ID from M$SYS_TABLES order by ID")
+func doShowTables(ctx *client.ActionContext, tablesTable string, showAll bool) {
+	rows, err := ctx.DB.Query(fmt.Sprintf("select NAME, TYPE, FLAG, ID from %s order by ID", tablesTable))
 	if err != nil {
-		ctx.Printfln("ERR select m$sys_tables fail; %s", err.Error())
+		ctx.Printfln("ERR select %s fail; %s", tablesTable, err.Error())
 		return
 	}
 	defer rows.Close()
 
-	t := ctx.NewBox([]string{"#", "ID", "NAME", "TYPE"})
+	t := ctx.NewBox([]string{"ROWNUM", "ID", "NAME", "TYPE"})
 
 	nrow := 0
 	for rows.Next() {

@@ -90,7 +90,7 @@ func doSshKeyList(ctx *client.ActionContext) {
 		return
 	}
 
-	box := ctx.NewBox([]string{"#", "NAME", "KEY TYPE", "FINGERPRINT"})
+	box := ctx.NewBox([]string{"ROWNUM", "NAME", "KEY TYPE", "FINGERPRINT"})
 	for i, k := range rsp.SshKeys {
 		box.AppendRow(i+1, k.Comment, k.KeyType, k.Fingerprint)
 	}
