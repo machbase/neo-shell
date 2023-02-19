@@ -36,7 +36,6 @@ func ExistsTableOrCreate(db spi.Database, tableName string, create bool, truncat
 			// do not truncate newly created table.
 			truncate = false
 		} else {
-			err = fmt.Errorf("table '%s' doesn't exist", tableName)
 			return
 		}
 	}
@@ -54,14 +53,14 @@ func ExistsTableOrCreate(db spi.Database, tableName string, create bool, truncat
 				err = result.Err()
 				return
 			}
-			truncate = true
+			truncated = true
 		} else {
 			result := db.Exec(fmt.Sprintf("delete from %s", tableName))
 			if result.Err() != nil {
 				err = result.Err()
 				return
 			}
-			truncate = true
+			truncated = true
 		}
 	}
 	return
