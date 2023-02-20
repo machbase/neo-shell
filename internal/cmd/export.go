@@ -69,6 +69,11 @@ func doExport(ctx *client.ActionContext) {
 		return
 	}
 
+	if len(cmd.Table) == 0 {
+		ctx.Println("ERR", "no table is specified")
+		return
+	}
+
 	var outputPath = util.StripQuote(cmd.Output)
 	output, err := stream.NewOutputStream(outputPath)
 	if err != nil {
@@ -107,7 +112,7 @@ func doExport(ctx *client.ActionContext) {
 		},
 	}
 
-	err = do.Query(queryCtx, "select * from "+cmd.Table+" order by time")
+	err = do.Query(queryCtx, "select * from "+cmd.Table)
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 	}
