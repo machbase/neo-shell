@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -27,6 +28,8 @@ const helpKey = `  key command [options] [args...]
       list        list registered keys
       del <id>    delete key
       gen <id>    generate new key with given id
+    options:
+      --output,-o <file>   output file (default:'-' stdout)
 `
 
 type KeyCmd struct {
@@ -35,7 +38,8 @@ type KeyCmd struct {
 		KeyId string `arg:"" name:"id"`
 	} `cmd:"" name:"del"`
 	Gen struct {
-		KeyId string `arg:"" name:"id"`
+		KeyId  string `arg:"" name:"id"`
+		Output string `name:"output" short:"o" default:"-" help:"store key and token files"`
 	} `cmd:"" name:"gen"`
 	Help bool `kong:"-"`
 }
@@ -64,7 +68,7 @@ func doKey(ctx *client.ActionContext) {
 	case "list":
 		doKeyList(ctx)
 	case "gen <id>":
-		doKeyGen(ctx, cmd.Gen.KeyId)
+		doKeyGen(ctx, cmd.Gen.KeyId, cmd.Gen.Output)
 	case "del <id>":
 		doKeyDel(ctx, cmd.Del.KeyId)
 	default:
@@ -119,7 +123,7 @@ func doKeyDel(ctx *client.ActionContext, id string) {
 	ctx.Println("deleted")
 }
 
-func doKeyGen(ctx *client.ActionContext, name string) {
+func doKeyGen(ctx *client.ActionContext, name string, output string) {
 	name = strings.ToLower(name)
 	pass, _ := regexp.MatchString("[a-z][a-z0-9_.@-]+", name)
 	if !pass {
@@ -147,11 +151,22 @@ func doKeyGen(ctx *client.ActionContext, name string) {
 		return
 	}
 
-	ctx.Println(rsp.Certificate)
-	ctx.Println(rsp.Key)
-	ctx.Println("-----BEGIN TOKEN-----")
-	ctx.Println(rsp.Token)
-	ctx.Println("-----END TOKEN-----")
-	ctx.Println("\nCaution:\n  This is the last chance to copy and store PRIVATE KEY and TOKEN.")
-	ctx.Println("  It can not be redo.")
+	if output == "-" {
+		ctx.Println(rsp.Certificate)
+		ctx.Println(rsp.Key)
+		ctx.Println("TOKEN", rsp.Token)
+		ctx.Println("\nCaution:\n  This is the last chance to copy and store PRIVATE KEY and TOKEN.")
+		ctx.Println("  It can not be redo.")
+	} else {
+		certfile := output + "_cert.pem"
+		keyfile := output + "_key.pem"
+		tokfile := output + "_token"
+
+		ctx.Println("Save certificate", certfile)
+		os.WriteFile(certfile, []byte(rsp.Certificate), 0644)
+		ctx.Println("Save private key", keyfile)
+		os.WriteFile(keyfile, []byte(rsp.Key), 0600)
+		ctx.Println("Save token", tokfile)
+		os.WriteFile(tokfile, []byte(rsp.Token), 0600)
+	}
 }
