@@ -11,8 +11,10 @@ require (
 	github.com/gdamore/tcell/v2 v2.5.4
 	github.com/gin-gonic/gin v1.8.2
 	github.com/gliderlabs/ssh v0.3.5
+	github.com/go-sql-driver/mysql v1.7.0
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/jedib0t/go-pretty/v6 v6.4.4
+	github.com/lib/pq v1.10.7
 	github.com/machbase/booter v1.1.0
 	github.com/machbase/neo-grpc v0.3.0
 	github.com/machbase/neo-logging v1.0.2-0.20230221030912-07ffc34d6654
