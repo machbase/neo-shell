@@ -143,7 +143,7 @@ func (ex *Exporter) AddRow(values []any) error {
 	ex.rownum++
 
 	if ex.ctx.Rownum {
-		ex.writer.AppendRow(table.Row(append([]any{strconv.FormatInt(ex.rownum, 10)}, cols...)))
+		ex.writer.AppendRow(table.Row(append([]any{ex.rownum}, cols...)))
 	} else {
 		ex.writer.AppendRow(table.Row(cols))
 	}
