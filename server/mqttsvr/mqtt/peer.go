@@ -50,9 +50,13 @@ type Peer interface {
 type AuthCode int
 
 const (
+	// auth success
 	AuthSuccess AuthCode = iota
+	// Server unavailable
 	AuthFail
+	// Bad User Name or Password
 	AuthError
+	//  Not authorized
 	AuthDenied
 )
 

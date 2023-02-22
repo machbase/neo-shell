@@ -7,6 +7,7 @@ import (
 	logging "github.com/machbase/neo-logging"
 	"github.com/machbase/neo-shell/server/allowance"
 	"github.com/machbase/neo-shell/server/mqttsvr/mqtt"
+	"github.com/machbase/neo-shell/server/security"
 	spi "github.com/machbase/neo-spi"
 	cmap "github.com/orcaman/concurrent-map"
 )
@@ -27,12 +28,22 @@ func New(db spi.Database, conf *Config) *Server {
 	}
 	for _, c := range conf.Listeners {
 		if strings.HasPrefix(c, "tcp://") {
-			mqttdConf.TcpListeners = append(mqttdConf.TcpListeners, mqtt.TcpListenerConfig{
+			tcpConf := mqtt.TcpListenerConfig{
 				ListenAddress: strings.TrimPrefix(c, "tcp://"),
 				SoLinger:      0,
 				KeepAlive:     10,
 				NoDelay:       true,
-			})
+			}
+			if conf.EnableTls {
+				tcpConf.Tls.Disabled = false
+				tcpConf.Tls.LoadSystemCAs = false
+				tcpConf.Tls.LoadPrivateCAs = true
+				tcpConf.Tls.CertFile = conf.ServerCertPath
+				tcpConf.Tls.KeyFile = conf.ServerKeyPath
+			} else {
+				tcpConf.Tls.Disabled = true
+			}
+			mqttdConf.TcpListeners = append(mqttdConf.TcpListeners, tcpConf)
 		} else if strings.HasPrefix(c, "unix://") {
 			mqttdConf.UnixSocketConfig = mqtt.UnixSocketListenerConfig{
 				Path:       strings.TrimPrefix(c, "unix://"),
@@ -55,6 +66,12 @@ type Config struct {
 	Passwords map[string]string
 
 	MaxMessageSizeLimit int
+
+	ServerCertPath string
+	ServerKeyPath  string
+
+	EnableTokenAuth bool
+	EnableTls       bool
 }
 
 type HandlerConfig struct {
@@ -69,6 +86,8 @@ type Server struct {
 	log   logging.Log
 
 	appenders cmap.ConcurrentMap
+
+	authServer security.AuthServer // injection point
 }
 
 func (svr *Server) Start() error {
@@ -89,7 +108,45 @@ func (svr *Server) Stop() {
 	}
 }
 
+func (svr *Server) SetAuthServer(authServer security.AuthServer) {
+	svr.authServer = authServer
+}
+
 func (svr *Server) OnConnect(evt *mqtt.EvtConnect) (mqtt.AuthCode, *mqtt.ConnectResult, error) {
+	if svr.conf.EnableTokenAuth {
+		if svr.authServer == nil {
+			return mqtt.AuthDenied, nil, nil
+		}
+		clientId := evt.ClientId
+		username := evt.Username // contains token
+		svr.log.Tracef("MQTT auth '%s' token '%s'", clientId, username)
+		if !strings.HasPrefix(username, clientId) {
+			return mqtt.AuthError, nil, nil
+		}
+		pass, err := svr.authServer.ValidateClientToken(string(username))
+		if err != nil {
+			return mqtt.AuthDenied, nil, err
+		}
+		if !pass {
+			return mqtt.AuthError, nil, nil
+		}
+	}
+	if svr.conf.EnableTls {
+		if svr.authServer == nil {
+			return mqtt.AuthDenied, nil, nil
+		}
+		clientId := evt.ClientId
+		certHash := evt.CertHash
+		svr.log.Tracef("MQTT auth '%s' cert %s", clientId, certHash)
+		pass, err := svr.authServer.ValidateClientCertificate(clientId, certHash)
+		if err != nil {
+			return mqtt.AuthDenied, nil, err
+		}
+		if !pass {
+			return mqtt.AuthError, nil, nil
+		}
+	}
+
 	peer, ok := svr.mqttd.GetPeer(evt.PeerId)
 	if ok {
 		peer.SetLogLevel(logging.LevelDebug)

@@ -6,12 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	logging "github.com/machbase/neo-logging"
+	"github.com/machbase/neo-shell/server/security"
 	spi "github.com/machbase/neo-spi"
 )
-
-type AuthServer interface {
-	ValidateClientToken(token string) (bool, error)
-}
 
 func New(db spi.Database, conf *Config) (*Server, error) {
 	return &Server{
@@ -35,7 +32,7 @@ type Server struct {
 	log  logging.Log
 	db   spi.Database
 
-	authServer AuthServer // injection point
+	authServer security.AuthServer // injection point
 }
 
 func (svr *Server) Start() error {
@@ -45,7 +42,7 @@ func (svr *Server) Start() error {
 func (svr *Server) Stop() {
 }
 
-func (svr *Server) SetAuthServer(authServer AuthServer) {
+func (svr *Server) SetAuthServer(authServer security.AuthServer) {
 	svr.authServer = authServer
 }
 
@@ -94,7 +91,7 @@ func (svr *Server) handleAuthToken(ctx *gin.Context) {
 		tok := h[7:]
 		result, err := svr.authServer.ValidateClientToken(tok)
 		if err != nil {
-			svr.log.Errorf("server private key", err)
+			svr.log.Errorf("client private key %s", err.Error())
 		}
 		if result {
 			found = true
