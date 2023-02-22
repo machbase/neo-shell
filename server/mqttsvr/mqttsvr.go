@@ -43,8 +43,6 @@ func New(db spi.Database, conf *Config) *Server {
 			} else {
 				tcpConf.Tls.Disabled = true
 			}
-			fmt.Println("cert", conf.ServerCertPath)
-			fmt.Println("key ", conf.ServerKeyPath)
 			mqttdConf.TcpListeners = append(mqttdConf.TcpListeners, tcpConf)
 		} else if strings.HasPrefix(c, "unix://") {
 			mqttdConf.UnixSocketConfig = mqtt.UnixSocketListenerConfig{
@@ -115,10 +113,13 @@ func (svr *Server) SetAuthServer(authServer security.AuthServer) {
 }
 
 func (svr *Server) OnConnect(evt *mqtt.EvtConnect) (mqtt.AuthCode, *mqtt.ConnectResult, error) {
-	if svr.authServer != nil {
+	if svr.conf.EnableTokenAuth {
+		if svr.authServer == nil {
+			return mqtt.AuthDenied, nil, nil
+		}
 		clientId := evt.ClientId
 		username := evt.Username // contains token
-		svr.log.Tracef("MQTT auth '%s' '%s'", clientId, username)
+		svr.log.Tracef("MQTT auth '%s' token '%s'", clientId, username)
 		if !strings.HasPrefix(username, clientId) {
 			return mqtt.AuthError, nil, nil
 		}
@@ -130,8 +131,21 @@ func (svr *Server) OnConnect(evt *mqtt.EvtConnect) (mqtt.AuthCode, *mqtt.Connect
 			return mqtt.AuthError, nil, nil
 		}
 	}
-
-	svr.log.Infof("MQTT client cert: %s", evt.CertHash)
+	if svr.conf.EnableTls {
+		if svr.authServer == nil {
+			return mqtt.AuthDenied, nil, nil
+		}
+		clientId := evt.ClientId
+		certHash := evt.CertHash
+		svr.log.Tracef("MQTT auth '%s' cert %s", clientId, certHash)
+		pass, err := svr.authServer.ValidateClientCertificate(clientId, certHash)
+		if err != nil {
+			return mqtt.AuthDenied, nil, err
+		}
+		if !pass {
+			return mqtt.AuthError, nil, nil
+		}
+	}
 
 	peer, ok := svr.mqttd.GetPeer(evt.PeerId)
 	if ok {
