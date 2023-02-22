@@ -16,7 +16,7 @@ require (
 	github.com/machbase/booter v1.1.0
 	github.com/machbase/neo-grpc v0.4.0
 	github.com/machbase/neo-logging v1.0.2-0.20230221030912-07ffc34d6654
-	github.com/machbase/neo-spi v1.0.0
+	github.com/machbase/neo-spi v1.0.1-0.20230222114145-b12306f6b6cc
 	github.com/mum4k/termdash v0.17.0
 	github.com/orcaman/concurrent-map v1.0.0
 	github.com/pkg/errors v0.9.1

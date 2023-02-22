@@ -87,12 +87,12 @@ github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/machbase/booter v1.1.0 h1:xLY3EdxIwHz8qAMnZMyyFqkHEVAFEbySyzJC1RLHAFI=
 github.com/machbase/booter v1.1.0/go.mod h1:XIvfrgM0bDDmbjvD1s/4UVYyCoVbjTXAvX2V645EXIg=
-github.com/machbase/neo-grpc v0.3.0 h1:0kzgdq0q6pGpHEC6AF1yC2cRZCt/eI9qFbUX+dzZhR8=
-github.com/machbase/neo-grpc v0.3.0/go.mod h1:eoxDppp3zM/WJo+JaQHbhnK4wxQpAUzHGswKJ93RdTM=
+github.com/machbase/neo-grpc v0.4.0 h1:LAZzUFthhOLbtWZ8ogqZ2d7wUKShKLaVsqzyVNv9Zu8=
+github.com/machbase/neo-grpc v0.4.0/go.mod h1:eoxDppp3zM/WJo+JaQHbhnK4wxQpAUzHGswKJ93RdTM=
 github.com/machbase/neo-logging v1.0.2-0.20230221030912-07ffc34d6654 h1:4zp7aWeuxEpSQoOy/bn0rOMOmxMtJyQi90Jl2NIsCEw=
 github.com/machbase/neo-logging v1.0.2-0.20230221030912-07ffc34d6654/go.mod h1:nTFq15RH/k1z6UZRoJTV7ZBtXnDzKBvItccKOvKqZds=
-github.com/machbase/neo-spi v1.0.0 h1:oXIPmdvB+7wy1Gtsme1Fq0UFcm+GmDQspRsBYLY7mm0=
-github.com/machbase/neo-spi v1.0.0/go.mod h1:jmzExsS84LOY0f097WhbXw1avVgl64/tHm6CdW/P+zM=
+github.com/machbase/neo-spi v1.0.1-0.20230222114145-b12306f6b6cc h1:A9FE64mmoENGqE8qjL8Gx38nrazjw7EyM+z6t+1Edv0=
+github.com/machbase/neo-spi v1.0.1-0.20230222114145-b12306f6b6cc/go.mod h1:jmzExsS84LOY0f097WhbXw1avVgl64/tHm6CdW/P+zM=
 github.com/mattn/go-isatty v0.0.17 h1:BTarxUcIeDqL27Mc+vyvdWYSL28zpIhv3RoTdsLMPng=
 github.com/mattn/go-isatty v0.0.17/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
