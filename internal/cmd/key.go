@@ -28,6 +28,7 @@ const helpKey = `  key command [options] [args...]
       list        list registered keys
       del <id>    delete key
       gen <id>    generate new key with given id
+      server-cert  retrieve server's certificate
     options:
       --output,-o <file>   output file (default:'-' stdout)
 `
@@ -39,8 +40,11 @@ type KeyCmd struct {
 	} `cmd:"" name:"del"`
 	Gen struct {
 		KeyId  string `arg:"" name:"id"`
-		Output string `name:"output" short:"o" default:"-" help:"store key and token files"`
+		Output string `name:"output" short:"o" default:"-" help:"file path to write key and token files"`
 	} `cmd:"" name:"gen"`
+	ServerCert struct {
+		Output string `name:"output" short:"o" default:"-" help:"file path to write server's certificate"`
+	} `cmd:"" name:"server-cert"`
 	Help bool `kong:"-"`
 }
 
@@ -71,6 +75,8 @@ func doKey(ctx *client.ActionContext) {
 		doKeyGen(ctx, cmd.Gen.KeyId, cmd.Gen.Output)
 	case "del <id>":
 		doKeyDel(ctx, cmd.Del.KeyId)
+	case "server-cert":
+		doServerCert(ctx, cmd.ServerCert.Output)
 	default:
 		ctx.Println("ERR", fmt.Sprintf("unhandled command %s", parseCtx.Command()))
 		return
@@ -168,5 +174,29 @@ func doKeyGen(ctx *client.ActionContext, name string, output string) {
 		os.WriteFile(keyfile, []byte(rsp.Key), 0600)
 		ctx.Println("Save token", tokfile)
 		os.WriteFile(tokfile, []byte(rsp.Token), 0600)
+	}
+}
+
+func doServerCert(ctx *client.ActionContext, output string) {
+	mgmtCli, err := ctx.NewManagementClient()
+	if err != nil {
+		ctx.Println("ERR", err.Error())
+		return
+	}
+	rsp, err := mgmtCli.ServerKey(ctx, &mgmt.ServerKeyRequest{})
+	if err != nil {
+		ctx.Println("ERR", err.Error())
+		return
+	}
+	if !rsp.Success {
+		ctx.Println("ERR", rsp.Reason)
+		return
+	}
+
+	if output == "-" {
+		ctx.Println(rsp.Certificate)
+	} else {
+		ctx.Println("Save certificate", output)
+		os.WriteFile(output, []byte(rsp.Certificate), 0644)
 	}
 }

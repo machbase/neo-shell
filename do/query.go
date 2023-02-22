@@ -32,8 +32,8 @@ func Query(ctx *QueryContext, sqlText string, args ...any) error {
 	}
 
 	var nrow int64
-	rec := cols.MakeBuffer()
 	for rows.Next() {
+		rec := cols.MakeBuffer()
 		err = rows.Scan(rec...)
 		if err != nil {
 			return err
