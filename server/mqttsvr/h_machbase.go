@@ -1,14 +1,19 @@
 package mqttsvr
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
+	"github.com/machbase/neo-shell/codec"
 	"github.com/machbase/neo-shell/server/mqttsvr/mqtt"
 	"github.com/machbase/neo-shell/server/msg"
+	"github.com/machbase/neo-shell/stream"
 	spi "github.com/machbase/neo-spi"
 	"github.com/tidwall/gjson"
 )
@@ -17,9 +22,10 @@ func (svr *Server) onMachbase(evt *mqtt.EvtMessage, prefix string) error {
 	tick := time.Now()
 	topic := evt.Topic
 	topic = strings.TrimPrefix(topic, prefix+"/")
+	peer, ok := svr.mqttd.GetPeer(evt.PeerId)
+	peerLog := peer.GetLog()
 
 	reply := func(msg any) {
-		peer, ok := svr.mqttd.GetPeer(evt.PeerId)
 		if ok {
 			buff, err := json.Marshal(msg)
 			if err != nil {
@@ -76,6 +82,25 @@ func (svr *Server) onMachbase(evt *mqtt.EvtMessage, prefix string) error {
 			return nil
 		}
 
+		toks := strings.Split(table, ":")
+		var compress = ""
+		var format = "json"
+		for i, t := range toks {
+			if i == 0 {
+				table = t
+			} else {
+				t = strings.ToLower(t)
+				switch t {
+				case "gzip":
+					compress = t
+				case "csv":
+					format = t
+				case "json":
+					format = t
+				}
+			}
+		}
+
 		var err error
 		var appenderSet []spi.Appender
 		var appender spi.Appender
@@ -103,48 +128,101 @@ func (svr *Server) onMachbase(evt *mqtt.EvtMessage, prefix string) error {
 			svr.appenders.Set(evt.PeerId, appenderSet)
 		}
 
-		result := gjson.ParseBytes(evt.Raw)
+		payload := evt.Raw
 
-		head := result.Get("0")
-		if head.IsArray() {
-			// if payload contains multiple tuples
-			cols, err := appender.Columns()
+		if compress == "gzip" {
+			gr, err := gzip.NewReader(bytes.NewBuffer(payload))
+			defer func() {
+				if gr == nil {
+					return
+				}
+				err = gr.Close()
+				if err != nil {
+					peerLog.Errorf("fail to close decompressor, %s", err.Error())
+				}
+			}()
 			if err != nil {
-				svr.log.Errorf("fail to get appender columns, %s", err.Error())
+				peerLog.Errorf("fail to gunzip, %s", err.Error())
 				return nil
 			}
-			result.ForEach(func(key, value gjson.Result) bool {
-				fields := value.Array()
+			payload, err = io.ReadAll(gr)
+			if err != nil {
+				peerLog.Errorf("fail to gunzip, %s", err.Error())
+				return nil
+			}
+		}
+
+		if format == "json" {
+			result := gjson.ParseBytes(payload)
+			head := result.Get("0")
+			if head.IsArray() {
+				// if payload contains multiple tuples
+				cols, err := appender.Columns()
+				if err != nil {
+					peerLog.Errorf("fail to get appender columns, %s", err.Error())
+					return nil
+				}
+				result.ForEach(func(key, value gjson.Result) bool {
+					fields := value.Array()
+					vals, err := convAppendColumns(fields, cols, appender.TableType())
+					if err != nil {
+						return false
+					}
+					err = appender.Append(vals...)
+					if err != nil {
+						peerLog.Warnf("append fail %s %d %s [%+v]", table, appender.TableType(), err.Error(), vals)
+						return false
+					}
+					return true
+				})
+				return err
+			} else {
+				// a single tuple
+				fields := result.Array()
+				cols, err := appender.Columns()
+				if err != nil {
+					peerLog.Errorf("fail to get appender columns, %s", err.Error())
+					return nil
+				}
 				vals, err := convAppendColumns(fields, cols, appender.TableType())
 				if err != nil {
-					return false
+					return err
 				}
 				err = appender.Append(vals...)
 				if err != nil {
-					svr.log.Warnf("append fail %s %d %s [%+v]", table, appender.TableType(), err.Error(), vals)
-					return false
+					peerLog.Warnf("append fail %s %d %s [%+v]", table, appender.TableType(), err.Error(), vals)
+					return err
 				}
-				return true
-			})
-			return err
-		} else {
-			// a single tuple
-			fields := result.Array()
-			cols, err := appender.Columns()
-			if err != nil {
-				svr.log.Errorf("fail to get appender columns, %s", err.Error())
 				return nil
 			}
-			vals, err := convAppendColumns(fields, cols, appender.TableType())
-			if err != nil {
-				return err
+		} else if format == "csv" {
+			cols, _ := appender.Columns()
+			decoder := codec.NewDecoderBuilder(format).
+				SetInputStream(&stream.ReaderInputStream{Reader: bytes.NewReader(payload)}).
+				SetColumns(cols).
+				SetTimeFormat("ns").
+				SetTimeLocation(time.UTC).
+				SetCsvDelimieter(",").
+				SetCsvHeading(false).
+				Build()
+			lineno := 0
+			for {
+				vals, err := decoder.NextRow()
+				if err != nil {
+					if err != io.EOF {
+						peerLog.Errorf("append csv, %s", err.Error())
+						return nil
+					}
+					break
+				}
+				err = appender.Append(vals...)
+				if err != nil {
+					peerLog.Errorf("append csv, %s", err.Error())
+					break
+				}
+				lineno++
 			}
-			err = appender.Append(vals...)
-			if err != nil {
-				svr.log.Warnf("append fail %s %d %s [%+v]", table, appender.TableType(), err.Error(), vals)
-				return err
-			}
-			return nil
+			peerLog.Infof("%s appended %d record(s)", evt.Topic, lineno)
 		}
 	}
 	return nil
