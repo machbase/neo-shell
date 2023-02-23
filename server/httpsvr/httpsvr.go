@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	logging "github.com/machbase/neo-logging"
+	"github.com/machbase/neo-shell/server/httpsvr/assets"
 	"github.com/machbase/neo-shell/server/security"
 	spi "github.com/machbase/neo-spi"
 )
@@ -70,6 +71,7 @@ func (svr *Server) Route(r *gin.Engine) {
 			r.POST(prefix+"/write", svr.handleWrite)
 			r.POST(prefix+"/write/:table", svr.handleWrite)
 		}
+		r.NoRoute(gin.WrapF(assets.Handler))
 	}
 }
 
