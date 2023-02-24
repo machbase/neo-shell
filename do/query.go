@@ -1,6 +1,10 @@
 package do
 
-import spi "github.com/machbase/neo-spi"
+import (
+	"fmt"
+
+	spi "github.com/machbase/neo-spi"
+)
 
 type QueryContext struct {
 	DB           spi.Database
@@ -9,20 +13,20 @@ type QueryContext struct {
 	OnFetchEnd   func()
 }
 
-func Query(ctx *QueryContext, sqlText string, args ...any) error {
+func Query(ctx *QueryContext, sqlText string, args ...any) (string, error) {
 	rows, err := ctx.DB.Query(sqlText, args...)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer rows.Close()
 
 	if !rows.IsFetchable() {
-		return nil
+		return rows.Message(), nil
 	}
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return err
+		return "", err
 	}
 	if ctx.OnFetchStart != nil {
 		ctx.OnFetchStart(cols)
@@ -36,12 +40,21 @@ func Query(ctx *QueryContext, sqlText string, args ...any) error {
 		rec := cols.MakeBuffer()
 		err = rows.Scan(rec...)
 		if err != nil {
-			return err
+			return "", err
 		}
 		nrow++
 		if ctx.OnFetch != nil && !ctx.OnFetch(nrow, rec) {
 			break
 		}
 	}
-	return nil
+
+	var usermsg = rows.Message()
+	if nrow == 0 {
+		usermsg = "no row fetched."
+	} else if nrow == 1 {
+		usermsg = "a row fetched."
+	} else {
+		usermsg = fmt.Sprintf("%d rows fetched.", nrow)
+	}
+	return usermsg, nil
 }

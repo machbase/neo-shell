@@ -157,9 +157,11 @@ func doSql(ctx *client.ActionContext) {
 	}
 
 	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))
-	err = do.Query(queryCtx, sqlText)
+	msg, err := do.Query(queryCtx, sqlText)
 	if err != nil {
 		ctx.Println("ERR", err.Error())
+	} else {
+		ctx.Println(msg)
 	}
 	client.AddSqlHistory(sqlText)
 }
