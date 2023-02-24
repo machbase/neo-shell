@@ -112,8 +112,10 @@ func doExport(ctx *client.ActionContext) {
 		},
 	}
 
-	err = do.Query(queryCtx, "select * from "+cmd.Table)
+	msg, err := do.Query(queryCtx, "select * from "+cmd.Table)
 	if err != nil {
 		ctx.Println("ERR", err.Error())
+	} else {
+		ctx.Println(msg)
 	}
 }
