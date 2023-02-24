@@ -118,6 +118,7 @@ func (svr *Server) handleQuery(ctx *gin.Context) {
 		rsp.Reason = err.Error()
 		ctx.JSON(http.StatusInternalServerError, rsp)
 	} else {
+		rsp.Success = true
 		rsp.Reason = msg
 		ctx.JSON(http.StatusOK, rsp)
 	}
