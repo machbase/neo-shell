@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"compress/gzip"
 	"fmt"
 	"os"
 	"strings"
@@ -35,6 +36,7 @@ const helpSql string = `  sql [options] <query>
 	  box        box format (default)
       csv        csv format
       json       json format
+    --compress <method>  compression method [gzip] (default is not compressed)
     --delimiter,-d       csv delimiter (default:',')
     --[no-]rownum        include rownum as first column (default:true)
     --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'default')
@@ -51,6 +53,7 @@ type SqlCmd struct {
 	Heading      bool           `name:"heading" negatable:"" default:"true"`
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
 	Format       string         `name:"format" short:"f" default:"box" enum:"box,csv,json"`
+	Compress     string         `name:"compress" default:"-" enum:"-,gzip"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
 	TimeFormat   string         `name:"timeformat" short:"t" default:"default"`
@@ -83,15 +86,31 @@ func doSql(ctx *client.ActionContext) {
 	}
 
 	var outputPath = util.StripQuote(cmd.Output)
-	output, err := stream.NewOutputStream(outputPath)
+	var output spi.OutputStream
+	output, err = stream.NewOutputStream(outputPath)
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 	}
+	defer output.Close()
 
-	if outputPath == "-" {
-		cmd.Interactive = ctx.Interactive
-	} else {
+	if cmd.Compress == "gzip" {
+		gw := gzip.NewWriter(output)
+		defer func() {
+			if gw != nil {
+				err := gw.Close()
+				if err != nil {
+					ctx.Println("ERR", err.Error())
+				}
+			}
+		}()
+		output = &stream.WriterOutputStream{Writer: gw}
 		cmd.Interactive = false
+	} else {
+		if outputPath == "-" {
+			cmd.Interactive = ctx.Interactive
+		} else {
+			cmd.Interactive = false
+		}
 	}
 
 	encoder := codec.NewEncoderBuilder(cmd.Format).

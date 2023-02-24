@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"compress/gzip"
 	"time"
 
 	"github.com/chzyer/readline"
@@ -26,7 +27,10 @@ const helpExport = `  export [options] <table>
     table               table name to read
   options:
     --output,-o <file>   output file (default:'-' stdout)
-    --format,-f <format> output format [csv,json] (default:'csv')
+    --format,-f <format> output format
+      csv        csv format (default)
+      json       json format
+    --compress <method>  compression method [gzip] (default is not compressed)
     --[no-]header        export header (default:false)
     --delimiter,-d      csv delimiter (default:',')
     --tz                timezone for handling datetime
@@ -43,6 +47,7 @@ type ExportCmd struct {
 	Heading      bool           `name:"heading" negatable:""`
 	TimeLocation *time.Location `name:"tz" default:"UTC"`
 	Format       string         `name:"format" short:"f" default:"csv" enum:"box,csv,json"`
+	Compress     string         `name:"compress" default:"-" enum:"-,gzip"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
@@ -75,10 +80,25 @@ func doExport(ctx *client.ActionContext) {
 	}
 
 	var outputPath = util.StripQuote(cmd.Output)
-	output, err := stream.NewOutputStream(outputPath)
+	var output spi.OutputStream
+	output, err = stream.NewOutputStream(outputPath)
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 		return
+	}
+	defer output.Close()
+
+	if cmd.Compress == "gzip" {
+		gw := gzip.NewWriter(output)
+		defer func() {
+			if gw != nil {
+				err := gw.Close()
+				if err != nil {
+					ctx.Println("ERR", err.Error())
+				}
+			}
+		}()
+		output = &stream.WriterOutputStream{Writer: gw}
 	}
 
 	encoder := codec.NewEncoderBuilder(cmd.Format).
@@ -108,7 +128,6 @@ func doExport(ctx *client.ActionContext) {
 		},
 		OnFetchEnd: func() {
 			encoder.Close()
-			output.Close()
 		},
 	}
 
