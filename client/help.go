@@ -46,7 +46,7 @@ func doHelp(ctx *ActionContext) {
 		}
 		switch fields[0] {
 		case "timeformat":
-			ctx.Println(helpTimeFormat)
+			ctx.Println(HelpTimeFormat)
 			return
 		}
 	}
@@ -70,7 +70,7 @@ func doHelp(ctx *ActionContext) {
 	ctx.Printfln("    %-*s %s", 10, "exit", "Exit shell")
 }
 
-var helpTimeFormat = `
+var HelpTimeFormat = `
   timeformat
     epoch
       ns             nanoseconds

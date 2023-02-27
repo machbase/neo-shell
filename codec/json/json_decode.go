@@ -113,39 +113,50 @@ func (dec *Decoder) nextRow0() ([]any, error) {
 		// find first '{'
 		if tok, err := dec.reader.Token(); err != nil {
 			return nil, err
-		} else if delim, ok := tok.(gojson.Delim); !ok || delim != '{' {
-			return nil, errors.New("invalid top level delimiter")
-		}
-		// find "data" field
-		found := false
-		for {
-			if tok, err := dec.reader.Token(); err != nil {
-				return nil, err
-			} else if key, ok := tok.(string); ok && key == "data" {
-				found = true
-				break
+		} else {
+			delim, ok := tok.(gojson.Delim)
+			if !ok {
+				return nil, errors.New("missing top level delimiter")
+			}
+
+			if delim == '{' {
+				// find "data" field
+				found := false
+				for {
+					if tok, err := dec.reader.Token(); err != nil {
+						return nil, err
+					} else if key, ok := tok.(string); ok && key == "data" {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return nil, errors.New("'data' field not found")
+				}
+				// find "rows" field
+				found = false
+				for {
+					if tok, err := dec.reader.Token(); err != nil {
+						return nil, err
+					} else if key, ok := tok.(string); ok && key == "rows" {
+						found = true
+						break
+					}
+				}
+				// find data's array '['
+				if tok, err := dec.reader.Token(); err != nil {
+					return nil, err
+				} else if delim, ok := tok.(gojson.Delim); !ok || delim != '[' {
+					return nil, errors.New("'data' field should be an array")
+				}
+				dec.dataDepth = 1
+			} else if delim == '[' {
+				// top level is '[', means rows only format
+				dec.dataDepth = 1
+			} else {
+				return nil, errors.New("invalid top level delimiter")
 			}
 		}
-		if !found {
-			return nil, errors.New("'data' field not found")
-		}
-		// find "rows" field
-		found = false
-		for {
-			if tok, err := dec.reader.Token(); err != nil {
-				return nil, err
-			} else if key, ok := tok.(string); ok && key == "rows" {
-				found = true
-				break
-			}
-		}
-		// find data's array '['
-		if tok, err := dec.reader.Token(); err != nil {
-			return nil, err
-		} else if delim, ok := tok.(gojson.Delim); !ok || delim != '[' {
-			return nil, errors.New("'data' field should be an array")
-		}
-		dec.dataDepth = 1
 	}
 
 	if dec.dataDepth == 0 {
@@ -190,3 +201,51 @@ func (dec *Decoder) nextRow0() ([]any, error) {
 	}
 	return tuple, nil
 }
+
+/*
+	if format == "json" {
+		result := gjson.ParseBytes(payload)
+		head := result.Get("0")
+		if head.IsArray() {
+			// if payload contains multiple tuples
+			cols, err := appender.Columns()
+			if err != nil {
+				peerLog.Errorf("fail to get appender columns, %s", err.Error())
+				return nil
+			}
+			result.ForEach(func(key, value gjson.Result) bool {
+				fields := value.Array()
+				vals, err := convAppendColumns(fields, cols, appender.TableType())
+				if err != nil {
+					return false
+				}
+				err = appender.Append(vals...)
+				if err != nil {
+					peerLog.Warnf("append fail %s %d %s [%+v]", table, appender.TableType(), err.Error(), vals)
+					return false
+				}
+				return true
+			})
+			return err
+		} else {
+			// a single tuple
+			fields := result.Array()
+			cols, err := appender.Columns()
+			if err != nil {
+				peerLog.Errorf("fail to get appender columns, %s", err.Error())
+				return nil
+			}
+			vals, err := convAppendColumns(fields, cols, appender.TableType())
+			if err != nil {
+				return err
+			}
+			err = appender.Append(vals...)
+			if err != nil {
+				peerLog.Warnf("append fail %s %d %s [%+v]", table, appender.TableType(), err.Error(), vals)
+				return err
+			}
+			return nil
+		}
+	} else if format == "csv" {
+	}
+*/

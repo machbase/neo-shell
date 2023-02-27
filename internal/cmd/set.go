@@ -14,9 +14,10 @@ func init() {
 		PcFunc: pcSet,
 		Action: doSet,
 		Desc:   "show/set shell settings",
-		Usage: `  set vi-mode   [on|off]
-  set box-style [simple|bold|double|light|round]`,
-	})
+		Usage: `  set <key> <value>
+  set vi-mode     [on|off]
+  set box-style   [simple|bold|double|light|round]
+`})
 }
 
 func pcSet() readline.PrefixCompleterInterface {

@@ -21,10 +21,10 @@ func init() {
 }
 
 const helpSshKey = `  ssh-key command [options] [args...]
-    commands:
-      list                       list registered ssh keys
-      add <type> <key> <comment> add new ssh key
-      del <key>                  delete ssh key
+  commands:
+    list                       list registered ssh keys
+    add <type> <key> <comment> add new ssh key
+    del <key>                  delete ssh key
 `
 
 type SshKeyCmd struct {

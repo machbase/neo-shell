@@ -28,7 +28,8 @@ const helpShow = `  show [options] <command>
     tables           list tables
       --all,-a       includes all hidden tables
     meta-tables      show meta tables
-    virtual-tables   show virtual tables`
+    virtual-tables   show virtual tables
+`
 
 type ShowCmd struct {
 	Info   struct{} `cmd:""`

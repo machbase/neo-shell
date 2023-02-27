@@ -15,10 +15,10 @@ require (
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/lib/pq v1.10.7
-	github.com/machbase/booter v1.1.0
+	github.com/machbase/booter v1.2.0
 	github.com/machbase/neo-grpc v0.4.0
-	github.com/machbase/neo-logging v1.0.2-0.20230221030912-07ffc34d6654
-	github.com/machbase/neo-spi v1.0.0
+	github.com/machbase/neo-logging v1.0.2
+	github.com/machbase/neo-spi v1.0.1
 	github.com/mum4k/termdash v0.17.0
 	github.com/orcaman/concurrent-map v1.0.0
 	github.com/pkg/errors v0.9.1
@@ -66,7 +66,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/ugorji/go/codec v1.2.9 // indirect
-	github.com/zclconf/go-cty v1.12.1 // indirect
+	github.com/zclconf/go-cty v1.13.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20230127162408-596548ed4efa // indirect
