@@ -33,7 +33,7 @@ const helpSql string = `  sql [options] <query>
   options:
     --output,-o <file>     output file (default:'-' stdout)
     --format,-f <format>   output format
-	  box        box format (default)
+      box        box format (default)
       csv        csv format
       json       json format
     --compress <method>  compression method [gzip] (default is not compressed)
@@ -46,7 +46,8 @@ const helpSql string = `  sql [options] <query>
         consult "help timeformat"
     --tz                  timezone for handling datetime
     --[no-]heading        print header
-    --precision,-p <int>  set precision of float value to force round`
+    --precision,-p <int>  set precision of float value to force round
+`
 
 type SqlCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`

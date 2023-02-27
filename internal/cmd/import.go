@@ -29,16 +29,17 @@ func init() {
 }
 
 const helpImport = `  import [options] <table>
-    table               table name to write
+  arguments:
+    table              table name to write
   options:
     --input,-i <file>  input file, (default: '-' stdin)
     --format,-f        file format [csv] (default:'csv')
-	--compress <alg>   input data is compressed in <alg> (support:gzip)
+    --compress <alg>   input data is compressed in <alg> (support:gzip)
     --no-header        there is no header, do not skip first line (default)
     --header           first line is header, skip it
     --method           write method [insert|append] (default:'insert')
-	--create-table     create table if it doesn't exist (default:false)
-	--truncate-table   truncate table ahead importing new data (default:false)
+    --create-table     create table if it doesn't exist (default:false)
+    --truncate-table   truncate table ahead importing new data (default:false)
     --delimiter,-d     csv delimiter (default:',')
     --tz               timezone for handling datetime
     --timeformat,-t    time format [ns|ms|s|<timeformat>] (default:'ns')
@@ -46,7 +47,8 @@ const helpImport = `  import [options] <table>
          represents unix epoch time in nano-, micro-, milli- and seconds for each
        timeformat
          consult "help timeformat"
-    --eof <string>     specify eof line, use any string matches [a-zA-Z0-9]+ (default: '.')`
+    --eof <string>     specify eof line, use any string matches [a-zA-Z0-9]+ (default: '.')
+`
 
 type ImportCmd struct {
 	Table         string         `arg:"" name:"table"`

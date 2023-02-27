@@ -22,6 +22,19 @@ func Shell(cmd *ShellCmd) {
 		fmt.Fprintf(os.Stdout, "neoshell %s (%s %s)\n", versionString, buildTimestamp, versionGitSHA)
 		return
 	}
+
+	for _, f := range cmd.Args {
+		if f == "--help" || f == "-h" {
+			targetCmd := client.FindCmd(cmd.Args[0])
+			if targetCmd == nil {
+				fmt.Fprintf(os.Stdout, "unknown sub-command %s\n\n", cmd.Args[0])
+				return
+			}
+			fmt.Fprintf(os.Stdout, "%s\n", targetCmd.Usage)
+			return
+		}
+	}
+
 	clientConf := client.DefaultConfig()
 	clientConf.ServerAddr = cmd.ServerAddr
 

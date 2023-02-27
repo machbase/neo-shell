@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -260,6 +261,21 @@ var commands = make(map[string]*Cmd)
 
 func RegisterCmd(cmd *Cmd) {
 	commands[cmd.Name] = cmd
+}
+
+func FindCmd(name string) *Cmd {
+	return commands[name]
+}
+
+func Commands() []*Cmd {
+	list := []*Cmd{}
+	for _, v := range commands {
+		list = append(list, v)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Name <= list[j].Name
+	})
+	return list
 }
 
 func (cli *client) completer() readline.PrefixCompleterInterface {
