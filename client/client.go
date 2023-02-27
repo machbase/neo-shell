@@ -102,6 +102,27 @@ func New(conf *Config, interactive bool) Client {
 }
 
 func (cli *client) Start() error {
+	return nil
+}
+
+func (cli *client) Stop() {
+	if cli.db != nil {
+		cli.db.Disconnect()
+	}
+}
+
+func (cli *client) Database() spi.Database {
+	if err := cli.checkDatabase(); err != nil {
+		cli.Println("ERR", err.Error())
+	}
+	return cli.db
+}
+
+func (cli *client) checkDatabase() error {
+	if cli.db != nil {
+		return nil
+	}
+
 	machcli := machrpc.NewClient()
 	err := machcli.Connect(cli.conf.ServerAddr, machrpc.QueryTimeout(cli.conf.QueryTimeout))
 	if err != nil {
@@ -127,17 +148,7 @@ func (cli *client) Start() error {
 	}
 
 	cli.db = machcli
-	return nil
-}
-
-func (cli *client) Stop() {
-	if cli.db != nil {
-		cli.db.Disconnect()
-	}
-}
-
-func (cli *client) Database() spi.Database {
-	return cli.db
+	return err
 }
 
 func (cli *client) ShutdownServer() error {
@@ -255,6 +266,8 @@ type Cmd struct {
 	Action func(ctx *ActionContext)
 	Desc   string
 	Usage  string
+
+	ClientAction bool
 }
 
 var commands = make(map[string]*Cmd)
@@ -303,29 +316,37 @@ func (cli *client) Process(line string) {
 		cmd, ok = commands["sql"]
 	}
 
-	if ok && cmd != nil {
-		actCtx := &ActionContext{
-			Line:         line,
-			Client:       cli,
-			DB:           cli.db,
-			Lang:         cli.conf.Lang,
-			TimeLocation: time.UTC,
-			TimeFormat:   "ns",
-			Interactive:  cli.interactive,
-			BoxStyle:     cli.conf.BoxStyle,
-			Stdin:        cli.conf.Stdin,
-			Stdout:       cli.conf.Stdout,
-			Stderr:       cli.conf.Stderr,
-		}
-		actCtx.parent, actCtx.cancelFunc = context.WithCancel(context.Background())
-		actCtx.cli = cli
-
-		defer actCtx.cancelFunc()
-
-		cmd.Action(actCtx)
-	} else {
+	if !ok || cmd == nil {
 		cli.Println("command not found", cmdName)
+		return
 	}
+
+	if !cmd.ClientAction {
+		if err := cli.checkDatabase(); err != nil {
+			cli.Println("ERR", err.Error())
+			return
+		}
+	}
+
+	actCtx := &ActionContext{
+		Line:         line,
+		Client:       cli,
+		DB:           cli.db,
+		Lang:         cli.conf.Lang,
+		TimeLocation: time.UTC,
+		TimeFormat:   "ns",
+		Interactive:  cli.interactive,
+		BoxStyle:     cli.conf.BoxStyle,
+		Stdin:        cli.conf.Stdin,
+		Stdout:       cli.conf.Stdout,
+		Stderr:       cli.conf.Stderr,
+	}
+	actCtx.parent, actCtx.cancelFunc = context.WithCancel(context.Background())
+	actCtx.cli = cli
+
+	defer actCtx.cancelFunc()
+
+	cmd.Action(actCtx)
 }
 
 func (cli *client) Prompt() {

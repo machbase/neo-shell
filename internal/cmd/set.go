@@ -17,7 +17,9 @@ func init() {
 		Usage: `  set <key> <value>
   set vi-mode     [on|off]
   set box-style   [simple|bold|double|light|round]
-`})
+`,
+		ClientAction: true,
+	})
 }
 
 func pcSet() readline.PrefixCompleterInterface {

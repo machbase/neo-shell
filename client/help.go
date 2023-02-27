@@ -10,10 +10,11 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:   "help",
-		PcFunc: pcHelp,
-		Action: doHelp,
-		Desc:   "Display this message, use 'help [command]'",
+		Name:         "help",
+		PcFunc:       pcHelp,
+		Action:       doHelp,
+		Desc:         "Display this message, use 'help [command]'",
+		ClientAction: true,
 	})
 }
 
