@@ -61,5 +61,5 @@ if [ "$NOMODULES" != "1" ]; then
 fi
 
 # Build and store objects into original directory.
-go build -ldflags "$LDFLAGS" -tags "neo-shell" -o $PRJROOT/tmp/$1 ./main/$1 && \
+go build -ldflags "$LDFLAGS" -tags "neo_shell" -o $PRJROOT/tmp/$1 ./main/$1 && \
 echo "Build done."
