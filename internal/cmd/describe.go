@@ -22,6 +22,8 @@ func init() {
 }
 
 const helpDescribe = `  desc [options] <table>
+  arguments:
+    table        name of table to describe
   options:
     --all,-a     show all hidden columns
 `

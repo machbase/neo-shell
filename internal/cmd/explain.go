@@ -11,7 +11,10 @@ func init() {
 		PcFunc: pcExplain,
 		Action: doExplain,
 		Desc:   "Display execution plan of query",
-		Usage:  "  explain <query>",
+		Usage: `  explain <query>
+  arguments:
+    query       query statement to display the execution plan
+`,
 	})
 }
 

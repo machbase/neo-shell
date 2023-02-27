@@ -24,22 +24,24 @@ func init() {
 }
 
 const helpExport = `  export [options] <table>
-    table               table name to read
+  arguments:
+    table                 table name to read
   options:
-    --output,-o <file>   output file (default:'-' stdout)
-    --format,-f <format> output format
+    --output,-o <file>    output file (default:'-' stdout)
+    --format,-f <format>  output format
       csv        csv format (default)
       json       json format
-    --compress <method>  compression method [gzip] (default is not compressed)
-    --[no-]header        export header (default:false)
-    --delimiter,-d      csv delimiter (default:',')
-    --tz                timezone for handling datetime
-    --timeformat,-t     time format [ns|ms|s|<timeformat>] (default:'ns')
+    --compress <method>   compression method [gzip] (default is not compressed)
+    --[no-]header         export header (default:false)
+    --delimiter,-d        csv delimiter (default:',')
+    --tz                  timezone for handling datetime
+    --timeformat,-t       time format [ns|ms|s|<timeformat>] (default:'ns')
        ns, us, ms, s
          represents unix epoch time in nano-, micro-, milli- and seconds for each
        timeformat
          consult "help timeformat"
-    --precision,-p <int>  set precision of float value to force round`
+    --precision,-p <int>  set precision of float value to force round
+`
 
 type ExportCmd struct {
 	Table        string         `arg:"" name:"table"`

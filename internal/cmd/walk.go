@@ -26,7 +26,7 @@ func init() {
 	})
 }
 
-const helpWalk = ` walk [options] <sql query>
+const helpWalk = `  walk [options] <sql query>
   options:
      --[no-]rownum        show rownum
      --precision <int>    precision for float values
@@ -35,7 +35,8 @@ const helpWalk = ` walk [options] <sql query>
          represents unix epoch time in nano-, micro-, milli- and seconds for each
        timeformat
          consult "help timeformat"
-     --tz                  timezone for handling datetime`
+     --tz                  timezone for handling datetime
+`
 
 type WalkCmd struct {
 	TimeLocation *time.Location `name:"tz" default:"UTC"`

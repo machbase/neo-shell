@@ -30,7 +30,7 @@ const helpChart = `  chart [options] <tag_path>...
                    '#<column>' part can be omitted for default '#value' ex) mytable/sensor
   options:
     --tz                     timezone for handling datetime
-    --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'default')
+    --timeformat,-t          time format [ns|ms|s|<timeformat>] (default:'default')
       ns, us, ms, s
         represents unix epoch time in nano-, micro-, milli- and seconds for each
       timeformat
@@ -50,8 +50,9 @@ const helpChart = `  chart [options] <tag_path>...
         html     generate chart page in html format
     --title <title>          title text for html output (default:"Chart")
     --subtitle <title>       sub title text for html output (default:"")
-	--width <string>         chart width for html output (default:"1600")
-	--height <string>        chart height (default:"900")`
+    --width <string>         chart width for html output (default:"1600")
+    --height <string>        chart height (default:"900")
+`
 
 type ChartCmd struct {
 	TagPaths     []string       `arg:"" name:"tags"`

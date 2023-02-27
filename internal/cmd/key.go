@@ -24,13 +24,13 @@ func init() {
 }
 
 const helpKey = `  key command [options] [args...]
-    commands:
-      list        list registered keys
-      del <id>    delete key
-      gen <id>    generate new key with given id
-      server-cert  retrieve server's certificate
-    options:
-      --output,-o <file>   output file (default:'-' stdout)
+  commands:
+    list        list registered keys
+    del <id>    delete key
+    gen <id>    generate new key with given id
+    server-cert  retrieve server's certificate
+  options:
+    --output,-o <file>   output file (default:'-' stdout)
 `
 
 type KeyCmd struct {

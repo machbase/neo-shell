@@ -15,7 +15,8 @@ func init() {
 	})
 }
 
-const helpShutdown string = `  shutdown`
+const helpShutdown string = `  shutdown    stop the server process
+`
 
 type ShutdownCmd struct {
 	Interactive bool `kong:"-"`
