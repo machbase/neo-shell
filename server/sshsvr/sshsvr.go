@@ -114,7 +114,6 @@ func (svr *MachShell) makeShellCommand(user string, args ...string) []string {
 	}
 	result := append(svr.shellCmd,
 		"--server", grpcAddrs[0],
-		"--user", user,
 	)
 	if len(args) > 0 {
 		result = append(result, args...)
