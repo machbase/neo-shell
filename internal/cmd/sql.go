@@ -57,6 +57,7 @@ type SqlCmd struct {
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
 	Timeformat   string         `name:"timeformat" short:"t"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
+	BoxStyle     string         `kong:"-"`
 	Interactive  bool           `kong:"-"`
 	Help         bool           `kong:"-"`
 	Query        []string       `arg:"" name:"query" passthrough:""`
@@ -90,7 +91,9 @@ func doSql(ctx *client.ActionContext) {
 	if cmd.Timeformat == "" {
 		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
-
+	if cmd.BoxStyle == "" {
+		cmd.BoxStyle = ctx.Pref().BoxStyle().Value()
+	}
 	var outputPath = util.StripQuote(cmd.Output)
 	var output spi.OutputStream
 	output, err = stream.NewOutputStream(outputPath)
@@ -126,7 +129,7 @@ func doSql(ctx *client.ActionContext) {
 		SetPrecision(cmd.Precision).
 		SetRownum(cmd.Rownum).
 		SetHeading(cmd.Heading).
-		SetBoxStyle("light").
+		SetBoxStyle(cmd.BoxStyle).
 		SetBoxSeparateColumns(cmd.Interactive).
 		SetBoxDrawBorder(cmd.Interactive).
 		SetCsvDelimieter(cmd.Delimiter).
