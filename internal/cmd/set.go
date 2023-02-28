@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -9,90 +10,61 @@ import (
 )
 
 func init() {
+	lines := []string{}
+	if pref, err := client.LoadPref(); err == nil {
+		for _, itm := range pref.Items() {
+			lines = append(lines, fmt.Sprintf("  set %-10s  %s", itm.Name, itm.Description()))
+		}
+	}
+
 	client.RegisterCmd(&client.Cmd{
-		Name:   "set",
-		PcFunc: pcSet,
-		Action: doSet,
-		Desc:   "show/set shell settings",
-		Usage: `  set <key> <value>
-  set vi-mode     [on|off]
-  set box-style   [simple|bold|double|light|round]
-`})
+		Name:         "set",
+		PcFunc:       pcSet,
+		Action:       doSet,
+		Desc:         "Settings of the shell",
+		Usage:        fmt.Sprintf("  set <key> <value>\n%s\n", strings.Join(lines, "\n")),
+		ClientAction: true,
+	})
 }
 
 func pcSet() readline.PrefixCompleterInterface {
-	return readline.PcItem("set",
-		// readline.PcItem("tz",
-		// 	readline.PcItem("UTC"),
-		// 	readline.PcItem("Local"),
-		// ),
-		readline.PcItem("box-style",
-			readline.PcItem("simple"),
-			readline.PcItem("bold"),
-			readline.PcItem("double"),
-			readline.PcItem("light"),
-			readline.PcItem("round"),
-		),
-		readline.PcItem("vi-mode",
-			readline.PcItem("on"),
-			readline.PcItem("off"),
-		),
-		// readline.PcItem("heading",
-		// 	readline.PcItem("on"),
-		// 	readline.PcItem("off"),
-		// ),
-		// readline.PcItem("format",
-		// 	readline.PcItem(Formats.Default),
-		// 	readline.PcItem(Formats.CSV),
-		// 	readline.PcItem(Formats.JSON),
-		// ),
-	)
+	top := readline.PcItem("set")
+	if pref, err := client.LoadPref(); err == nil {
+		for _, itm := range pref.Items() {
+			pc := readline.PcItem(itm.Name)
+			for _, en := range itm.Enum {
+				ec := readline.PcItem(en)
+				pc.Children = append(pc.Children, ec)
+			}
+			top.Children = append(top.Children, pc)
+		}
+	}
+	return top
 }
 
 func doSet(ctx *client.ActionContext) {
 	args := util.SplitFields(ctx.Line, true)
-	onoff := func(t bool) string {
-		if t {
-			return "on"
-		} else {
-			return "off"
-		}
-	}
-	parseflag := func(flag *bool) {
-		b := "-"
-		if len(args) == 2 {
-			b = strings.ToLower(args[1])
-		}
-		if b == "on" {
-			*flag = true
-		} else if b == "off" {
-			*flag = false
-		}
-		ctx.Println(args[0], onoff(*flag))
-	}
-
-	conf := ctx.Config()
+	pref := ctx.Pref()
 	if len(args) == 0 {
-		box := ctx.NewBox([]string{"NAME", "VALUE"})
-		box.AppendRow("vi-mode", onoff(conf.VimMode))
-		box.AppendRow("box-style", conf.BoxStyle)
+		box := ctx.NewBox([]string{"NAME", "VALUE", "DESCRIPTION"})
+		itms := pref.Items()
+		for _, itm := range itms {
+			box.AppendRow(itm.Name, itm.Value(), itm.Description())
+		}
 		box.Render()
 		return
 	}
-	switch strings.ToLower(args[0]) {
-	case "vi-mode":
-		parseflag(&conf.VimMode)
-	case "box-style":
-		conf.BoxStyle = parseBoxStyle(args[1])
-		ctx.Println("box-style", conf.BoxStyle)
-	}
-}
 
-func parseBoxStyle(s string) string {
-	switch s {
-	case "simple", "bold", "double", "light", "round":
-		return s
-	default:
-		return "light"
+	if len(args) == 2 {
+		itm := pref.Item(strings.ToLower(args[0]))
+		if itm == nil {
+			ctx.Println("unknown set key '%s'", args[0])
+		} else {
+			if err := itm.SetValue(args[1]); err != nil {
+				ctx.Println("ERR", err.Error())
+			} else {
+				pref.Save()
+			}
+		}
 	}
 }

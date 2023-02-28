@@ -10,10 +10,11 @@ import (
 
 func init() {
 	RegisterCmd(&Cmd{
-		Name:   "help",
-		PcFunc: pcHelp,
-		Action: doHelp,
-		Desc:   "Display this message, use 'help [command]'",
+		Name:         "help",
+		PcFunc:       pcHelp,
+		Action:       doHelp,
+		Desc:         "Display this message, use 'help [command]'",
+		ClientAction: true,
 	})
 }
 
@@ -24,6 +25,7 @@ func pcHelp() readline.PrefixCompleterInterface {
 			lst = append(lst, k)
 		}
 		lst = append(lst, "timeformat")
+		lst = append(lst, "tz")
 		lst = append(lst, "exit")
 		return lst
 	}))
@@ -47,6 +49,9 @@ func doHelp(ctx *ActionContext) {
 		switch fields[0] {
 		case "timeformat":
 			ctx.Println(HelpTimeFormat)
+			return
+		case "tz":
+			ctx.Println(HelpTz)
 			return
 		}
 	}
@@ -96,10 +101,23 @@ var HelpTimeFormat = `
       StampMicro     Jan _2 15:04:05.000000
       StampNano      Jan _2 15:04:05.000000000
     custom format
-       year          2006
-       month         01
-       day           02
-       hour          03 or 15
-       minute        04
-       second        05 or with sub-seconds '05.999999'
+      year           2006
+      month          01
+      day            02
+      hour           03 or 15
+      minute         04
+      second         05 or with sub-seconds '05.999999'
+`
+
+var HelpTz = `
+  tz
+    abbreviations
+      UTC
+      Local
+    location examples
+      America/Los_Angeles
+      Europe/Paris
+      ...
+    Time Coordinates examples
+      UTC+9
 `

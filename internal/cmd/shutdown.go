@@ -10,7 +10,7 @@ func init() {
 		Name:   "shutdown",
 		PcFunc: pcShutdown,
 		Action: doShutdown,
-		Desc:   "Shutdown server",
+		Desc:   "Shutdown server process",
 		Usage:  helpShutdown,
 	})
 }

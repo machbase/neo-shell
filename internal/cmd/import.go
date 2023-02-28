@@ -23,31 +23,28 @@ func init() {
 		Name:   "import",
 		PcFunc: pcImport,
 		Action: doImport,
-		Desc:   "import table",
+		Desc:   "Import table",
 		Usage:  helpImport,
 	})
 }
 
 const helpImport = `  import [options] <table>
   arguments:
-    table              table name to write
+    table                 table name to write
   options:
-    --input,-i <file>  input file, (default: '-' stdin)
-    --format,-f        file format [csv] (default:'csv')
-    --compress <alg>   input data is compressed in <alg> (support:gzip)
-    --no-header        there is no header, do not skip first line (default)
-    --header           first line is header, skip it
-    --method           write method [insert|append] (default:'insert')
-    --create-table     create table if it doesn't exist (default:false)
-    --truncate-table   truncate table ahead importing new data (default:false)
-    --delimiter,-d     csv delimiter (default:',')
-    --tz               timezone for handling datetime
-    --timeformat,-t    time format [ns|ms|s|<timeformat>] (default:'ns')
-       ns, us, ms, s
-         represents unix epoch time in nano-, micro-, milli- and seconds for each
-       timeformat
-         consult "help timeformat"
-    --eof <string>     specify eof line, use any string matches [a-zA-Z0-9]+ (default: '.')
+    -i,--input <file>     input file, (default: '-' stdin)
+    -f,--format <fmt>     file format [csv] (default:'csv')
+       --compress <alg>   input data is compressed in <alg> (support:gzip)
+       --no-header        there is no header, do not skip first line (default)
+       --header           first line is header, skip it
+       --method           write method [insert|append] (default:'insert')
+       --create-table     create table if it doesn't exist (default:false)
+       --truncate-table   truncate table ahead importing new data (default:false)
+    -d,--delimiter        csv delimiter (default:',')
+       --tz               timezone for handling datetime
+    -t,--timeformat       time format [ns|ms|s|<timeformat>] (default:'ns')
+                          consult "help timeformat"
+       --eof <string>     specify eof line, use any string matches [a-zA-Z0-9]+ (default: '.')
 `
 
 type ImportCmd struct {
@@ -61,8 +58,8 @@ type ImportCmd struct {
 	CreateTable   bool           `name:"create-table" default:"false"`
 	TruncateTable bool           `name:"truncate-table" default:"false"`
 	Delimiter     string         `name:"delimiter" short:"d" default:","`
-	TimeFormat    string         `name:"timeformat" short:"t" default:"ns"`
-	TimeLocation  *time.Location `name:"tz" default:"UTC"`
+	Timeformat    string         `name:"timeformat" short:"t"`
+	TimeLocation  *time.Location `name:"tz"`
 	Help          bool           `kong:"-"`
 }
 
@@ -85,6 +82,13 @@ func doImport(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println(err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	in, err := stream.NewInputStream(cmd.Input)
@@ -151,7 +155,7 @@ func doImport(ctx *client.ActionContext) {
 	decoder := codec.NewDecoderBuilder(cmd.InputFormat).
 		SetInputStream(in).
 		SetColumns(desc.Columns.Columns()).
-		SetTimeFormat(cmd.TimeFormat).
+		SetTimeFormat(cmd.Timeformat).
 		SetTimeLocation(cmd.TimeLocation).
 		SetCsvDelimieter(cmd.Delimiter).
 		Build()

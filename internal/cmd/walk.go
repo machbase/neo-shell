@@ -28,19 +28,17 @@ func init() {
 
 const helpWalk = `  walk [options] <sql query>
   options:
-     --[no-]rownum        show rownum
-     --precision <int>    precision for float values
-     --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'ns')
-       ns, us, ms, s
-         represents unix epoch time in nano-, micro-, milli- and seconds for each
-       timeformat
-         consult "help timeformat"
-     --tz                  timezone for handling datetime
+        --[no-]rownum        show rownum
+        --precision <int>    precision for float values
+     -t,--timeformat         time format [ns|ms|s|<timeformat>] (default:'ns')
+                             consult "help timeformat"
+        --tz                 timezone for handling datetime
+                             consult "help tz"
 `
 
 type WalkCmd struct {
-	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Timeformat   string         `name:"timeformat" short:"t" default:"default"`
+	TimeLocation *time.Location `name:"tz"`
+	Timeformat   string         `name:"timeformat" short:"t"`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Help         bool           `kong:"-"`
@@ -65,6 +63,13 @@ func doWalk(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))

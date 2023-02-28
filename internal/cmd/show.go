@@ -26,7 +26,7 @@ const helpShow = `  show [options] <command>
   commands:
     info             show server info
     tables           list tables
-      --all,-a       includes all hidden tables
+      -a,--all       includes all hidden tables
     meta-tables      show meta tables
     virtual-tables   show virtual tables
 `

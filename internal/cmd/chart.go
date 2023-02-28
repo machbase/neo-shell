@@ -18,7 +18,7 @@ func init() {
 		Name:   "chart",
 		PcFunc: pcChart,
 		Action: doChart,
-		Desc:   "chart [options] <tag_path> ...",
+		Desc:   "Rendering chart from tag table",
 		Usage:  helpChart,
 	})
 }
@@ -29,35 +29,32 @@ const helpChart = `  chart [options] <tag_path>...
                    since all tag tables have 'value' column,
                    '#<column>' part can be omitted for default '#value' ex) mytable/sensor
   options:
-    --tz                     timezone for handling datetime
-    --timeformat,-t          time format [ns|ms|s|<timeformat>] (default:'default')
-      ns, us, ms, s
-        represents unix epoch time in nano-, micro-, milli- and seconds for each
-      timeformat
-        consult "help timeformat"    
-    --time  <time>           base time, now or time string in format "2023-02-03 13:20:30" (default: now)
-    --range <duration>       time range of data, from time specified by '--time' (default: 1m)
-    --refresh,-r <duration>  refresh period (default: 0)
+       --tz                  timezone for handling datetime
+    -t,--timeformat          time format [ns|ms|s|<timeformat>] (default:'default')
+                             consult "help timeformat"
+       --time  <time>        base time, now or time string in format "2023-02-03 13:20:30" (default: now)
+       --range <duration>    time range of data, from time specified by '--time' (default: 1m)
+    -r,--refresh <duration>  refresh period (default: 0)
                              effective only if '--time' is "now".
                              value format is '[0-9]+(s|m)'  ex) '3s' for 3 seconds, '1m' for 1 minute
                              auto refresh is disabled if value is 0 which is default
-    --count,-n <count>       repeat times (default: 0)
+    -m,--count <count>       repeat times (default: 0)
                              set 0 for unlimit
-    --output,-o <file>       output file (default:'-' stdout)
-    --format,-f <format>     output format
-        none     terminal chart (default)
-        json     json format
-        html     generate chart page in html format
-    --title <title>          title text for html output (default:"Chart")
-    --subtitle <title>       sub title text for html output (default:"")
-    --width <string>         chart width for html output (default:"1600")
-    --height <string>        chart height (default:"900")
+    -o,--output <file>       output file (default:'-' stdout)
+    -f,--format <format>     output format
+                none         terminal chart (default)
+                json         json format
+                html         generate chart page in html format
+       --title <title>       title text for html output (default:"Chart")
+       --subtitle <title>    sub title text for html output (default:"")
+       --width <string>      chart width for html output (default:"1600")
+       --height <string>     chart height (default:"900")
 `
 
 type ChartCmd struct {
 	TagPaths     []string       `arg:"" name:"tags"`
-	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Timeformat   string         `name:"timeformat" default:"default"`
+	TimeLocation *time.Location `name:"tz"`
+	Timeformat   string         `name:"timeformat"`
 	Range        time.Duration  `name:"range" default:"1m"`
 	Timestamp    string         `name:"time" default:"now"`
 	Refresh      time.Duration  `name:"refresh" short:"r" default:"0"`
@@ -89,6 +86,13 @@ func doChart(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println(err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	if len(cmd.TagPaths) == 0 {

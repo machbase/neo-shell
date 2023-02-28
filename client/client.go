@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -35,6 +36,7 @@ type Client interface {
 	Printfln(format string, args ...any)
 
 	Database() spi.Database
+	Pref() *Pref
 }
 
 type ShutdownServerFunc func() error
@@ -65,9 +67,6 @@ type Config struct {
 	Stderr       io.Writer
 	Prompt       string
 	PromptCont   string
-	HistoryFile  string
-	VimMode      bool
-	BoxStyle     string
 	QueryTimeout time.Duration
 	Lang         language.Tag
 }
@@ -75,6 +74,7 @@ type Config struct {
 type client struct {
 	conf *Config
 	db   spi.DatabaseClient
+	pref *Pref
 
 	interactive   bool
 	remoteSession bool
@@ -87,8 +87,6 @@ func DefaultConfig() *Config {
 		Stderr:       os.Stderr,
 		Prompt:       "\033[31mmachbase-neo»\033[0m ",
 		PromptCont:   "\033[37m>\033[0m  ",
-		HistoryFile:  "/tmp/readline.tmp",
-		VimMode:      false,
 		QueryTimeout: 0 * time.Second,
 		Lang:         language.English,
 	}
@@ -102,6 +100,37 @@ func New(conf *Config, interactive bool) Client {
 }
 
 func (cli *client) Start() error {
+	pref, err := LoadPref()
+	if err != nil {
+		return err
+	}
+	cli.pref = pref
+
+	return nil
+}
+
+func (cli *client) Stop() {
+	if cli.db != nil {
+		cli.db.Disconnect()
+	}
+}
+
+func (cli *client) Database() spi.Database {
+	if err := cli.checkDatabase(); err != nil {
+		cli.Println("ERR", err.Error())
+	}
+	return cli.db
+}
+
+func (cli *client) Pref() *Pref {
+	return cli.pref
+}
+
+func (cli *client) checkDatabase() error {
+	if cli.db != nil {
+		return nil
+	}
+
 	machcli := machrpc.NewClient()
 	err := machcli.Connect(cli.conf.ServerAddr, machrpc.QueryTimeout(cli.conf.QueryTimeout))
 	if err != nil {
@@ -127,17 +156,7 @@ func (cli *client) Start() error {
 	}
 
 	cli.db = machcli
-	return nil
-}
-
-func (cli *client) Stop() {
-	if cli.db != nil {
-		cli.db.Disconnect()
-	}
-}
-
-func (cli *client) Database() spi.Database {
-	return cli.db
+	return err
 }
 
 func (cli *client) ShutdownServer() error {
@@ -184,7 +203,6 @@ type ActionContext struct {
 	TimeLocation *time.Location
 	TimeFormat   string
 	Interactive  bool
-	BoxStyle     string
 
 	Stdin  io.ReadCloser
 	Stdout io.Writer
@@ -235,6 +253,10 @@ func (ctx *ActionContext) Config() *Config {
 	return ctx.cli.conf
 }
 
+func (ctx *ActionContext) Pref() *Pref {
+	return ctx.cli.pref
+}
+
 func (ctx *ActionContext) NewManagementClient() (mgmt.ManagementClient, error) {
 	conn, err := machrpc.MakeGrpcConn(ctx.cli.conf.ServerAddr)
 	if err != nil {
@@ -255,6 +277,8 @@ type Cmd struct {
 	Action func(ctx *ActionContext)
 	Desc   string
 	Usage  string
+
+	ClientAction bool
 }
 
 var commands = make(map[string]*Cmd)
@@ -303,35 +327,43 @@ func (cli *client) Process(line string) {
 		cmd, ok = commands["sql"]
 	}
 
-	if ok && cmd != nil {
-		actCtx := &ActionContext{
-			Line:         line,
-			Client:       cli,
-			DB:           cli.db,
-			Lang:         cli.conf.Lang,
-			TimeLocation: time.UTC,
-			TimeFormat:   "ns",
-			Interactive:  cli.interactive,
-			BoxStyle:     cli.conf.BoxStyle,
-			Stdin:        cli.conf.Stdin,
-			Stdout:       cli.conf.Stdout,
-			Stderr:       cli.conf.Stderr,
-		}
-		actCtx.parent, actCtx.cancelFunc = context.WithCancel(context.Background())
-		actCtx.cli = cli
-
-		defer actCtx.cancelFunc()
-
-		cmd.Action(actCtx)
-	} else {
+	if !ok || cmd == nil {
 		cli.Println("command not found", cmdName)
+		return
 	}
+
+	if !cmd.ClientAction {
+		if err := cli.checkDatabase(); err != nil {
+			cli.Println("ERR", err.Error())
+			return
+		}
+	}
+
+	actCtx := &ActionContext{
+		Line:         line,
+		Client:       cli,
+		DB:           cli.db,
+		Lang:         cli.conf.Lang,
+		TimeLocation: time.UTC,
+		TimeFormat:   "ns",
+		Interactive:  cli.interactive,
+		Stdin:        cli.conf.Stdin,
+		Stdout:       cli.conf.Stdout,
+		Stderr:       cli.conf.Stderr,
+	}
+	actCtx.parent, actCtx.cancelFunc = context.WithCancel(context.Background())
+	actCtx.cli = cli
+
+	defer actCtx.cancelFunc()
+
+	cmd.Action(actCtx)
 }
 
 func (cli *client) Prompt() {
+	historyFile := filepath.Join(PrefDir(), ".neoshell_history")
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:                 cli.conf.Prompt,
-		HistoryFile:            cli.conf.HistoryFile,
+		HistoryFile:            historyFile,
 		DisableAutoSaveHistory: true,
 		AutoComplete:           cli.completer(),
 		InterruptPrompt:        "^C",
@@ -348,7 +380,7 @@ func (cli *client) Prompt() {
 	defer rl.Close()
 
 	rl.CaptureExitSignal()
-	rl.SetVimMode(cli.conf.VimMode)
+	rl.SetVimMode(cli.Pref().ViMode().BoolValue())
 
 	log.SetOutput(rl.Stderr())
 

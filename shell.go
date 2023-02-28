@@ -13,8 +13,7 @@ import (
 type ShellCmd struct {
 	Args       []string `arg:"" optional:"" name:"ARGS" passthrough:""`
 	Version    bool     `name:"version" default:"false" help:"show version"`
-	ServerAddr string   `name:"server" short:"s" default:"tcp://127.0.0.1:5655" help:"server address"`
-	User       string   `name:"user" short:"u" default:"sys"`
+	ServerAddr string   `name:"server" short:"s" help:"server address"`
 }
 
 func Shell(cmd *ShellCmd) {
@@ -35,11 +34,15 @@ func Shell(cmd *ShellCmd) {
 		}
 	}
 
+	if cmd.ServerAddr == "" {
+		if pref, err := client.LoadPref(); err == nil {
+			cmd.ServerAddr = pref.Server().Value()
+		} else {
+			cmd.ServerAddr = "tcp://127.0.0.1:5655"
+		}
+	}
 	clientConf := client.DefaultConfig()
 	clientConf.ServerAddr = cmd.ServerAddr
-
-	// enum:"simple,bold,double,light,round"
-	clientConf.BoxStyle = "light"
 
 	var command = ""
 	if len(cmd.Args) > 0 {

@@ -29,35 +29,33 @@ func init() {
 
 const helpSql string = `  sql [options] <query>
   arguments:
-    query         sql query to execute
+    query                   sql query to execute
   options:
-    --output,-o <file>     output file (default:'-' stdout)
-    --format,-f <format>   output format
-      box        box format (default)
-      csv        csv format
-      json       json format
-    --compress <method>  compression method [gzip] (default is not compressed)
-    --delimiter,-d       csv delimiter (default:',')
-    --[no-]rownum        include rownum as first column (default:true)
-    --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'default')
-      ns, us, ms, s
-        represents unix epoch time in nano-, micro-, milli- and seconds for each
-      timeformat
-        consult "help timeformat"
-    --tz                  timezone for handling datetime
-    --[no-]heading        print header
-    --precision,-p <int>  set precision of float value to force round
+    -o,--output <file>      output file (default:'-' stdout)
+    -f,--format <format>    output format
+                box         box format (default)
+                csv         csv format
+                json        json format
+       --compress <method>  compression method [gzip] (default is not compressed)
+    -d,--delimiter          csv delimiter (default:',')
+       --[no-]rownum        include rownum as first column (default:true)
+    -t,--timeformat         time format [ns|ms|s|<timeformat>] (default:'default')
+                            consult "help timeformat"
+       --tz                 timezone for handling datetime
+                            consult "help tz"
+       --[no-]heading       print header
+    -p,--precision <int>    set precision of float value to force round
 `
 
 type SqlCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:"" default:"true"`
-	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	TimeLocation *time.Location `name:"tz"`
 	Format       string         `name:"format" short:"f" default:"box" enum:"box,csv,json"`
 	Compress     string         `name:"compress" default:"-" enum:"-,gzip"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
-	TimeFormat   string         `name:"timeformat" short:"t" default:"default"`
+	Timeformat   string         `name:"timeformat" short:"t"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Interactive  bool           `kong:"-"`
 	Help         bool           `kong:"-"`
@@ -84,6 +82,13 @@ func doSql(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	var outputPath = util.StripQuote(cmd.Output)
@@ -117,7 +122,7 @@ func doSql(ctx *client.ActionContext) {
 	encoder := codec.NewEncoderBuilder(cmd.Format).
 		SetOutputStream(output).
 		SetTimeLocation(cmd.TimeLocation).
-		SetTimeFormat(cmd.TimeFormat).
+		SetTimeFormat(cmd.Timeformat).
 		SetPrecision(cmd.Precision).
 		SetRownum(cmd.Rownum).
 		SetHeading(cmd.Heading).
