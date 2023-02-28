@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/machbase/neo-shell/server/msg"
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
 
@@ -35,7 +36,7 @@ func Query(db spi.Database, req *msg.QueryRequest, rsp *msg.QueryResponse) {
 	data.Columns = cols.NamesWithTimeLocation(time.UTC)
 	data.Types = cols.Types()
 
-	timeformat := spi.GetTimeformat(req.Timeformat)
+	timeformat := util.GetTimeformat(req.Timeformat)
 	nrow := 0
 	if req.Format == "csv" {
 		bytesBuff := &bytes.Buffer{}

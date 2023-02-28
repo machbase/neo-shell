@@ -6,6 +6,7 @@ import (
 	"github.com/machbase/neo-shell/codec/box"
 	"github.com/machbase/neo-shell/codec/csv"
 	"github.com/machbase/neo-shell/codec/json"
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
 
@@ -71,7 +72,7 @@ func (b *encBuilder) SetTimeLocation(tz *time.Location) EncoderBuilder {
 }
 
 func (b *encBuilder) SetTimeFormat(f string) EncoderBuilder {
-	b.TimeFormat = spi.GetTimeformat(f)
+	b.TimeFormat = util.GetTimeformat(f)
 	return b
 }
 

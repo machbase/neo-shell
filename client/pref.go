@@ -13,7 +13,6 @@ import (
 
 	"github.com/machbase/neo-shell/util"
 	"github.com/machbase/neo-shell/util/ini"
-	spi "github.com/machbase/neo-spi"
 )
 
 type Pref struct {
@@ -277,7 +276,7 @@ func timeformatValidate(s string) (string, bool) {
 	case "ms":
 	case "s":
 	default:
-		s = spi.GetTimeformat(s)
+		s = util.GetTimeformat(s)
 	}
 	return s, true
 }
