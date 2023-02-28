@@ -16,7 +16,7 @@ func init() {
 		Name:   "desc",
 		PcFunc: pcDescribe,
 		Action: doDescribe,
-		Desc:   "describe table structure",
+		Desc:   "Describe table structure",
 		Usage:  helpDescribe,
 	})
 }
@@ -25,7 +25,7 @@ const helpDescribe = `  desc [options] <table>
   arguments:
     table        name of table to describe
   options:
-    --all,-a     show all hidden columns
+    -a,--all     show all hidden columns
 `
 
 type DescribeCmd struct {

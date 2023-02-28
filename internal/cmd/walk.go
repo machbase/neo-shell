@@ -28,14 +28,12 @@ func init() {
 
 const helpWalk = `  walk [options] <sql query>
   options:
-     --[no-]rownum        show rownum
-     --precision <int>    precision for float values
-     --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'ns')
-       ns, us, ms, s
-         represents unix epoch time in nano-, micro-, milli- and seconds for each
-       timeformat
-         consult "help timeformat"
-     --tz                  timezone for handling datetime
+        --[no-]rownum        show rownum
+        --precision <int>    precision for float values
+     -t,--timeformat         time format [ns|ms|s|<timeformat>] (default:'ns')
+                             consult "help timeformat"
+        --tz                 timezone for handling datetime
+                             consult "help tz"
 `
 
 type WalkCmd struct {

@@ -175,6 +175,7 @@ var (
 	prefItem_Timeformat = PrefItem{"General", "timeformat", "2006-01-02 15:04:05.999", []string{}, "'help timeformat'", timeformatValidate, nil}
 	prefItem_Heading    = PrefItem{"General", "heading", "on", []string{"on", "off"}, "show heading", nil, nil}
 	prefItem_Format     = PrefItem{"General", "format", "-", []string{"-", "json", "csv"}, "in/output format", nil, nil}
+	prefItem_Server     = PrefItem{"General", "server", "tcp://127.0.0.1:5655", []string{}, "default server address", nil, nil}
 )
 
 var prefItems = map[string]*PrefItem{
@@ -182,6 +183,7 @@ var prefItems = map[string]*PrefItem{
 	prefItem_ViMode.Name:     &prefItem_ViMode,
 	prefItem_TimeZone.Name:   &prefItem_TimeZone,
 	prefItem_Timeformat.Name: &prefItem_Timeformat,
+	prefItem_Server.Name:     &prefItem_Server,
 	// prefItem_Heading.Name:    &prefItem_Heading,
 	// prefItem_Format.Name:     &prefItem_Format,
 }
@@ -234,6 +236,10 @@ func (p *Pref) Heading() *PrefItem {
 
 func (p *Pref) Format() *PrefItem {
 	return p.Item(prefItem_Format.Name)
+}
+
+func (p *Pref) Server() *PrefItem {
+	return p.Item(prefItem_Server.Name)
 }
 
 func timezoneValidate(s string) (string, bool) {

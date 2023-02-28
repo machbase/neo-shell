@@ -29,24 +29,22 @@ func init() {
 
 const helpSql string = `  sql [options] <query>
   arguments:
-    query         sql query to execute
+    query                   sql query to execute
   options:
-    --output,-o <file>     output file (default:'-' stdout)
-    --format,-f <format>   output format
-      box        box format (default)
-      csv        csv format
-      json       json format
-    --compress <method>  compression method [gzip] (default is not compressed)
-    --delimiter,-d       csv delimiter (default:',')
-    --[no-]rownum        include rownum as first column (default:true)
-    --timeformat,-t      time format [ns|ms|s|<timeformat>] (default:'default')
-      ns, us, ms, s
-        represents unix epoch time in nano-, micro-, milli- and seconds for each
-      timeformat
-        consult "help timeformat"
-    --tz                  timezone for handling datetime
-    --[no-]heading        print header
-    --precision,-p <int>  set precision of float value to force round
+    -o,--output <file>      output file (default:'-' stdout)
+    -f,--format <format>    output format
+                box         box format (default)
+                csv         csv format
+                json        json format
+       --compress <method>  compression method [gzip] (default is not compressed)
+    -d,--delimiter          csv delimiter (default:',')
+       --[no-]rownum        include rownum as first column (default:true)
+    -t,--timeformat         time format [ns|ms|s|<timeformat>] (default:'default')
+                            consult "help timeformat"
+       --tz                 timezone for handling datetime
+                            consult "help tz"
+       --[no-]heading       print header
+    -p,--precision <int>    set precision of float value to force round
 `
 
 type SqlCmd struct {

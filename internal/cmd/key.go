@@ -30,7 +30,7 @@ const helpKey = `  key command [options] [args...]
     gen <id>    generate new key with given id
     server-cert  retrieve server's certificate
   options:
-    --output,-o <file>   output file (default:'-' stdout)
+    -o,--output <file>   output file (default:'-' stdout)
 `
 
 type KeyCmd struct {

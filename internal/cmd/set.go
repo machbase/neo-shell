@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -9,81 +10,40 @@ import (
 )
 
 func init() {
+	lines := []string{}
+	if pref, err := client.LoadPref(); err == nil {
+		for _, itm := range pref.Items() {
+			lines = append(lines, fmt.Sprintf("  set %-10s  %s", itm.Name, itm.Description()))
+		}
+	}
+
 	client.RegisterCmd(&client.Cmd{
-		Name:   "set",
-		PcFunc: pcSet,
-		Action: doSet,
-		Desc:   "show/set shell settings",
-		Usage: `  set <key>       <value>
-  set vi-mode     [on|off]
-  set box-style   [simple|bold|double|light|round]
-`,
+		Name:         "set",
+		PcFunc:       pcSet,
+		Action:       doSet,
+		Desc:         "Settings of the shell",
+		Usage:        fmt.Sprintf("  set <key> <value>\n%s\n", strings.Join(lines, "\n")),
 		ClientAction: true,
 	})
 }
 
 func pcSet() readline.PrefixCompleterInterface {
-	return readline.PcItem("set",
-		// readline.PcItem("tz",
-		// 	readline.PcItem("UTC"),
-		// 	readline.PcItem("Local"),
-		// ),
-		readline.PcItem("box-style",
-			readline.PcItem("simple"),
-			readline.PcItem("bold"),
-			readline.PcItem("double"),
-			readline.PcItem("light"),
-			readline.PcItem("round"),
-		),
-		readline.PcItem("vi-mode",
-			readline.PcItem("on"),
-			readline.PcItem("off"),
-		),
-		// readline.PcItem("heading",
-		// 	readline.PcItem("on"),
-		// 	readline.PcItem("off"),
-		// ),
-		// readline.PcItem("format",
-		// 	readline.PcItem(Formats.Default),
-		// 	readline.PcItem(Formats.CSV),
-		// 	readline.PcItem(Formats.JSON),
-		// ),
-	)
+	top := readline.PcItem("set")
+	if pref, err := client.LoadPref(); err == nil {
+		for _, itm := range pref.Items() {
+			pc := readline.PcItem(itm.Name)
+			for _, en := range itm.Enum {
+				ec := readline.PcItem(en)
+				pc.Children = append(pc.Children, ec)
+			}
+			top.Children = append(top.Children, pc)
+		}
+	}
+	return top
 }
 
 func doSet(ctx *client.ActionContext) {
 	args := util.SplitFields(ctx.Line, true)
-	// onoff := func(t bool) string {
-	// 	if t {
-	// 		return "on"
-	// 	} else {
-	// 		return "off"
-	// 	}
-	// }
-	// parseflag := func() bool {
-	// 	b := "-"
-	// 	if len(args) == 2 {
-	// 		b = strings.ToLower(args[1])
-	// 	}
-	// 	var flag bool
-	// 	if b == "on" {
-	// 		flag = true
-	// 	} else if b == "off" {
-	// 		flag = false
-	// 	}
-	// 	ctx.Println(args[0], onoff(flag))
-	// 	return flag
-	// }
-	// parseBoxStyle := func(s string) string {
-	// 	switch s {
-	// 	case "simple", "bold", "double", "light", "round":
-	// 	default:
-	// 		s = "light"
-	// 	}
-	// 	ctx.Println(args[0], s)
-	// 	return s
-	// }
-
 	pref := ctx.Pref()
 	if len(args) == 0 {
 		box := ctx.NewBox([]string{"NAME", "VALUE", "DESCRIPTION"})
