@@ -52,12 +52,12 @@ const helpSql string = `  sql [options] <query>
 type SqlCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:"" default:"true"`
-	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	TimeLocation *time.Location `name:"tz"`
 	Format       string         `name:"format" short:"f" default:"box" enum:"box,csv,json"`
 	Compress     string         `name:"compress" default:"-" enum:"-,gzip"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
 	Rownum       bool           `name:"rownum" negatable:"" default:"true"`
-	TimeFormat   string         `name:"timeformat" short:"t" default:"default"`
+	Timeformat   string         `name:"timeformat" short:"t"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Interactive  bool           `kong:"-"`
 	Help         bool           `kong:"-"`
@@ -84,6 +84,13 @@ func doSql(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	var outputPath = util.StripQuote(cmd.Output)
@@ -117,7 +124,7 @@ func doSql(ctx *client.ActionContext) {
 	encoder := codec.NewEncoderBuilder(cmd.Format).
 		SetOutputStream(output).
 		SetTimeLocation(cmd.TimeLocation).
-		SetTimeFormat(cmd.TimeFormat).
+		SetTimeFormat(cmd.Timeformat).
 		SetPrecision(cmd.Precision).
 		SetRownum(cmd.Rownum).
 		SetHeading(cmd.Heading).

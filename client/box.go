@@ -34,7 +34,7 @@ func (ctx *ActionContext) newBox(header []string, compact bool, heading bool, fo
 	b.w.SetOutputMirror(mirror)
 
 	style := table.StyleDefault
-	switch ctx.BoxStyle {
+	switch ctx.Pref().BoxStyle().Value() {
 	case "bold":
 		style = table.StyleBold
 	case "double":

@@ -47,11 +47,11 @@ type ExportCmd struct {
 	Table        string         `arg:"" name:"table"`
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:""`
-	TimeLocation *time.Location `name:"tz" default:"UTC"`
+	TimeLocation *time.Location `name:"tz"`
 	Format       string         `name:"format" short:"f" default:"csv" enum:"box,csv,json"`
 	Compress     string         `name:"compress" default:"-" enum:"-,gzip"`
 	Delimiter    string         `name:"delimiter" short:"d" default:","`
-	TimeFormat   string         `name:"timeformat" short:"t" default:"ns"`
+	Timeformat   string         `name:"timeformat" short:"t"`
 	Precision    int            `name:"precision" short:"p" default:"-1"`
 	Help         bool           `kong:"-"`
 }
@@ -74,6 +74,13 @@ func doExport(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	if len(cmd.Table) == 0 {
@@ -106,7 +113,7 @@ func doExport(ctx *client.ActionContext) {
 	encoder := codec.NewEncoderBuilder(cmd.Format).
 		SetOutputStream(output).
 		SetTimeLocation(cmd.TimeLocation).
-		SetTimeFormat(cmd.TimeFormat).
+		SetTimeFormat(cmd.Timeformat).
 		SetPrecision(cmd.Precision).
 		SetRownum(false).
 		SetHeading(cmd.Heading).

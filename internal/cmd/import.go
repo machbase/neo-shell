@@ -61,8 +61,8 @@ type ImportCmd struct {
 	CreateTable   bool           `name:"create-table" default:"false"`
 	TruncateTable bool           `name:"truncate-table" default:"false"`
 	Delimiter     string         `name:"delimiter" short:"d" default:","`
-	TimeFormat    string         `name:"timeformat" short:"t" default:"ns"`
-	TimeLocation  *time.Location `name:"tz" default:"UTC"`
+	Timeformat    string         `name:"timeformat" short:"t"`
+	TimeLocation  *time.Location `name:"tz"`
 	Help          bool           `kong:"-"`
 }
 
@@ -85,6 +85,13 @@ func doImport(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println(err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	in, err := stream.NewInputStream(cmd.Input)
@@ -151,7 +158,7 @@ func doImport(ctx *client.ActionContext) {
 	decoder := codec.NewDecoderBuilder(cmd.InputFormat).
 		SetInputStream(in).
 		SetColumns(desc.Columns.Columns()).
-		SetTimeFormat(cmd.TimeFormat).
+		SetTimeFormat(cmd.Timeformat).
 		SetTimeLocation(cmd.TimeLocation).
 		SetCsvDelimieter(cmd.Delimiter).
 		Build()

@@ -21,6 +21,7 @@ test: tmpdir
 		./codec/json \
 		./do \
 		./util/glob \
+		./util/ini \
 		./server/security \
 		./server/mqttsvr/mqtt
 

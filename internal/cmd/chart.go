@@ -56,8 +56,8 @@ const helpChart = `  chart [options] <tag_path>...
 
 type ChartCmd struct {
 	TagPaths     []string       `arg:"" name:"tags"`
-	TimeLocation *time.Location `name:"tz" default:"UTC"`
-	Timeformat   string         `name:"timeformat" default:"default"`
+	TimeLocation *time.Location `name:"tz"`
+	Timeformat   string         `name:"timeformat"`
 	Range        time.Duration  `name:"range" default:"1m"`
 	Timestamp    string         `name:"time" default:"now"`
 	Refresh      time.Duration  `name:"refresh" short:"r" default:"0"`
@@ -89,6 +89,13 @@ func doChart(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println(err.Error())
 		return
+	}
+
+	if cmd.TimeLocation == nil {
+		cmd.TimeLocation = ctx.Pref().TimeZone().TimezoneValue()
+	}
+	if cmd.Timeformat == "" {
+		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
 
 	if len(cmd.TagPaths) == 0 {

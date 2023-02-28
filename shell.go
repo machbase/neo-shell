@@ -38,9 +38,6 @@ func Shell(cmd *ShellCmd) {
 	clientConf := client.DefaultConfig()
 	clientConf.ServerAddr = cmd.ServerAddr
 
-	// enum:"simple,bold,double,light,round"
-	clientConf.BoxStyle = "light"
-
 	var command = ""
 	if len(cmd.Args) > 0 {
 		for i := range cmd.Args {
