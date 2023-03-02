@@ -16,6 +16,8 @@ type ShellCmd struct {
 	ServerAddr string   `name:"server" short:"s" help:"server address"`
 }
 
+var DefaultServerAddress = "tcp://127.0.0.1:5655"
+
 func Shell(cmd *ShellCmd) {
 	if cmd.Version {
 		fmt.Fprintf(os.Stdout, "neoshell %s (%s %s)\n", versionString, buildTimestamp, versionGitSHA)
