@@ -254,15 +254,9 @@ func timezoneValidate(s string) (string, bool) {
 	if err == nil {
 		return tz.String(), true
 	}
-
-	found, ok := util.Timezones[s]
-	if ok {
-		for _, x := range found {
-			tz, err = time.LoadLocation(x)
-			if err == nil {
-				return tz.String(), true
-			}
-		}
+	tz, err = util.GetTimeLocation(s)
+	if err == nil {
+		return tz.String(), true
 	}
 
 	fmt.Println(err.Error())

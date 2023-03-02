@@ -1,5 +1,42 @@
 package util
 
+import (
+	"fmt"
+	"time"
+)
+
+func HelpTimeZones() string {
+	return `    abbreviations
+      UTC
+      Local
+      Europe/London
+      America/New_York
+      ...
+    location examples
+      America/Los_Angeles
+      Europe/Paris
+      ...
+    Time Coordinates examples
+      UTC+9
+`
+}
+
+func GetTimeLocation(tzName string) (*time.Location, error) {
+	var err error
+	var tz *time.Location
+
+	found, ok := Timezones[tzName]
+	if ok {
+		for _, x := range found {
+			tz, err = time.LoadLocation(x)
+			if err == nil {
+				return tz, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("unknown timezone '%s'", tzName)
+}
+
 var Timezones = map[string][]string{
 	"GMT": {
 		"Africa/Abidjan",
