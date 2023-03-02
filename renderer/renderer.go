@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
 )
 
@@ -54,7 +55,7 @@ func (dq *ChartQuery) Query(db spi.Database) (*spi.RenderingData, error) {
 }
 
 func BuildChartQueries(tagPaths []string, cmdTimestamp string, cmdRange time.Duration, timeformat string, tz *time.Location) ([]*ChartQuery, error) {
-	timeformat = spi.GetTimeformat(timeformat)
+	timeformat = util.GetTimeformat(timeformat)
 	queries := make([]*ChartQuery, len(tagPaths))
 	for i, path := range tagPaths {
 		// path는 <table>/<tag>#<column> 형식으로 구성된다.
