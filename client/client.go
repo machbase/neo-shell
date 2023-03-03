@@ -404,7 +404,7 @@ func (cli *client) Prompt() {
 			continue
 		}
 		if len(parts) == 0 {
-			if line == "exit" || line == "exit;" {
+			if line == "exit" || line == "exit;" || line == "quit" || line == "quit;" {
 				goto exit
 			} else if strings.HasPrefix(line, "help") {
 				goto madeline
