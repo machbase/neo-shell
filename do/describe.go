@@ -12,12 +12,96 @@ import (
 // If includeHiddenColumns is true, the result includes hidden columns those name start with '_'
 // such as "_RID" and "_ARRIVAL_TIME".
 func Describe(db spi.Database, name string, includeHiddenColumns bool) (Description, error) {
+	tableName := strings.ToUpper(name)
+	if strings.HasPrefix(tableName, "V$") {
+		return describe_mv(db, name, includeHiddenColumns)
+	} else if strings.HasPrefix(tableName, "M$") {
+		return describe_mv(db, name, includeHiddenColumns)
+	} else {
+		return describe(db, name, includeHiddenColumns)
+	}
+}
+
+func describe(db spi.Database, name string, includeHiddenColumns bool) (Description, error) {
+	d := &TableDescription{}
+	var tableType int
+	var colCount int
+	var colType int
+
+	tableName := strings.ToUpper(name)
+	columnsTable := "M$SYS_COLUMNS"
+	userName := "SYS"
+	dbName := "MACHBASEDB"
+	dbId := -1
+	toks := strings.Split(tableName, ".")
+	if len(toks) == 2 {
+		userName = toks[0]
+		tableName = toks[1]
+	} else if len(toks) == 3 {
+		dbName = toks[0]
+		userName = toks[1]
+		tableName = toks[2]
+	}
+
+	if dbName != "" && dbName != "MACHBASEDB" {
+		row := db.QueryRow("select database_tbsid from V$STORAGE_MOUNT_DATABASES where NAME = ?", dbName)
+		if err := row.Scan(&dbId); err != nil {
+			return nil, err
+		}
+	}
+	sqlText := `SELECT
+			j.ID as TABLE_ID,
+			j.TYPE as TABLE_TYPE,
+			j.FLAG as TABLE_FLAG,
+			j.COLCOUNT as TABLE_COLCOUNT
+		from
+			M$SYS_USERS u,
+			M$SYS_TABLES j
+		where
+			u.NAME = ?
+		and j.USER_ID = u.USER_ID
+		and j.DATABASE_ID = ?
+		and j.NAME = ?`
+
+	r := db.QueryRow(sqlText, userName, dbId, tableName)
+	if r.Err() != nil {
+		return nil, r.Err()
+	}
+	if err := r.Scan(&d.Id, &tableType, &d.Flag, &colCount); err != nil {
+		return nil, err
+	}
+	d.Type = spi.TableType(tableType)
+	d.Database = dbName
+	d.User = userName
+	d.Name = tableName
+
+	rows, err := db.Query(fmt.Sprintf(`select name, type, length, id from %s where table_id = ? order by id`, columnsTable), d.Id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		col := &ColumnDescription{}
+		err = rows.Scan(&col.Name, &colType, &col.Length, &col.Id)
+		if err != nil {
+			return nil, err
+		}
+		if !includeHiddenColumns && strings.HasPrefix(col.Name, "_") {
+			continue
+		}
+		col.Type = spi.ColumnType(colType)
+		d.Columns = append(d.Columns, col)
+	}
+	return d, nil
+}
+
+func describe_mv(db spi.Database, name string, includeHiddenColumns bool) (Description, error) {
 	d := &TableDescription{}
 	var tableType int
 	var colCount int
 	var colType int
 	tableName := strings.ToUpper(name)
-
 	tablesTable := "M$SYS_TABLES"
 	columnsTable := "M$SYS_COLUMNS"
 	if strings.HasPrefix(tableName, "V$") {
@@ -32,6 +116,9 @@ func Describe(db spi.Database, name string, includeHiddenColumns bool) (Descript
 		return nil, err
 	}
 	d.Type = spi.TableType(tableType)
+	d.Database = "MACHBASEDB"
+	d.User = "SYS"
+	d.Name = tableName
 
 	rows, err := db.Query(fmt.Sprintf(`select name, type, length, id from %s where table_id = ? order by id`, columnsTable), d.Id)
 	if err != nil {
@@ -63,11 +150,13 @@ func (cd *ColumnDescription) description() {}
 
 // TableDescription is represents data that comes as a result of 'desc <table>'
 type TableDescription struct {
-	Name    string             `json:"name"`
-	Type    spi.TableType      `json:"type"`
-	Flag    int                `json:"flag"`
-	Id      int                `json:"id"`
-	Columns ColumnDescriptions `json:"columns"`
+	Database string             `json:"database"`
+	User     string             `json:"user"`
+	Name     string             `json:"name"`
+	Type     spi.TableType      `json:"type"`
+	Flag     int                `json:"flag"`
+	Id       int                `json:"id"`
+	Columns  ColumnDescriptions `json:"columns"`
 }
 
 // TypeString returns string representation of table type.

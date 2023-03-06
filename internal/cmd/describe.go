@@ -65,7 +65,7 @@ func doDescribe(ctx *client.ActionContext) {
 	ctx.Printfln("TABLE  %s  %s", desc.Name, desc.TypeString())
 	if desc.Type == spi.TagTableType {
 		tags := []string{}
-		rows, err := ctx.DB.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(cmd.Table)))
+		rows, err := ctx.DB.Query(fmt.Sprintf("select name from _%s_META order by name", strings.ToUpper(desc.Name)))
 		if err != nil {
 			ctx.Println("ERR", err.Error())
 			return
@@ -79,15 +79,15 @@ func doDescribe(ctx *client.ActionContext) {
 			}
 			tags = append(tags, name)
 		}
-		ctx.Println("TAGS    ", strings.Join(tags, ", "))
+		ctx.Println("TAGS  ", strings.Join(tags, ", "))
 	}
 
 	nrow := 0
-	box := ctx.NewBox([]string{"ROWNUM", "ID", "NAME", "TYPE", "LENGTH"})
+	box := ctx.NewBox([]string{"ROWNUM", "NAME", "TYPE", "LENGTH"})
 	for _, col := range desc.Columns {
 		nrow++
 		colType := spi.ColumnTypeString(col.Type)
-		box.AppendRow(nrow, col.Id, col.Name, colType, col.Length)
+		box.AppendRow(nrow, col.Name, colType, col.Length)
 	}
 
 	box.Render()
