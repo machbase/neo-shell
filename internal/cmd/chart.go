@@ -42,7 +42,7 @@ const helpChart = `  chart [options] <tag_path>...
                              set 0 for unlimit
     -o,--output <file>       output file (default:'-' stdout)
     -f,--format <format>     output format
-                none         terminal chart (default)
+                term         terminal chart (default)
                 json         json format
                 html         generate chart page in html format
        --title <title>       title text for html output (default:"Chart")
@@ -60,7 +60,7 @@ type ChartCmd struct {
 	Refresh      time.Duration  `name:"refresh" short:"r" default:"0"`
 	Count        int            `name:"count" short:"n" default:"0"`
 	Output       string         `name:"output" short:"o" default:"-"`
-	Format       string         `name:"format" short:"f" enum:"none,json,html" default:"none"`
+	Format       string         `name:"format" short:"f" enum:"term,json,html" default:"term"`
 	HtmlTitle    string         `name:"title" default:"Chart"`
 	HtmlSubtitle string         `name:"subtitle" default:""`
 	HtmlWidth    string         `name:"width" default:"1600"`
@@ -74,7 +74,7 @@ func pcChart() readline.PrefixCompleterInterface {
 
 func doChart(ctx *client.ActionContext) {
 	cmd := &ChartCmd{}
-	parser, err := client.Kong(cmd, func() error { ctx.Println(helpSql); cmd.Help = true; return nil })
+	parser, err := client.Kong(cmd, func() error { ctx.Println(helpChart); cmd.Help = true; return nil })
 	if err != nil {
 		ctx.Println(err.Error())
 		return
