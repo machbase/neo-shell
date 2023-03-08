@@ -29,7 +29,6 @@ func describe(db spi.Database, name string, includeHiddenColumns bool) (Descript
 	var colType int
 
 	tableName := strings.ToUpper(name)
-	columnsTable := "M$SYS_COLUMNS"
 	userName := "SYS"
 	dbName := "MACHBASEDB"
 	dbId := -1
@@ -44,7 +43,7 @@ func describe(db spi.Database, name string, includeHiddenColumns bool) (Descript
 	}
 
 	if dbName != "" && dbName != "MACHBASEDB" {
-		row := db.QueryRow("select database_tbsid from V$STORAGE_MOUNT_DATABASES where NAME = ?", dbName)
+		row := db.QueryRow("select BACKUP_TBSID from V$STORAGE_MOUNT_DATABASES where MOUNTDB = ?", dbName)
 		if err := row.Scan(&dbId); err != nil {
 			return nil, err
 		}
@@ -75,7 +74,7 @@ func describe(db spi.Database, name string, includeHiddenColumns bool) (Descript
 	d.User = userName
 	d.Name = tableName
 
-	rows, err := db.Query(fmt.Sprintf(`select name, type, length, id from %s where table_id = ? order by id`, columnsTable), d.Id)
+	rows, err := db.Query("select name, type, length, id from M$SYS_COLUMNS where table_id = ? order by id", d.Id)
 	if err != nil {
 		return nil, err
 	}
