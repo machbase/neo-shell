@@ -114,12 +114,8 @@ func (svr *Server) handleQuery(ctx *gin.Context) {
 			encoder.Close()
 		},
 	}
-	if msg, err := do.Query(queryCtx, req.SqlText); err != nil {
+	if _, err := do.Query(queryCtx, req.SqlText); err != nil {
 		rsp.Reason = err.Error()
 		ctx.JSON(http.StatusInternalServerError, rsp)
-	} else {
-		rsp.Success = true
-		rsp.Reason = msg
-		ctx.JSON(http.StatusOK, rsp)
 	}
 }

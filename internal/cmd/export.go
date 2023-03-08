@@ -32,7 +32,8 @@ const helpExport = `  export [options] <table>
                 csv          csv format (default)
                 json         json format
        --compress <method>   compression method [gzip] (default is not compressed)
-       --[no-]header         export header (default:false)
+       --[no-]heading        print header message (default:false)
+       --[no-]footer         print footer message (default:false)
     -d,--delimiter           csv delimiter (default:',')
        --tz                  timezone for handling datetime
     -t,--timeformat          time format [ns|ms|s|<timeformat>] (default:'ns')
@@ -41,9 +42,11 @@ const helpExport = `  export [options] <table>
 `
 
 type ExportCmd struct {
-	Table        string         `arg:"" name:"table"`
-	Output       string         `name:"output" short:"o" default:"-"`
-	Heading      bool           `name:"heading" negatable:""`
+	Table   string `arg:"" name:"table"`
+	Output  string `name:"output" short:"o" default:"-"`
+	Heading bool   `name:"heading" negatable:""`
+	Footer  bool   `name:"footer" negatable:""`
+
 	TimeLocation *time.Location `name:"tz"`
 	Format       string         `name:"format" short:"f" default:"csv" enum:"box,csv,json"`
 	Compress     string         `name:"compress" default:"-" enum:"-,gzip"`
@@ -137,10 +140,7 @@ func doExport(ctx *client.ActionContext) {
 		},
 	}
 
-	msg, err := do.Query(queryCtx, "select * from "+cmd.Table)
-	if err != nil {
+	if _, err := do.Query(queryCtx, "select * from "+cmd.Table); err != nil {
 		ctx.Println("ERR", err.Error())
-	} else {
-		ctx.Println(msg)
 	}
 }

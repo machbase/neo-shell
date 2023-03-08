@@ -44,12 +44,14 @@ const helpSql string = `  sql [options] <query>
        --tz                 timezone for handling datetime
                             consult "help tz"
        --[no-]heading       print header
+       --[no-]footer        print footer message
     -p,--precision <int>    set precision of float value to force round
 `
 
 type SqlCmd struct {
 	Output       string         `name:"output" short:"o" default:"-"`
 	Heading      bool           `name:"heading" negatable:"" default:"true"`
+	Footer       bool           `name:"footer" negatable:"" default:"true"`
 	TimeLocation *time.Location `name:"tz"`
 	Format       string         `name:"format" short:"f" default:"box" enum:"box,csv,json"`
 	Compress     string         `name:"compress" default:"-" enum:"-,gzip"`
@@ -189,7 +191,9 @@ func doSql(ctx *client.ActionContext) {
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 	} else {
-		ctx.Println(msg)
+		if cmd.Footer {
+			ctx.Println(msg)
+		}
 	}
 	client.AddSqlHistory(sqlText)
 }
