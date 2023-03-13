@@ -22,7 +22,7 @@ type QueryResponse struct {
 }
 
 type QueryData struct {
-	Columns []string `json:"colums"`
+	Columns []string `json:"columns"`
 	Types   []string `json:"types"`
 	Rows    [][]any  `json:"rows"`
 }
