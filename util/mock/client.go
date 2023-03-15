@@ -19,7 +19,7 @@ var _ spi.DatabaseClient = &DatabaseClientMock{}
 //
 //		// make and configure a mocked spi.DatabaseClient
 //		mockedDatabaseClient := &DatabaseClientMock{
-//			AppenderFunc: func(tableName string) (spi.Appender, error) {
+//			AppenderFunc: func(tableName string, opts ...spi.AppendOption) (spi.Appender, error) {
 //				panic("mock out the Appender method")
 //			},
 //			ConnectFunc: func(serverAddr string, opts ...any) error {
@@ -60,7 +60,7 @@ var _ spi.DatabaseClient = &DatabaseClientMock{}
 //	}
 type DatabaseClientMock struct {
 	// AppenderFunc mocks the Appender method.
-	AppenderFunc func(tableName string) (spi.Appender, error)
+	AppenderFunc func(tableName string, opts ...spi.AppendOption) (spi.Appender, error)
 
 	// ConnectFunc mocks the Connect method.
 	ConnectFunc func(serverAddr string, opts ...any) error
@@ -98,6 +98,8 @@ type DatabaseClientMock struct {
 		Appender []struct {
 			// TableName is the tableName argument value.
 			TableName string
+			// Opts is the opts argument value.
+			Opts []spi.AppendOption
 		}
 		// Connect holds details about calls to the Connect method.
 		Connect []struct {
@@ -180,19 +182,21 @@ type DatabaseClientMock struct {
 }
 
 // Appender calls AppenderFunc.
-func (mock *DatabaseClientMock) Appender(tableName string) (spi.Appender, error) {
+func (mock *DatabaseClientMock) Appender(tableName string, opts ...spi.AppendOption) (spi.Appender, error) {
 	if mock.AppenderFunc == nil {
 		panic("DatabaseClientMock.AppenderFunc: method is nil but DatabaseClient.Appender was just called")
 	}
 	callInfo := struct {
 		TableName string
+		Opts      []spi.AppendOption
 	}{
 		TableName: tableName,
+		Opts:      opts,
 	}
 	mock.lockAppender.Lock()
 	mock.calls.Appender = append(mock.calls.Appender, callInfo)
 	mock.lockAppender.Unlock()
-	return mock.AppenderFunc(tableName)
+	return mock.AppenderFunc(tableName, opts...)
 }
 
 // AppenderCalls gets all the calls that were made to Appender.
@@ -201,9 +205,11 @@ func (mock *DatabaseClientMock) Appender(tableName string) (spi.Appender, error)
 //	len(mockedDatabaseClient.AppenderCalls())
 func (mock *DatabaseClientMock) AppenderCalls() []struct {
 	TableName string
+	Opts      []spi.AppendOption
 } {
 	var calls []struct {
 		TableName string
+		Opts      []spi.AppendOption
 	}
 	mock.lockAppender.RLock()
 	calls = mock.calls.Appender

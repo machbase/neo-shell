@@ -372,7 +372,12 @@ func (s *svr) Appender(ctx context.Context, req *machrpc.AppenderRequest) (*mach
 		}
 		rsp.Elapse = time.Since(tick).String()
 	}()
-	realAppender, err := s.machbase.Appender(req.TableName)
+
+	opts := []spi.AppendOption{}
+	if len(req.Timeformat) > 0 {
+		opts = append(opts, spi.AppendTimeformatOption(req.Timeformat))
+	}
+	realAppender, err := s.machbase.Appender(req.TableName, opts...)
 	if err != nil {
 		rsp.Reason = err.Error()
 		return rsp, nil
