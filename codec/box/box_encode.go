@@ -127,6 +127,14 @@ func (ex *Exporter) AddRow(values []any) error {
 			cols[i] = strconv.FormatInt(int64(*v), 10)
 		case int:
 			cols[i] = strconv.FormatInt(int64(v), 10)
+		case *int8:
+			cols[i] = strconv.FormatInt(int64(*v), 10)
+		case int8:
+			cols[i] = strconv.FormatInt(int64(v), 10)
+		case *int16:
+			cols[i] = strconv.FormatInt(int64(*v), 10)
+		case int16:
+			cols[i] = strconv.FormatInt(int64(v), 10)
 		case *int32:
 			cols[i] = strconv.FormatInt(int64(*v), 10)
 		case int32:
