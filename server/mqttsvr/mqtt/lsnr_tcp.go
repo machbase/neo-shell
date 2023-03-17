@@ -14,6 +14,7 @@ import (
 
 	logging "github.com/machbase/neo-logging"
 	"github.com/machbase/neo-shell/server/allowance"
+	"github.com/pkg/errors"
 )
 
 type tcpListener struct {
@@ -95,10 +96,11 @@ func buildTlsConfig(tlsCfg *TlsListenerConfig, tcpCfg *TcpListenerConfig) (*tls.
 		// append root ca
 		ca, err := os.ReadFile(tlsCfg.CertFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "fail to load keys: %s\n", err)
-			return nil, nil
+			return nil, errors.Wrap(err, fmt.Sprintf("fail to load ca key: %s\n", tlsCfg.CertFile))
 		}
-		rootCAs.AppendCertsFromPEM(ca)
+		if ok := rootCAs.AppendCertsFromPEM(ca); !ok {
+			return nil, errors.Wrap(err, fmt.Sprintf("fail to add ca key: %s\n", tlsCfg.CertFile))
+		}
 	}
 
 	rt := &tls.Config{
