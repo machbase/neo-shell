@@ -19,20 +19,20 @@ func (svr *Server) onMachbase(evt *mqtt.EvtMessage, prefix string) error {
 	topic := evt.Topic
 	topic = strings.TrimPrefix(topic, prefix+"/")
 	peer, ok := svr.mqttd.GetPeer(evt.PeerId)
-	reply := func(msg any) {
-		if ok {
-			buff, err := json.Marshal(msg)
-			if err != nil {
-				return
-			}
-			peer.Publish(prefix+"/reply", 1, buff)
-		}
-	}
 
 	if topic == "query" {
+		reply := func(msg any) {
+			if ok {
+				buff, err := json.Marshal(msg)
+				if err != nil {
+					return
+				}
+				peer.Publish(prefix+"/reply", 1, buff)
+			}
+		}
 		return svr.handleQuery(peer, evt.Raw, reply)
 	} else if strings.HasPrefix(topic, "write") {
-		return svr.handleWrite(peer, topic, evt.Raw, reply)
+		return svr.handleWrite(peer, topic, evt.Raw)
 	} else if strings.HasPrefix(topic, "append/") {
 		return svr.handleAppend(peer, topic, evt.Raw)
 	} else {
@@ -59,14 +59,9 @@ func (svr *Server) handleQuery(peer mqtt.Peer, payload []byte, reply func(msg an
 	return nil
 }
 
-func (svr *Server) handleWrite(peer mqtt.Peer, topic string, payload []byte, reply func(msg any)) error {
-	tick := time.Now()
+func (svr *Server) handleWrite(peer mqtt.Peer, topic string, payload []byte) error {
 	req := &msg.WriteRequest{}
 	rsp := &msg.WriteResponse{Reason: "not specified"}
-	defer func() {
-		rsp.Elapse = time.Since(tick).String()
-		reply(rsp)
-	}()
 
 	err := json.Unmarshal(payload, req)
 	if err != nil {
