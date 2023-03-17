@@ -43,7 +43,7 @@ type svr struct {
 func (s *svr) Start() (err error) {
 	options := []wire.OptionFn{}
 	options = append(options, wire.Parse(s.parse))
-	options = append(options, wire.Version("8.0"))
+	options = append(options, wire.Version("9.0"))
 	if s.conf.Development {
 		zlog, _ := zap.NewDevelopment()
 		options = append(options, wire.Logger(zlog))
