@@ -52,6 +52,9 @@ var _ spi.DatabaseServer = &DatabaseServerMock{}
 //			StartupFunc: func() error {
 //				panic("mock out the Startup method")
 //			},
+//			UserAuthFunc: func(user string, password string) (bool, error) {
+//				panic("mock out the UserAuth method")
+//			},
 //		}
 //
 //		// use mockedDatabaseServer in code that requires spi.DatabaseServer
@@ -91,6 +94,9 @@ type DatabaseServerMock struct {
 
 	// StartupFunc mocks the Startup method.
 	StartupFunc func() error
+
+	// UserAuthFunc mocks the UserAuth method.
+	UserAuthFunc func(user string, password string) (bool, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -163,6 +169,13 @@ type DatabaseServerMock struct {
 		// Startup holds details about calls to the Startup method.
 		Startup []struct {
 		}
+		// UserAuth holds details about calls to the UserAuth method.
+		UserAuth []struct {
+			// User is the user argument value.
+			User string
+			// Password is the password argument value.
+			Password string
+		}
 	}
 	lockAppender        sync.RWMutex
 	lockExec            sync.RWMutex
@@ -175,6 +188,7 @@ type DatabaseServerMock struct {
 	lockQueryRowContext sync.RWMutex
 	lockShutdown        sync.RWMutex
 	lockStartup         sync.RWMutex
+	lockUserAuth        sync.RWMutex
 }
 
 // Appender calls AppenderFunc.
@@ -551,5 +565,41 @@ func (mock *DatabaseServerMock) StartupCalls() []struct {
 	mock.lockStartup.RLock()
 	calls = mock.calls.Startup
 	mock.lockStartup.RUnlock()
+	return calls
+}
+
+// UserAuth calls UserAuthFunc.
+func (mock *DatabaseServerMock) UserAuth(user string, password string) (bool, error) {
+	if mock.UserAuthFunc == nil {
+		panic("DatabaseServerMock.UserAuthFunc: method is nil but DatabaseServer.UserAuth was just called")
+	}
+	callInfo := struct {
+		User     string
+		Password string
+	}{
+		User:     user,
+		Password: password,
+	}
+	mock.lockUserAuth.Lock()
+	mock.calls.UserAuth = append(mock.calls.UserAuth, callInfo)
+	mock.lockUserAuth.Unlock()
+	return mock.UserAuthFunc(user, password)
+}
+
+// UserAuthCalls gets all the calls that were made to UserAuth.
+// Check the length with:
+//
+//	len(mockedDatabaseServer.UserAuthCalls())
+func (mock *DatabaseServerMock) UserAuthCalls() []struct {
+	User     string
+	Password string
+} {
+	var calls []struct {
+		User     string
+		Password string
+	}
+	mock.lockUserAuth.RLock()
+	calls = mock.calls.UserAuth
+	mock.lockUserAuth.RUnlock()
 	return calls
 }

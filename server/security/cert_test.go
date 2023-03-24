@@ -53,8 +53,7 @@ func TestCert(t *testing.T) {
 	err = security.GenClientCert(req)
 	assert.NoError(t, err)
 
-	fmt.Printf(string(sshAuthorizedKeyOut.Bytes()))
-	//t.Logf("%s", hex.Dump(pfxOut.Bytes()))
+	fmt.Println(sshAuthorizedKeyOut.String())
 }
 
 const testServerKey = `
