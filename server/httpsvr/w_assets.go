@@ -1,11 +1,9 @@
-package websvr
+package httpsvr
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -33,7 +31,7 @@ func (fs *docFS) Exists(prefix string, path string) bool {
 	if !strings.HasPrefix(path, prefix) {
 		return false
 	}
-	path = strings.TrimPrefix(path, prefix)
+	path = strings.TrimPrefix(strings.TrimPrefix(path, prefix), "/")
 	if len(path) == 0 {
 		// this path will be served as '/index.html'
 		return true
@@ -42,10 +40,13 @@ func (fs *docFS) Exists(prefix string, path string) bool {
 	if err != nil {
 		return false
 	}
+	defer f.Close()
+
 	s, err := f.Stat()
 	if err != nil {
 		return false
 	}
+
 	if s.IsDir() {
 		// it should return false,
 		// so that client can find / -> /index.html
@@ -54,7 +55,7 @@ func (fs *docFS) Exists(prefix string, path string) bool {
 	return true
 }
 
-func (svr *Server) noroute(dochandler gin.HandlerFunc) gin.HandlerFunc {
+func (svr *Server) noroute(docPrefix string, index string, dochandler gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method != http.MethodGet {
 			c.Data(http.StatusNotFound, "", nil)
@@ -62,21 +63,14 @@ func (svr *Server) noroute(dochandler gin.HandlerFunc) gin.HandlerFunc {
 		}
 
 		if c.Request.Method == http.MethodGet &&
-			strings.HasPrefix(c.Request.URL.Path, svr.conf.Prefix) {
+			strings.HasPrefix(c.Request.URL.Path, docPrefix) {
 			if isWellKnownFileType(c.Request.URL.Path) {
-				fmt.Println("->", c.Request.URL.Path)
-				c.Request.URL.Path = svr.conf.Prefix
 				dochandler(c)
 			} else {
-				c.Request.URL.Path, _ = url.JoinPath(svr.Base(), "index.html")
 				dochandler(c)
 			}
 			return
-		} else if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-			return
 		}
-		fmt.Printf("noroute %v %v\n", c.Request.Method, c.Request.URL)
-		svr.log.Warnf("NOROUTE %v %v", c.Request.Method, c.Request.URL)
 	}
 }
 

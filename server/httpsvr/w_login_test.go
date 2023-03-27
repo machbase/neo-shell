@@ -1,4 +1,4 @@
-package websvr
+package httpsvr_test
 
 import (
 	"bytes"
@@ -8,19 +8,30 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	. "github.com/machbase/neo-shell/server/httpsvr"
 	"github.com/machbase/neo-shell/util/mock"
 	"github.com/stretchr/testify/require"
 )
 
+type TestServerMock struct {
+	mock.DatabaseServerMock
+	mock.DatabaseAuthMock
+}
+
 func TestLoginRoute(t *testing.T) {
 
-	dbMock := &mock.DatabaseServerMock{}
+	dbMock := &TestServerMock{}
 	dbMock.UserAuthFunc = func(user, password string) (bool, error) {
 		return user == "sys" && password == "manager", nil
 	}
 
 	conf := &Config{
-		Prefix: "/web/",
+		Handlers: []HandlerConfig{
+			{
+				Prefix:  "/web",
+				Handler: "web",
+			},
+		},
 	}
 	wsvr, err := New(dbMock, conf)
 	if err != nil {

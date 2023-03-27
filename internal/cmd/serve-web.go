@@ -12,7 +12,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/gin-gonic/gin"
 	"github.com/machbase/neo-shell/client"
-	"github.com/machbase/neo-shell/server/websvr"
+	"github.com/machbase/neo-shell/server/httpsvr"
 	"github.com/machbase/neo-shell/util"
 )
 
@@ -69,7 +69,11 @@ func doServeWeb(ctx *client.ActionContext) {
 		cmd.Prefix = "/"
 	}
 
-	gin.SetMode(gin.ReleaseMode)
+	if cmd.Verbose {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	r := gin.New()
 
@@ -95,10 +99,12 @@ func doServeWeb(ctx *client.ActionContext) {
 	if cmd.Verbose {
 		r.Use(weblogfunc(ctx))
 	}
-	websvrConf := &websvr.Config{
-		Prefix: cmd.Prefix,
+	webConf := &httpsvr.Config{
+		Handlers: []httpsvr.HandlerConfig{
+			{Prefix: cmd.Prefix, Handler: "web"},
+		},
 	}
-	svr, err := websvr.New(ctx.DB, websvrConf)
+	svr, err := httpsvr.New(ctx.DB, webConf)
 	if err != nil {
 		ctx.Println("ERR", err.Error())
 		return
@@ -110,7 +116,7 @@ func doServeWeb(ctx *client.ActionContext) {
 		Handler: r,
 	}
 
-	ctx.Printfln("serve-web > listening http://%s:%d%s", cmd.Host, cmd.Port, svr.Base())
+	ctx.Printfln("serve-web > listening http://%s:%d%s", cmd.Host, cmd.Port, cmd.Prefix)
 
 	serverQuit := make(chan bool, 1)
 

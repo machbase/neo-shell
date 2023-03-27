@@ -9,6 +9,7 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/eclipse/paho.mqtt.golang v1.4.2
 	github.com/gdamore/tcell/v2 v2.5.4
+	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-contrib/static v0.0.1
 	github.com/gin-gonic/gin v1.8.2
 	github.com/gliderlabs/ssh v0.3.5
@@ -17,9 +18,9 @@ require (
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/booter v1.2.0
-	github.com/machbase/neo-grpc v0.5.0
+	github.com/machbase/neo-grpc v0.5.1-0.20230327035426-313f734aae99
 	github.com/machbase/neo-logging v1.0.2
-	github.com/machbase/neo-spi v1.0.3
+	github.com/machbase/neo-spi v1.0.4-0.20230327035314-c2911a85d44d
 	github.com/mum4k/termdash v0.17.0
 	github.com/orcaman/concurrent-map v1.0.0
 	github.com/pkg/errors v0.9.1

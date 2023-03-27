@@ -1,6 +1,7 @@
-package websvr
+package httpsvr
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -68,8 +69,8 @@ func (svr *Server) handleLogin(ctx *gin.Context) {
 	passed := false
 
 	if dbauth, ok := svr.db.(spi.DatabaseAuth); !ok {
-		svr.log.Warn("database auth is not implemented")
-		rsp.Reason = "database is not supporting user authentication"
+		svr.log.Warnf("database auth is not implemented by %T", svr.db)
+		rsp.Reason = fmt.Sprintf("database (%T) is not supporting user authentication", svr.db)
 		rsp.Elapse = time.Since(tick).String()
 		ctx.JSON(http.StatusInternalServerError, rsp)
 		return
@@ -102,7 +103,7 @@ func (svr *Server) handleLogin(ctx *gin.Context) {
 	}
 
 	// store refresh token
-	svr.SetRefreshToken(refreshTokenId, refreshToken)
+	svr.jwtCache.SetRefreshToken(refreshTokenId, refreshToken)
 
 	rsp.Success = true
 	rsp.Reason = "success"
@@ -156,7 +157,7 @@ func (svr *Server) handleReLogin(ctx *gin.Context) {
 
 	// 저장되어 있는 refresh token과 비교한다.
 	// load refresh token from cached table by claim.ID
-	storedToken, ok := svr.GetRefreshToken(refreshClaim.ID)
+	storedToken, ok := svr.jwtCache.GetRefreshToken(refreshClaim.ID)
 	if !ok {
 		rsp.Reason = "refresh token not found"
 		rsp.Elapse = time.Since(tick).String()
@@ -187,7 +188,7 @@ func (svr *Server) handleReLogin(ctx *gin.Context) {
 	}
 
 	// 신규 발급된 refresh token을 저장한다.
-	svr.SetRefreshToken(refreshTokenId, refreshToken)
+	svr.jwtCache.SetRefreshToken(refreshTokenId, refreshToken)
 
 	rsp.Success, rsp.Reason = true, "success"
 	rsp.AccessToken = accessToken
@@ -227,7 +228,7 @@ func (svr *Server) handleLogout(ctx *gin.Context) {
 	_, err = security.VerifyTokenWithClaim(req.RefreshToken, refreshClaim)
 	if err == nil && len(refreshClaim.ID) > 0 {
 		// delete stored refresh token by claim.ID
-		svr.RemoveRefreshToken(refreshClaim.ID)
+		svr.jwtCache.RemoveRefreshToken(refreshClaim.ID)
 	}
 
 	svr.log.Tracef("logout '%s' success rt.id:'%s'", refreshClaim.Subject, refreshClaim.ID)

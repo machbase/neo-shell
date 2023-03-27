@@ -21,4 +21,5 @@ tmp/
 packages/
 vendor/
 
+server/httpsvr/dist/*
 server/websvr/dist/*
