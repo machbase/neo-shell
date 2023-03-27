@@ -30,22 +30,12 @@ func TestLoginRoute(t *testing.T) {
 	router := gin.Default()
 	wsvr.Route(router)
 
-	// success case - login
-	var b = &bytes.Buffer{}
-	loginReq := &LoginReq{
-		LoginName: "sys",
-		Password:  "manager",
-	}
-	expectStatus := http.StatusOK
-	if err = json.NewEncoder(b).Encode(loginReq); err != nil {
-		t.Fatal(err)
-	}
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/web/api/login", b)
-	req.Header.Set("Content-type", "application/json")
-	router.ServeHTTP(w, req)
-	require.Equal(t, expectStatus, w.Code, w.Body.String())
+	var b *bytes.Buffer
+	var loginReq *LoginReq
+	var loginRsp *LoginRsp
+	var w *httptest.ResponseRecorder
+	var expectStatus int
+	var req *http.Request
 
 	// wrong password case - login
 	b = &bytes.Buffer{}
@@ -63,4 +53,70 @@ func TestLoginRoute(t *testing.T) {
 	req.Header.Set("Content-type", "application/json")
 	router.ServeHTTP(w, req)
 	require.Equal(t, expectStatus, w.Code, w.Body.String())
+
+	// success case - login
+	b = &bytes.Buffer{}
+	loginReq = &LoginReq{
+		LoginName: "sys",
+		Password:  "manager",
+	}
+	expectStatus = http.StatusOK
+	if err = json.NewEncoder(b).Encode(loginReq); err != nil {
+		t.Fatal(err)
+	}
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/web/api/login", b)
+	req.Header.Set("Content-type", "application/json")
+	router.ServeHTTP(w, req)
+	require.Equal(t, expectStatus, w.Code, w.Body.String())
+
+	dec := json.NewDecoder(w.Body)
+	loginRsp = &LoginRsp{}
+	err = dec.Decode(loginRsp)
+	require.Nil(t, err, "login response decode")
+
+	// success case - re-login
+	b = &bytes.Buffer{}
+	reloginReq := &ReLoginReq{
+		RefreshToken: loginRsp.RefreshToken,
+	}
+	expectStatus = http.StatusOK
+	if err = json.NewEncoder(b).Encode(reloginReq); err != nil {
+		t.Fatal(err)
+	}
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/web/api/relogin", b)
+	req.Header.Set("Content-type", "application/json")
+	router.ServeHTTP(w, req)
+	require.Equal(t, expectStatus, w.Code, w.Body.String())
+
+	dec = json.NewDecoder(w.Body)
+	reRsp := &ReLoginRsp{}
+	err = dec.Decode(reRsp)
+	require.Nil(t, err, w.Body.String())
+	require.True(t, reRsp.Success, w.Body.String())
+
+	// success case - logout
+	b = &bytes.Buffer{}
+	logoutReq := &LogoutReq{
+		RefreshToken: reRsp.RefreshToken,
+	}
+	expectStatus = http.StatusOK
+	if err = json.NewEncoder(b).Encode(logoutReq); err != nil {
+		t.Fatal(err)
+	}
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/web/api/logout", b)
+	req.Header.Set("Content-type", "application/json")
+	router.ServeHTTP(w, req)
+	require.Equal(t, expectStatus, w.Code, w.Body.String())
+
+	dec = json.NewDecoder(w.Body)
+	logoutRsp := &LogoutRsp{}
+	err = dec.Decode(logoutRsp)
+	require.Nil(t, err, w.Body.String())
+	require.True(t, logoutRsp.Success, w.Body.String())
 }
