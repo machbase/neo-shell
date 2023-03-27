@@ -83,6 +83,8 @@ func (pi *PrefItem) DefaultString() string {
 		return strconv.Itoa(v)
 	case *time.Location:
 		return v.String()
+	case func() string:
+		return v()
 	}
 	return "<undefined>"
 }
@@ -174,8 +176,21 @@ var (
 	prefItem_Timeformat = PrefItem{"General", "timeformat", "2006-01-02 15:04:05.999", []string{}, "'help timeformat'", timeformatValidate, nil}
 	prefItem_Heading    = PrefItem{"General", "heading", "on", []string{"on", "off"}, "show heading", nil, nil}
 	prefItem_Format     = PrefItem{"General", "format", "-", []string{"-", "json", "csv"}, "in/output format", nil, nil}
-	prefItem_Server     = PrefItem{"General", "server", "tcp://127.0.0.1:5655", []string{}, "default server address", nil, nil}
+	prefItem_Server     = PrefItem{"General", "server", defaultServerAddress, []string{}, "default server address", nil, nil}
 )
+
+func defaultServerAddress() string {
+	serverAddr := "tcp://127.0.0.1:5655"
+	// check local mach_grpc.sock file
+	if exePath, err := os.Executable(); err == nil {
+		exeDirPath := filepath.Dir(exePath)
+		sockPath := filepath.Join(exeDirPath, "mach-grpc.sock")
+		if stat, err := os.Stat(sockPath); err == nil && stat != nil && !stat.IsDir() {
+			serverAddr = "unix://" + sockPath
+		}
+	}
+	return serverAddr
+}
 
 var prefItems = map[string]*PrefItem{
 	prefItem_BoxStyle.Name:   &prefItem_BoxStyle,
