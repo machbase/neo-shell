@@ -21,4 +21,5 @@ tmp/
 packages/
 vendor/
 
-native/**/*_dummy.o
+server/httpsvr/dist/*
+server/websvr/dist/*
