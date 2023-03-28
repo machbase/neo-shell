@@ -1,7 +1,6 @@
 package httpsvr
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -77,9 +76,7 @@ func (svr *Server) Route(r *gin.Engine) {
 			group.POST("/api/login", svr.handleLogin)
 			group.POST("/api/relogin", svr.handleReLogin)
 			group.POST("/api/logout", svr.handleLogout)
-			group.Any("/machbase", func(ctx *gin.Context) {
-				fmt.Println(ctx.Request.Method, ctx.Request.URL.Path)
-			})
+			group.Any("/machbase", svr.handleQuery)
 		default: // "machbase"
 			if svr.authServer != nil {
 				group.Use(svr.handleAuthToken)
