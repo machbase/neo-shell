@@ -3,12 +3,10 @@ package httpsvr
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	logging "github.com/machbase/neo-logging"
 	"github.com/machbase/neo-shell/server/httpsvr/assets"
@@ -55,9 +53,6 @@ func (svr *Server) SetAuthServer(authServer security.AuthServer) {
 }
 
 func (svr *Server) Route(r *gin.Engine) {
-	noroutes := []gin.HandlerFunc{
-		gin.WrapF(assets.Handler), // handle root /favicon.ico
-	}
 	r.Use(svr.corsHandler())
 	for _, h := range svr.conf.Handlers {
 		prefix := h.Prefix
@@ -75,23 +70,16 @@ func (svr *Server) Route(r *gin.Engine) {
 			group.POST("/:oper", svr.handleLineProtocol)
 		case "web": // web ui
 			contentBase := "/ui/"
-			dochandler := static.Serve(prefix+contentBase, &docFS{
-				FileSystem: http.FS(GetAssets(contentBase)),
-			})
-			contentPrefix, _ := url.JoinPath(prefix, contentBase)
-			index, _ := url.JoinPath(prefix, contentBase, "index.html")
-
-			group.Use(dochandler)
 			group.GET("/", func(ctx *gin.Context) {
-				ctx.Redirect(http.StatusFound, index)
+				ctx.Redirect(http.StatusFound, contentBase)
 			})
+			group.StaticFS("/ui", GetAssets(contentBase))
 			group.POST("/api/login", svr.handleLogin)
 			group.POST("/api/relogin", svr.handleReLogin)
 			group.POST("/api/logout", svr.handleLogout)
 			group.Any("/machbase", func(ctx *gin.Context) {
 				fmt.Println(ctx.Request.Method, ctx.Request.URL.Path)
 			})
-			noroutes = append(noroutes, svr.noroute(contentPrefix, index, dochandler))
 		default: // "machbase"
 			if svr.authServer != nil {
 				group.Use(svr.handleAuthToken)
@@ -103,7 +91,8 @@ func (svr *Server) Route(r *gin.Engine) {
 			group.POST("/write", svr.handleWrite)
 			group.POST("/write/:table", svr.handleWrite)
 		}
-		r.NoRoute(noroutes...)
+		// handle root /favicon.ico
+		r.NoRoute(gin.WrapF(assets.Handler))
 	}
 }
 

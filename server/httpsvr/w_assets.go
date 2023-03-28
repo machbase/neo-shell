@@ -6,71 +6,33 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 //go:embed dist/*
 var distFs embed.FS
 
-func GetAssets(dir string) fs.FS {
+func GetAssets(dir string) http.FileSystem {
 	dir = strings.TrimPrefix(strings.TrimSuffix(dir, "/"), "/")
 	subfs, err := fs.Sub(distFs, "dist/"+dir)
 	if err != nil {
 		panic(err)
 	}
-	return subfs
+
+	return &assetFileSystem{
+		FileSystem: http.FS(subfs),
+	}
 }
 
-type docFS struct {
+type assetFileSystem struct {
 	http.FileSystem
+	Prefix string
 }
 
-func (fs *docFS) Exists(prefix string, path string) bool {
-	// fmt.Println("=>", path, ",", prefix)
-	if !strings.HasPrefix(path, prefix) {
-		return false
-	}
-	path = strings.TrimPrefix(strings.TrimPrefix(path, prefix), "/")
-	if len(path) == 0 {
-		// this path will be served as '/index.html'
-		return true
-	}
-	f, err := fs.Open(path)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-
-	s, err := f.Stat()
-	if err != nil {
-		return false
-	}
-
-	if s.IsDir() {
-		// it should return false,
-		// so that client can find / -> /index.html
-		return false
-	}
-	return true
-}
-
-func (svr *Server) noroute(docPrefix string, index string, dochandler gin.HandlerFunc) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if c.Request.Method != http.MethodGet {
-			c.Data(http.StatusNotFound, "", nil)
-			return
-		}
-
-		if c.Request.Method == http.MethodGet &&
-			strings.HasPrefix(c.Request.URL.Path, docPrefix) {
-			if isWellKnownFileType(c.Request.URL.Path) {
-				dochandler(c)
-			} else {
-				dochandler(c)
-			}
-			return
-		}
+func (fs *assetFileSystem) Open(name string) (http.File, error) {
+	if isWellKnownFileType(name) {
+		return fs.FileSystem.Open(name)
+	} else {
+		return fs.FileSystem.Open("index.html")
 	}
 }
 
