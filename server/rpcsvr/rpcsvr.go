@@ -385,18 +385,22 @@ func (s *svr) Appender(ctx context.Context, req *machrpc.AppenderRequest) (*mach
 	tableType := realAppender.TableType()
 	tableName := realAppender.TableName()
 	handle := strconv.FormatInt(atomic.AddInt64(&contextIdSerial, 1), 10)
-	s.ctxMap.Set(handle, &appenderWrap{
+	wrap := &appenderWrap{
 		id:       handle,
 		appender: realAppender,
-		release: func() {
-			s.ctxMap.RemoveCb(handle, func(key string, v interface{}, exists bool) bool {
-				s.log.Tracef("close appender: %v", handle)
+		closed:   false,
+	}
+	wrap.release = func() {
+		s.ctxMap.RemoveCb(handle, func(key string, v interface{}, exists bool) bool {
+			if !wrap.closed {
+				s.log.Tracef("close appender:%v", handle)
 				realAppender.Close()
-				return true
-			})
-		},
-	})
-	s.log.Tracef("open appender: %v", handle)
+			}
+			return true
+		})
+	}
+	s.ctxMap.Set(handle, wrap)
+	s.log.Tracef("open appender:%v", handle)
 	rsp.Success = true
 	rsp.Reason = "success"
 	rsp.Handle = handle
@@ -409,6 +413,7 @@ type appenderWrap struct {
 	id       string
 	appender spi.Appender
 	release  func()
+	closed   bool
 }
 
 func (s *svr) Append(stream machrpc.Machbase_AppendServer) error {
@@ -427,11 +432,22 @@ func (s *svr) Append(stream machrpc.Machbase_AppendServer) error {
 	for {
 		m, err := stream.Recv()
 		if err == io.EOF {
-			// caution: m is nil
+			//
+			// Caution: m is nil
+			//
+			var successCount, failCount int64
+			if wrap != nil && wrap.appender != nil {
+				successCount, failCount, _ = wrap.appender.Close()
+				s.log.Tracef("close appender:%v success:%d fail:%d", wrap.id, successCount, failCount)
+				wrap.closed = true
+			}
+
 			return stream.SendAndClose(&machrpc.AppendDone{
-				Success: true,
-				Reason:  "success",
-				Elapse:  time.Since(tick).String(),
+				Success:      true,
+				Reason:       "success",
+				Elapse:       time.Since(tick).String(),
+				SuccessCount: successCount,
+				FailCount:    failCount,
 			})
 		} else if err != nil {
 			return err
