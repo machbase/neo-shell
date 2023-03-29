@@ -194,7 +194,6 @@ func doImport(ctx *client.ActionContext) {
 					ctx.Println("ERR", err.Error())
 					break
 				}
-				defer appender.Close()
 			}
 
 			err = appender.Append(vals...)
@@ -204,5 +203,20 @@ func doImport(ctx *client.ActionContext) {
 			}
 		}
 	}
-	ctx.Printfln("import total %d record(s) %sed", lineno, cmd.Method)
+	if cmd.Method == "insert" {
+		ctx.Printfln("import total %d record(s) %sed", lineno, cmd.Method)
+	} else if appender != nil {
+		succ, fail, err := appender.Close()
+		if err != nil {
+			ctx.Printfln("import total %d record(s) appended, %d failed %s", succ, fail, err.Error())
+		} else {
+			if fail == 0 {
+				ctx.Printfln("import total %d record(s) appended", succ)
+			} else {
+				ctx.Printfln("import total %d record(s) appended, %d failed", succ, fail)
+			}
+		}
+	} else {
+		ctx.Printfln("import processed no record")
+	}
 }
