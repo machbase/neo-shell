@@ -92,6 +92,7 @@ func doRun(ctx *client.ActionContext) {
 		}
 
 		line := strings.Join(lineBuff, " ")
+		line = strings.TrimSuffix(line, ";")
 		lineBuff = lineBuff[:0]
 
 		ctx.Println(line)
