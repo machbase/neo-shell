@@ -27,7 +27,6 @@ require (
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.8.1
-	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/crypto v0.6.0
 	golang.org/x/net v0.7.0

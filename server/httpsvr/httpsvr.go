@@ -2,6 +2,7 @@ package httpsvr
 
 import (
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -70,9 +71,9 @@ func (svr *Server) Route(r *gin.Engine) {
 		case "web": // web ui
 			contentBase := "/ui/"
 			group.GET("/", func(ctx *gin.Context) {
-				ctx.Redirect(http.StatusFound, contentBase)
+				ctx.Redirect(http.StatusFound, path.Join(prefix, contentBase))
 			})
-			group.StaticFS("/ui", GetAssets(contentBase))
+			group.StaticFS(contentBase, GetAssets(contentBase))
 			group.POST("/api/login", svr.handleLogin)
 			group.POST("/api/relogin", svr.handleReLogin)
 			group.POST("/api/logout", svr.handleLogout)
@@ -88,9 +89,9 @@ func (svr *Server) Route(r *gin.Engine) {
 			group.POST("/write", svr.handleWrite)
 			group.POST("/write/:table", svr.handleWrite)
 		}
-		// handle root /favicon.ico
-		r.NoRoute(gin.WrapF(assets.Handler))
 	}
+	// handle root /favicon.ico
+	r.NoRoute(gin.WrapF(assets.Handler))
 }
 
 func (svr *Server) handleAuthToken(ctx *gin.Context) {

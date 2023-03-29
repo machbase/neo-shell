@@ -29,7 +29,9 @@ type assetFileSystem struct {
 }
 
 func (fs *assetFileSystem) Open(name string) (http.File, error) {
-	if isWellKnownFileType(name) {
+	if strings.HasSuffix(name, "/") {
+		return fs.FileSystem.Open(name)
+	} else if isWellKnownFileType(name) {
 		return fs.FileSystem.Open(name)
 	} else {
 		return fs.FileSystem.Open("index.html")
