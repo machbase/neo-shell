@@ -1,6 +1,45 @@
 package util
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/pkg/errors"
+)
+
+func ParseTime(field string, format string, location *time.Location) (time.Time, error) {
+	timeLayout := GetTimeformat(format)
+	var ts int64
+	var err error
+	switch timeLayout {
+	case "s":
+		if ts, err = strconv.ParseInt(field, 10, 64); err != nil {
+			return time.Time{}, errors.Wrap(err, "unable parse time in timeformat")
+		}
+		return time.Unix(ts, 0), nil
+	case "ms":
+		var ts int64
+		if ts, err = strconv.ParseInt(field, 10, 64); err != nil {
+			return time.Time{}, errors.Wrap(err, "unable parse time in timeformat")
+		}
+		return time.Unix(0, ts*int64(time.Millisecond)), nil
+	case "us":
+		var ts int64
+		if ts, err = strconv.ParseInt(field, 10, 64); err != nil {
+			return time.Time{}, errors.Wrap(err, "unable parse time in timeformat")
+		}
+		return time.Unix(0, ts*int64(time.Microsecond)), nil
+	case "ns": // "ns"
+		var ts int64
+		if ts, err = strconv.ParseInt(field, 10, 64); err != nil {
+			return time.Time{}, errors.Wrap(err, "unable parse time in timeformat")
+		}
+		return time.Unix(0, ts), nil
+	default:
+		return time.ParseInLocation(timeLayout, field, location)
+	}
+}
 
 // Refer: https://gosamples.dev/date-time-format-cheatsheet/
 var _timeformats = map[string]string{

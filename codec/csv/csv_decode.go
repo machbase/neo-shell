@@ -6,11 +6,10 @@ import (
 	"io"
 	"math"
 	"strconv"
-	"time"
 	"unicode/utf8"
 
+	"github.com/machbase/neo-shell/util"
 	spi "github.com/machbase/neo-spi"
-	"github.com/pkg/errors"
 )
 
 type Decoder struct {
@@ -53,19 +52,9 @@ func (dec *Decoder) NextRow() ([]any, error) {
 		case "string":
 			values[i] = field
 		case "datetime":
-			var ts int64
-			if ts, err = strconv.ParseInt(field, 10, 64); err != nil {
-				return nil, errors.Wrap(err, "unable parse time in timeformat")
-			}
-			switch dec.ctx.TimeFormat {
-			case "s":
-				values[i] = time.Unix(ts, 0)
-			case "ms":
-				values[i] = time.Unix(0, ts*int64(time.Millisecond))
-			case "us":
-				values[i] = time.Unix(0, ts*int64(time.Microsecond))
-			default: // "ns"
-				values[i] = time.Unix(0, ts)
+			values[i], err = util.ParseTime(field, dec.ctx.TimeFormat, dec.ctx.TimeLocation)
+			if err != nil {
+				return nil, err
 			}
 		case "double":
 			if values[i], err = strconv.ParseFloat(field, 64); err != nil {
