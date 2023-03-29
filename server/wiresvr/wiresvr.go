@@ -47,8 +47,12 @@ func (s *svr) Start() (err error) {
 	if s.conf.Development {
 		zlog, _ := zap.NewDevelopment()
 		options = append(options, wire.Logger(zlog))
+	} else {
+		zapCfg := zap.NewProductionConfig()
+		zapCfg.Level.SetLevel(zap.ErrorLevel)
+		zlog, _ := zapCfg.Build()
+		options = append(options, wire.Logger(zlog))
 	}
-
 	for _, addr := range s.conf.Listeners {
 		lsnr, err := wire.NewServer(options...)
 		if err != nil {
@@ -112,7 +116,7 @@ func (s *svr) parse(ctx context.Context, query string) (wire.PreparedStatementFn
 }
 
 func (s *svr) handleSet(ctx context.Context, query string, writer wire.DataWriter, parameters []string) error {
-	s.log.Info(query)
+	s.log.Debug("handle set", query)
 	//writer.Define(wire.Columns{
 	// wire.Column{
 	// 	Table:  int32(0),
@@ -127,6 +131,8 @@ func (s *svr) handleSet(ctx context.Context, query string, writer wire.DataWrite
 }
 
 func (s *svr) handleQuery(ctx context.Context, query string, writer wire.DataWriter, parameters []string) error {
+	s.log.Debug("handle query", query)
+
 	params := make([]any, len(parameters))
 	for i, p := range parameters {
 		params[i] = p
