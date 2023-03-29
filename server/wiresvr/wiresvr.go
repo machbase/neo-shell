@@ -102,32 +102,25 @@ func (s *svr) parse(ctx context.Context, query string) (wire.PreparedStatementFn
 
 	var statement wire.PreparedStatementFn
 
-	if strings.HasPrefix(strings.ToUpper(query), "SET ") {
-		statement = func(ctx context.Context, writer wire.DataWriter, parameters []string) error {
-			return s.handleSet(ctx, query, writer, parameters)
+	// check if the query should be handled by fake query handler
+	upperQuery := strings.ToUpper(query)
+	for _, f := range fakeQueryFilters {
+		if f(upperQuery) {
+			statement = func(ctx context.Context, writer wire.DataWriter, parameters []string) error {
+				return s.handleFakeQuery(ctx, query, writer, parameters)
+			}
+			return statement, parameters, nil
 		}
-	} else {
+	}
+
+	// query will be handled by machbase
+	if statement == nil {
 		statement = func(ctx context.Context, writer wire.DataWriter, parameters []string) error {
 			return s.handleQuery(ctx, query, writer, parameters)
 		}
 	}
 
 	return statement, parameters, nil
-}
-
-func (s *svr) handleSet(ctx context.Context, query string, writer wire.DataWriter, parameters []string) error {
-	s.log.Debug("handle set", query)
-	//writer.Define(wire.Columns{
-	// wire.Column{
-	// 	Table:  int32(0),
-	// 	Name:   "extra_float_digits",
-	// 	Oid:    oid.T_text,
-	// 	Width:  int16(1),
-	// 	Format: wire.TextFormat,
-	// },
-	//})
-	//writer.Row([]any{})
-	return writer.Complete("SET")
 }
 
 func (s *svr) handleQuery(ctx context.Context, query string, writer wire.DataWriter, parameters []string) error {
@@ -175,10 +168,6 @@ func (s *svr) handleQuery(ctx context.Context, query string, writer wire.DataWri
 		writer.Row(values)
 	}
 
-	// err := errors.New("unimplemented feature")
-	// err = psqlerr.WithCode(err, codes.FeatureNotSupported)
-	// err = psqlerr.WithSeverity(err, psqlerr.LevelFatal)
-
 	return writer.Complete("OK")
 }
 
@@ -211,4 +200,96 @@ func columnToOid(c *spi.Column) (oid.Oid, wire.FormatCode) {
 		format = wire.BinaryFormat
 	}
 	return oidType, format
+}
+
+var fakeQueryFilters = []func(string) bool{
+	func(q string) bool { return strings.HasPrefix(q, "SET ") },
+	func(q string) bool { return q == "SELECT 1" },
+	func(q string) bool {
+		return strings.HasPrefix(q, "SELECT T.TABLE_NAME AS LABEL, (CASE WHEN T.TABLE_TYPE = 'BASE TABLE'")
+	},
+	func(q string) bool {
+		return strings.HasPrefix(q, "SELECT C.COLUMN_NAME AS LABEL, 'CONNECTION.COLUMN' AS TYPE, ")
+	},
+	func(q string) bool {
+		return strings.HasPrefix(q, "SELECT DB.*, DB.DATNAME AS \"LABEL\", DB.DATNAME as \"DATABASE\", ")
+	},
+}
+
+func (s *svr) handleFakeQuery(ctx context.Context, query string, writer wire.DataWriter, parameters []string) error {
+	defTextColumn := func(name string) wire.Column {
+		return wire.Column{
+			Table:  int32(0),
+			Name:   name,
+			Oid:    oid.T_text,
+			Width:  int16(100),
+			Format: wire.TextFormat,
+		}
+	}
+	defInt32Column := func(name string) wire.Column {
+		return wire.Column{
+			Table:  int32(0),
+			Name:   name,
+			Oid:    oid.T_int4,
+			Width:  int16(16),
+			Format: wire.BinaryFormat,
+		}
+	}
+	defBoolColumn := func(name string) wire.Column {
+		return wire.Column{
+			Table:  int32(0),
+			Name:   name,
+			Oid:    oid.T_bool,
+			Width:  int16(100),
+			Format: wire.BinaryFormat,
+		}
+	}
+
+	if strings.HasPrefix(strings.ToUpper(query), "SET ") {
+		return writer.Complete("SET")
+	} else if query == "SELECT 1" {
+		define := wire.Columns{}
+		define = append(define, wire.Column{
+			Table:  int32(0),
+			Name:   "1",
+			Oid:    oid.T_int8,
+			Width:  int16(1),
+			Format: wire.TextFormat,
+		})
+		writer.Define(define)
+		writer.Row([]any{1})
+	} else if strings.HasPrefix(strings.ToUpper(query), "SELECT T.TABLE_NAME AS LABEL, (CASE WHEN T.TABLE_TYPE = 'BASE TABLE'") {
+		writer.Define([]wire.Column{
+			defTextColumn("label"),
+			defTextColumn("type"),
+			defTextColumn("schema"),
+			defTextColumn("database"),
+			defBoolColumn("isView"),
+			defTextColumn("description"),
+			defTextColumn("detail"),
+		})
+	} else if strings.HasPrefix(strings.ToUpper(query), "SELECT C.COLUMN_NAME AS LABEL, 'CONNECTION.COLUMN' AS TYPE") {
+		writer.Define([]wire.Column{
+			defTextColumn("label"),
+			defTextColumn("type"),
+			defTextColumn("table"),
+			defTextColumn("dataType"),
+			defInt32Column("size"),
+			defTextColumn("database"),
+			defTextColumn("defaultValue"),
+			defBoolColumn("isNullable"),
+			defBoolColumn("isPk"),
+			defBoolColumn("isFk"),
+		})
+	} else if strings.HasPrefix(strings.ToUpper(query), "SELECT DB.*, DB.DATNAME AS \"LABEL\", DB.DATNAME AS \"DATABASE\", ") {
+		// SELECT db.*, db.datname as "label", db.datname as "database", 'connection.database' as "type", 'database' as "detail"
+		// FROM pg_catalog.pg_database db
+		// WHERE datallowconn AND NOT datistemplate AND db.datname = CURRENT_DATABASE()
+		//ORDER BY db.datname;
+		return writer.Complete("OK")
+
+	} else {
+		s.log.Debug("handle fake", query)
+	}
+	return writer.Complete("OK")
 }
