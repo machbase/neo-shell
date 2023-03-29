@@ -14,7 +14,7 @@ require (
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/jackc/pgx/v5 v5.0.3
 	github.com/jedib0t/go-pretty/v6 v6.4.4
-	github.com/jeroenrinzema/psql-wire v0.5.2
+	github.com/jeroenrinzema/psql-wire v0.5.3
 	github.com/lib/pq v1.10.7
 	github.com/machbase/booter v1.2.0
 	github.com/machbase/neo-grpc v0.6.0
