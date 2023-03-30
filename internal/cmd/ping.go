@@ -59,7 +59,7 @@ func doPing(ctx *client.ActionContext) {
 			}
 			latency, err := pinger.Ping()
 			if err != nil {
-				ctx.Printfln("ping", err.Error())
+				ctx.Println("ping", err.Error())
 			} else {
 				ctx.Printfln("seq=%d time=%s", i, latency)
 			}
