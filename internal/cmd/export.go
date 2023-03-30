@@ -82,6 +82,7 @@ func doExport(ctx *client.ActionContext) {
 	if cmd.Timeformat == "" {
 		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
+	cmd.Timeformat = util.StripQuote(cmd.Timeformat)
 
 	if len(cmd.Table) == 0 {
 		ctx.Println("ERR", "no table is specified")

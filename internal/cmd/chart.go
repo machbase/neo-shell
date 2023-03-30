@@ -94,6 +94,7 @@ func doChart(ctx *client.ActionContext) {
 	if cmd.Timeformat == "" {
 		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
+	cmd.Timeformat = util.StripQuote(cmd.Timeformat)
 
 	if len(cmd.TagPaths) == 0 {
 		ctx.Println("at least one tag_path should be specified")

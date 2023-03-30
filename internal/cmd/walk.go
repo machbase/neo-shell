@@ -71,6 +71,7 @@ func doWalk(ctx *client.ActionContext) {
 	if cmd.Timeformat == "" {
 		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
+	cmd.Timeformat = util.StripQuote(cmd.Timeformat)
 
 	sqlText := util.StripQuote(strings.Join(cmd.Query, " "))
 
