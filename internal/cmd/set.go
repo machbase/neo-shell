@@ -60,7 +60,8 @@ func doSet(ctx *client.ActionContext) {
 		if itm == nil {
 			ctx.Println("unknown set key '%s'", args[0])
 		} else {
-			if err := itm.SetValue(args[1]); err != nil {
+			value := util.StripQuote(args[1])
+			if err := itm.SetValue(value); err != nil {
 				ctx.Println("ERR", err.Error())
 			} else {
 				pref.Save()

@@ -90,6 +90,7 @@ func doImport(ctx *client.ActionContext) {
 	if cmd.Timeformat == "" {
 		cmd.Timeformat = ctx.Pref().Timeformat().Value()
 	}
+	cmd.Timeformat = util.StripQuote(cmd.Timeformat)
 
 	in, err := stream.NewInputStream(cmd.Input)
 	if err != nil {
