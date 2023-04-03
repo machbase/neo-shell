@@ -59,39 +59,6 @@ func signerFromPem(pemBytes []byte, password []byte) (ssh.Signer, error) {
 	}
 
 	return signer, nil
-
-	/*
-		// handle encrypted key
-		if x509.IsEncryptedPEMBlock(pemBlock) {
-			// decrypt PEM
-			pemBlock.Bytes, err = x509.DecryptPEMBlock(pemBlock, []byte(password))
-			if err != nil {
-				return nil, fmt.Errorf("Decrypting PEM block failed %v", err)
-			}
-
-			// get RSA, EC or DSA key
-			key, err := parsePemBlock(pemBlock)
-			if err != nil {
-				return nil, err
-			}
-
-			// generate signer instance from key
-			signer, err := ssh.NewSignerFromKey(key)
-			if err != nil {
-				return nil, fmt.Errorf("Creating signer from encrypted key failed %v", err)
-			}
-
-			return signer, nil
-		} else {
-			// generate signer instance from plain key
-			signer, err := ssh.ParsePrivateKey(pemBytes)
-			if err != nil {
-				return nil, fmt.Errorf("Parsing plain private key failed %v", err)
-			}
-
-			return signer, nil
-		}
-	*/
 }
 
 func parsePemBlock(block *pem.Block) (interface{}, error) {
