@@ -23,6 +23,8 @@ func init() {
 		Action: doServeWeb,
 		Desc:   "Serve Web UI",
 		Usage:  helpServeWeb,
+
+		Experimental: true,
 	})
 }
 
