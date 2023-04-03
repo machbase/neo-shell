@@ -10,9 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
@@ -481,9 +479,4 @@ func (svr *server) shellHandler(ss ssh.Session) {
 	}()
 	cmd.Wait()
 	svr.log.Infof("session close %s from %s '%v' ", ss.User(), ss.RemoteAddr(), cmd.ProcessState)
-}
-
-func setWinsize(f *os.File, w, h int) {
-	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCSWINSZ),
-		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
 }

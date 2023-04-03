@@ -123,6 +123,20 @@ func (s *svr) HandleConn(ctx context.Context, stat stats.ConnStats) {
 
 //// machrpc server handler
 
+func (s *svr) Ping(pctx context.Context, req *machrpc.PingRequest) (*machrpc.PingResponse, error) {
+	rsp := &machrpc.PingResponse{}
+	tick := time.Now()
+	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Explain panic recover", panic)
+		}
+		rsp.Elapse = time.Since(tick).String()
+	}()
+	rsp.Success, rsp.Reason = true, "success"
+	rsp.Token = req.Token
+	return rsp, nil
+}
+
 func (s *svr) Explain(pctx context.Context, req *machrpc.ExplainRequest) (*machrpc.ExplainResponse, error) {
 	rsp := &machrpc.ExplainResponse{}
 	tick := time.Now()
