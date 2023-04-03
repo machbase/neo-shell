@@ -68,6 +68,7 @@ func (svr *Server) Route(r *gin.Engine) {
 				group.Use(svr.handleAuthToken)
 			}
 			group.POST("/:oper", svr.handleLineProtocol)
+			svr.log.Infof("HTTP path %s for the line protocol", prefix)
 		case "web": // web ui
 			contentBase := "/ui/"
 			group.GET("/", func(ctx *gin.Context) {
@@ -78,6 +79,7 @@ func (svr *Server) Route(r *gin.Engine) {
 			group.POST("/api/relogin", svr.handleReLogin)
 			group.POST("/api/logout", svr.handleLogout)
 			group.Any("/machbase", svr.handleQuery)
+			svr.log.Infof("HTTP path %s for the web ui", prefix)
 		default: // "machbase"
 			if svr.authServer != nil {
 				group.Use(svr.handleAuthToken)
@@ -88,6 +90,7 @@ func (svr *Server) Route(r *gin.Engine) {
 			group.POST("/chart", svr.handleChart)
 			group.POST("/write", svr.handleWrite)
 			group.POST("/write/:table", svr.handleWrite)
+			svr.log.Infof("HTTP path %s for machbase api", prefix)
 		}
 	}
 	// handle root /favicon.ico
