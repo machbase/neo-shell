@@ -46,3 +46,4 @@ regen-mock:
 	moq -out ./util/mock/result.go -pkg mock   ../neo-spi Result
 	moq -out ./util/mock/rows.go -pkg mock     ../neo-spi Rows
 	moq -out ./util/mock/row.go -pkg mock      ../neo-spi Row
+	moq -out ./util/mock/appender.go -pkg mock ../neo-spi Appender
