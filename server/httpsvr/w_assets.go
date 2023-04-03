@@ -8,12 +8,12 @@ import (
 	"strings"
 )
 
-//go:embed dist/*
-var distFs embed.FS
+//go:embed web/*
+var webFs embed.FS
 
 func GetAssets(dir string) http.FileSystem {
 	dir = strings.TrimPrefix(strings.TrimSuffix(dir, "/"), "/")
-	subfs, err := fs.Sub(distFs, "dist/"+dir)
+	subfs, err := fs.Sub(webFs, "web/"+dir)
 	if err != nil {
 		panic(err)
 	}

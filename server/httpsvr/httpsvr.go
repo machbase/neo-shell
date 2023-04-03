@@ -59,6 +59,10 @@ func (svr *Server) Route(r *gin.Engine) {
 		// remove trailing slash
 		prefix = strings.TrimSuffix(prefix, "/")
 
+		if h.Handler == "-" {
+			// disabled by configuration
+			continue
+		}
 		svr.log.Debugf("Add handler %s '%s'", h.Handler, prefix)
 		group := r.Group(prefix)
 
