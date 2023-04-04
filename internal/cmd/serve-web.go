@@ -41,7 +41,7 @@ type ServeWebCmd struct {
 	Host        string `name:"host" short:"h" default:"127.0.0.1"`
 	Port        int    `name:"port" short:"p" default:"5650"`
 	Prefix      string `name:"prefix" default:"/"`
-	LogFilename string `name:"logFilename" default:"-"`
+	LogFilename string `name:"log-filename" default:"-"`
 	Verbose     bool   `name:"verbose" short:"v" default:"false"`
 	Help        bool   `kong:"-"`
 }
@@ -118,14 +118,15 @@ func doServeWeb(ctx *client.ActionContext) {
 		Handler: r,
 	}
 
-	ctx.Printfln("serve-web > listening http://%s:%d%s", cmd.Host, cmd.Port, cmd.Prefix)
+	prompt := "\033[33mserve-web >\033[0m"
+	ctx.Printfln("%s listening http://%s:%d%s", prompt, cmd.Host, cmd.Port, cmd.Prefix)
 
 	serverQuit := make(chan bool, 1)
 
 	if ctx.Interactive {
 		go func() {
 			rl, err := readline.NewEx(&readline.Config{
-				Prompt:                 "serve-web > ",
+				Prompt:                 prompt + " ",
 				DisableAutoSaveHistory: true,
 				InterruptPrompt:        "^C",
 				Stdin:                  ctx.Stdin,
@@ -153,10 +154,10 @@ func doServeWeb(ctx *client.ActionContext) {
 					break
 				}
 			}
-			ctx.Println("serve-web > closing...")
+			ctx.Println(prompt, "closing...")
 			httpd.Shutdown(context.Background())
 			<-serverQuit
-			ctx.Println("serve-web > closed.")
+			ctx.Println(prompt, "closed.")
 		}()
 
 		err = httpd.ListenAndServe()
