@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/machbase/neo-shell/server/security"
 	spi "github.com/machbase/neo-spi"
 	"github.com/pkg/errors"
@@ -27,6 +28,25 @@ func (svr *Server) issueAccessToken(loginName string) (accessToken string, refre
 	}
 	refreshTokenId = refreshClaim.ID
 	return
+}
+
+func (svr *Server) verifyAccessToken(token string) (security.Claim, error) {
+	claim := security.NewClaimEmpty()
+	ok, err := security.VerifyTokenWithClaim(token, claim)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	return claim, nil
+}
+
+func IsErrTokenExpired(err error) bool {
+	if jwtErr, ok := err.(*jwt.ValidationError); ok && jwtErr.Is(jwt.ErrTokenExpired) {
+		return true
+	}
+	return false
 }
 
 type LoginReq struct {
@@ -143,7 +163,7 @@ func (svr *Server) handleReLogin(ctx *gin.Context) {
 	if err != nil {
 		rsp.Reason = err.Error()
 		rsp.Elapse = time.Since(tick).String()
-		ctx.JSON(http.StatusInternalServerError, rsp)
+		ctx.JSON(http.StatusUnauthorized, rsp)
 		return
 	}
 	if !verified {

@@ -80,6 +80,7 @@ func (svr *Server) Route(r *gin.Engine) {
 			})
 			group.StaticFS(contentBase, GetAssets(contentBase))
 			group.POST("/api/login", svr.handleLogin)
+			group.Use(svr.handleJwtToken)
 			group.POST("/api/relogin", svr.handleReLogin)
 			group.POST("/api/logout", svr.handleLogout)
 			group.Any("/machbase", svr.handleQuery)
@@ -101,15 +102,12 @@ func (svr *Server) Route(r *gin.Engine) {
 	r.NoRoute(gin.WrapF(assets.Handler))
 }
 
-func (svr *Server) handleAuthToken(ctx *gin.Context) {
-	if svr.authServer == nil {
-		ctx.JSON(http.StatusUnauthorized, map[string]any{"success": false, "reason": "no auth server"})
-		ctx.Abort()
-	}
+func (svr *Server) handleJwtToken(ctx *gin.Context) {
 	auth, exist := ctx.Request.Header["Authorization"]
 	if !exist {
 		ctx.JSON(http.StatusUnauthorized, map[string]any{"success": false, "reason": "missing authorization header"})
 		ctx.Abort()
+		return
 	}
 	found := false
 	for _, h := range auth {
@@ -117,6 +115,52 @@ func (svr *Server) handleAuthToken(ctx *gin.Context) {
 			continue
 		}
 		tok := h[7:]
+		claim, err := svr.verifyAccessToken(tok)
+		if err != nil {
+			if IsErrTokenExpired(err) && strings.HasSuffix(ctx.Request.URL.Path, "/api/relogin") {
+				// jwt has been expired, but the request is for 'relogin'
+				found = true
+				break
+			} else {
+				ctx.JSON(http.StatusUnauthorized, map[string]any{"success": false, "reason": err.Error()})
+				ctx.Abort()
+				return
+			}
+		}
+		if claim == nil {
+			continue
+		}
+		if err == nil && claim != nil {
+			found = true
+			break
+		}
+	}
+	if !found {
+		ctx.JSON(http.StatusUnauthorized, map[string]any{"success": false, "reason": "user not found or wrong password"})
+		ctx.Abort()
+		return
+	}
+}
+
+func (svr *Server) handleAuthToken(ctx *gin.Context) {
+	if svr.authServer == nil {
+		ctx.JSON(http.StatusUnauthorized, map[string]any{"success": false, "reason": "no auth server"})
+		ctx.Abort()
+		return
+	}
+	auth, exist := ctx.Request.Header["Authorization"]
+	if !exist {
+		ctx.JSON(http.StatusUnauthorized, map[string]any{"success": false, "reason": "missing authorization header"})
+		ctx.Abort()
+		return
+	}
+	found := false
+	for _, h := range auth {
+		if !strings.HasPrefix(strings.ToUpper(h), "BEARER ") {
+			continue
+		}
+		tok := h[7:]
+		svr.log.Infof("tok ==>", tok)
 		result, err := svr.authServer.ValidateClientToken(tok)
 		if err != nil {
 			svr.log.Errorf("client private key %s", err.Error())
@@ -129,6 +173,7 @@ func (svr *Server) handleAuthToken(ctx *gin.Context) {
 	if !found {
 		ctx.JSON(http.StatusUnauthorized, map[string]any{"success": false, "reason": "missing valid token"})
 		ctx.Abort()
+		return
 	}
 }
 
