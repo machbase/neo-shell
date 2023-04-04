@@ -8,12 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	logging "github.com/machbase/neo-logging"
 	"github.com/machbase/neo-shell/util"
-	"github.com/teris-io/shortid"
 )
-
-const LOGGING = "neo-shell/ginlog"
-const TRACKID = "neo-shell/trackid"
-const HEADER_TRACKID = "x-agwd-trackid"
 
 func RecoveryWithLogging(log logging.Log, recovery ...gin.RecoveryFunc) gin.HandlerFunc {
 	gin.DefaultWriter = log
@@ -23,10 +18,6 @@ func RecoveryWithLogging(log logging.Log, recovery ...gin.RecoveryFunc) gin.Hand
 		return gin.CustomRecoveryWithWriter(log, recovery[0])
 	}
 	return gin.CustomRecoveryWithWriter(log, func(c *gin.Context, err any) {
-		trackId := c.GetString(TRACKID)
-		if len(trackId) > 0 {
-			log.Errorf("%s panic %s", trackId, err)
-		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 	})
 }
@@ -73,15 +64,6 @@ func HttpLoggerWithFilterAndFileConf(loggingName string, filter HttpLoggerFilter
 
 func logger(log logging.Log, filter HttpLoggerFilter) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var trxId string
-		if id := c.Request.Header.Get(HEADER_TRACKID); len(id) > 0 {
-			trxId = id
-		} else {
-			trxId, _ = shortid.Generate()
-			trxId = util.StrPad(trxId, 10, "_", "RIGHT")
-		}
-		c.Set(TRACKID, trxId)
-		c.Set(LOGGING, log)
 
 		// Start timer
 		start := time.Now()
@@ -119,11 +101,12 @@ func logger(log logging.Log, filter HttpLoggerFilter) gin.HandlerFunc {
 			ErrorMessage = "\n" + ErrorMessage
 		}
 
-		WriteSize := c.Writer.Size()
-		if WriteSize == -1 {
-			WriteSize = 0
+		wsize := c.Writer.Size()
+		if wsize == -1 {
+			wsize = 0
 		}
-		ReadSize := c.Request.ContentLength
+		WriteSize := util.HumanizeByteCount(int64(wsize))
+		ReadSize := util.HumanizeByteCount(c.Request.ContentLength)
 
 		color := ""
 		reset := "\033[0m"
@@ -144,8 +127,7 @@ func logger(log logging.Log, filter HttpLoggerFilter) gin.HandlerFunc {
 			level = logging.LevelError
 		}
 
-		log.Logf(level, "%-10s |%s %3d %s| %13v | %15s | %5d | %5d | %s %-7s %s%s",
-			trxId,
+		log.Logf(level, "%s %3d %s| %13v | %15s | %8s | %8s | %s %-7s %s%s",
 			color, StatusCode, reset,
 			Latency,
 			ClientIP,

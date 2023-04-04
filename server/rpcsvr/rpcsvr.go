@@ -123,6 +123,20 @@ func (s *svr) HandleConn(ctx context.Context, stat stats.ConnStats) {
 
 //// machrpc server handler
 
+func (s *svr) Ping(pctx context.Context, req *machrpc.PingRequest) (*machrpc.PingResponse, error) {
+	rsp := &machrpc.PingResponse{}
+	tick := time.Now()
+	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("Explain panic recover", panic)
+		}
+		rsp.Elapse = time.Since(tick).String()
+	}()
+	rsp.Success, rsp.Reason = true, "success"
+	rsp.Token = req.Token
+	return rsp, nil
+}
+
 func (s *svr) Explain(pctx context.Context, req *machrpc.ExplainRequest) (*machrpc.ExplainResponse, error) {
 	rsp := &machrpc.ExplainResponse{}
 	tick := time.Now()
@@ -479,6 +493,32 @@ func (s *svr) Append(stream machrpc.Machbase_AppendServer) error {
 			return err
 		}
 	}
+}
+
+func (s *svr) UserAuth(pctx context.Context, req *machrpc.UserAuthRequest) (*machrpc.UserAuthResponse, error) {
+	rsp := &machrpc.UserAuthResponse{}
+	tick := time.Now()
+	defer func() {
+		if panic := recover(); panic != nil {
+			s.log.Error("UserAuth panic recover", panic)
+		}
+		rsp.Elapse = time.Since(tick).String()
+	}()
+	if db, ok := s.machbase.(spi.DatabaseAuth); ok {
+		passed, err := db.UserAuth(req.LoginName, req.Password)
+		if err != nil {
+			rsp.Reason = err.Error()
+		} else if passed {
+			rsp.Success = passed
+			rsp.Reason = "success"
+		} else {
+			rsp.Reason = "invalid username or password"
+		}
+	} else {
+		rsp.Reason = "database is not support user-auth"
+	}
+
+	return rsp, nil
 }
 
 func (s *svr) GetServerInfo(pctx context.Context, req *machrpc.ServerInfoRequest) (*machrpc.ServerInfo, error) {

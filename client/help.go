@@ -70,6 +70,10 @@ func doHelp(ctx *ActionContext) {
 	})
 	for _, k := range keys {
 		cmd := commands[k]
+		if cmd.Experimental {
+			// do not expose experimental command
+			continue
+		}
 		ctx.Printfln("    %-*s %s", 10, cmd.Name, cmd.Desc)
 	}
 	ctx.Printfln("    %-*s %s", 10, "exit", "Exit shell")

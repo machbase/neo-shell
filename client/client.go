@@ -278,7 +278,10 @@ type Cmd struct {
 	Desc   string
 	Usage  string
 
+	// if the Cmd is the client side action
 	ClientAction bool
+	// if the Cmd is an experimental feature
+	Experimental bool
 }
 
 var commands = make(map[string]*Cmd)
