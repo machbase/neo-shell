@@ -486,11 +486,27 @@ func (s *svr) Append(stream machrpc.Machbase_AppendServer) error {
 			return fmt.Errorf("not allowed changing handle in a stream")
 		}
 
-		values := machrpc.ConvertPbToAny(m.Params)
-		err = wrap.appender.Append(values...)
-		if err != nil {
-			s.log.Error("append", err.Error())
-			return err
+		if len(m.Records) > 0 {
+			for _, rec := range m.Records {
+				values, err := machrpc.ConvertPbTupleToAny(rec.Tuple)
+				if err != nil {
+					s.log.Error("append-unmarshal", err.Error())
+				}
+				err = wrap.appender.Append(values...)
+				if err != nil {
+					s.log.Error("append", err.Error())
+					return err
+				}
+			}
+		}
+		if len(m.Params) > 0 {
+			s.log.Infof("deprecated pb any")
+			values := machrpc.ConvertPbToAny(m.Params)
+			err = wrap.appender.Append(values...)
+			if err != nil {
+				s.log.Error("append", err.Error())
+				return err
+			}
 		}
 	}
 }

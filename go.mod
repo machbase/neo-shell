@@ -17,7 +17,7 @@ require (
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/jedib0t/go-pretty/v6 v6.4.4
 	github.com/machbase/booter v1.2.0
-	github.com/machbase/neo-grpc v0.6.1-0.20230330032114-50a24ed246a3
+	github.com/machbase/neo-grpc v0.6.1-0.20230404073727-7094c665b9ee
 	github.com/machbase/neo-logging v1.0.2
 	github.com/machbase/neo-spi v1.1.1-0.20230330032004-15397814e62d
 	github.com/mum4k/termdash v0.17.0
