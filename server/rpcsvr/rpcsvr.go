@@ -500,7 +500,7 @@ func (s *svr) Append(stream machrpc.Machbase_AppendServer) error {
 			}
 		}
 		if len(m.Params) > 0 {
-			s.log.Infof("deprecated pb any")
+			// for gRPC client that utilizes protobuf.Any (e.g: Python, C#, Java)
 			values := machrpc.ConvertPbToAny(m.Params)
 			err = wrap.appender.Append(values...)
 			if err != nil {
