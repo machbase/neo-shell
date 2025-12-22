@@ -1,7 +1,7 @@
 github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0rYXWg0=
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
-github.com/OutOfBedlam/jsh v0.0.0-20251219005535-5a1066384ce9 h1:MZVJ9xQQz5cGrkjeEY1swGDPhu1qZtVZxnawhXMHUD8=
-github.com/OutOfBedlam/jsh v0.0.0-20251219005535-5a1066384ce9/go.mod h1:AUCS0w3dhBxgrHwVU1gNCtWhAkKn70ShNe8DJ7r5u8Y=
+github.com/OutOfBedlam/jsh v0.0.0-20251222074710-9c12766c270c h1:T92OiJyo4tDGsD0+0Hu+Y8pjideb2LQA5fbN0bvJ+wY=
+github.com/OutOfBedlam/jsh v0.0.0-20251222074710-9c12766c270c/go.mod h1:per5Y62hnwaQytPcNRtvzbtaQIXGFIzHROHrbiD7F4Q=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
 github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew1u1fNQOlOtuGxQY=
@@ -62,6 +62,8 @@ github.com/hymkor/go-multiline-ny v0.22.3 h1:+4ttpG8MQK6F3uWqxbWFoDlIAN8bv4BmH7H
 github.com/hymkor/go-multiline-ny v0.22.3/go.mod h1:9FsFQa3nIhxAjz1yL0kK/Oya/LB4fBsHckY3ZqBcTJY=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
+github.com/jedib0t/go-pretty/v6 v6.5.8 h1:8BCzJdSvUbaDuRba4YVh+SKMGcAAKdkcF3SVFbrHAtQ=
+github.com/jedib0t/go-pretty/v6 v6.5.8/go.mod h1:zbn98qrYlh95FIhwwsbIip0LYpwSG8SUOScs+v9/t0E=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 h1:iQTw/8FWTuc7uiaSepXwyf3o52HaUYcV+Tu66S3F5GA=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=

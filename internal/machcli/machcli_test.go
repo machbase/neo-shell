@@ -1,4 +1,4 @@
-package mach
+package machcli
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/OutOfBedlam/jsh/engine"
+	"github.com/OutOfBedlam/jsh/native"
 	"github.com/machbase/neo-server/v8/api/testsuite"
 )
 
@@ -34,10 +35,17 @@ func RunTest(t *testing.T, tc TestCase) {
 	t.Run(tc.name, func(t *testing.T) {
 		t.Helper()
 		conf := engine.Config{
-			Name:   tc.name,
-			Code:   tc.script,
-			Dir:    "../../test/",
-			Env:    tc.vars,
+			Name: tc.name,
+			Code: tc.script,
+			FSTabs: []engine.FSTab{
+				native.RootFSTab(),
+				{MountPoint: "/test", Source: "../../test/"},
+				{MountPoint: "/usr", Source: "../usr/"},
+			},
+			Env: map[string]any{
+				"PATH": "/sbin:/lib:/usr/bin:/usr/lib:/work",
+				"PWD":  "/work",
+			},
 			Reader: &bytes.Buffer{},
 			Writer: &bytes.Buffer{},
 		}
@@ -45,9 +53,12 @@ func RunTest(t *testing.T, tc TestCase) {
 		if err != nil {
 			t.Fatalf("Failed to create JSRuntime: %v", err)
 		}
-		jr.RegisterNativeModule("process", jr.Process)
-		jr.RegisterNativeModule("machcli", Module)
+		jr.RegisterNativeModule("@jsh/process", jr.Process)
+		jr.RegisterNativeModule("@jsh/machcli", Module)
 
+		for k, v := range tc.vars {
+			jr.Env.Set(k, v)
+		}
 		if err := jr.Run(); err != nil {
 			if tc.err == "" || !strings.Contains(err.Error(), tc.err) {
 				t.Fatalf("Unexpected error: %v", err)
@@ -75,9 +86,9 @@ func TestDatabase(t *testing.T) {
 		{
 			name: "mach_exec",
 			script: `
-				const {Client} = require("machcli");
-				const conf = require("process").env.get("conf");
-				const tick = require("process").env.get("tick");
+				const {Client} = require('/usr/lib/machcli');
+				const conf = require("/lib/process").env.get("conf");
+				const tick = require("/lib/process").env.get("tick");
 				try {
 					db = new Client(conf);
 					conn = db.connect();
@@ -101,9 +112,9 @@ func TestDatabase(t *testing.T) {
 		{
 			name: "mach_append",
 			script: `
-				const {Client} = require("machcli");
-				const {now} = require("process");
-				const conf = require("process").env.get("conf");
+				const {Client} = require('/usr/lib/machcli');
+				const {now} = require("/lib/process");
+				const conf = require("/lib/process").env.get("conf");
 				try {
 					db = new Client(conf);
 					conn = db.connect();
@@ -128,8 +139,8 @@ func TestDatabase(t *testing.T) {
 		{
 			name: "mach_query_row",
 			script: `
-				const {Client} = require("machcli");
-				const conf = require("process").env.get("conf");
+				const {Client} = require('/usr/lib/machcli');
+				const conf = require("/lib/process").env.get("conf");
 				try {
 					db = new Client(conf);
 					conn = db.connect();
@@ -149,14 +160,14 @@ func TestDatabase(t *testing.T) {
 		{
 			name: "mach_query",
 			script: `
-				const {Client} = require("machcli");
-				const conf = require("process").env.get("conf");
+				const {Client} = require('/usr/lib/machcli');
+				const conf = require("/lib/process").env.get("conf");
 				try {
 					db = new Client(conf);
 					conn = db.connect();
 					rows = conn.query("SELECT * from TAG order by time limit ?", 1);
 					for (const row of rows) {
-						console.println("ROWNUM:", row._ROWNUM, "NAME:", row.NAME, "TIME:", row.TIME, "VALUE:", row.VALUE);
+						console.println("NAME:", row.NAME, "TIME:", row.TIME, "VALUE:", row.VALUE);
 					}
 					console.println(rows.message);
 				} catch(err) {
@@ -168,7 +179,7 @@ func TestDatabase(t *testing.T) {
 				}
 			`,
 			output: []string{
-				fmt.Sprintf("ROWNUM: 1 NAME: jsh TIME: %s VALUE: 123", tick.Local().Format(time.DateTime)),
+				fmt.Sprintf("NAME: jsh TIME: %s VALUE: 123", tick.Local().Format(time.DateTime)),
 				"Select successfully.",
 			},
 		},

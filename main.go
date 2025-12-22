@@ -1,18 +1,20 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/OutOfBedlam/jsh/engine"
-	"github.com/OutOfBedlam/jsh/native/http"
-	"github.com/OutOfBedlam/jsh/native/mqtt"
-	"github.com/OutOfBedlam/jsh/native/readline"
-	"github.com/OutOfBedlam/jsh/native/shell"
-	"github.com/OutOfBedlam/jsh/native/ws"
-	"github.com/machbase/neo-jsh/native/mach"
+	"github.com/OutOfBedlam/jsh/native"
+	"github.com/machbase/neo-jsh/internal/machcli"
+	"github.com/machbase/neo-jsh/internal/pretty"
 )
+
+//go:embed internal/usr/*
+var usrFS embed.FS
 
 // JSH options:
 //  1. -c "script" : command to execute
@@ -22,9 +24,10 @@ import (
 //  3. no args : start interactive shell
 //     ex: jsh
 func main() {
+	var fstabs engine.FSTabs
 	src := flag.String("c", "", "command to execute")
-	dir := flag.String("d", ".", "working directory")
 	scf := flag.String("s", "", "configured file to start from")
+	flag.Var(&fstabs, "v", "volume to mount (format: /mountpoint=source)")
 	flag.Parse()
 
 	conf := engine.Config{}
@@ -37,22 +40,37 @@ func main() {
 	} else {
 		// otherwise, use command args to build ExecPass
 		conf.Code = *src
-		conf.Dir = *dir
+		conf.FSTabs = fstabs
 		conf.Args = flag.Args()
-		conf.Default = "/sbin/shell.js" // default script to run if no args
+		conf.Default = "/usr/bin/shell.js" // default script to run if no args
+		conf.Env = map[string]any{
+			"PATH": "/sbin:/lib:/usr/bin:/usr/lib:/work",
+			"HOME": "/work",
+			"PWD":  "/work",
+		}
 	}
-	engine, err := engine.New(conf)
+	conf.AddFSTabHook(func(tabs engine.FSTabs) engine.FSTabs {
+		if !tabs.HasMountPoint("/") {
+			tabs = append([]engine.FSTab{native.RootFSTab()}, tabs...)
+		}
+		if !tabs.HasMountPoint("/usr") {
+			dirfs, _ := fs.Sub(usrFS, "internal/usr")
+			tabs = append(tabs, engine.FSTab{MountPoint: "/usr", FS: dirfs})
+		}
+		if !tabs.HasMountPoint("/work") {
+			dirfs, _ := engine.DirFS(".")
+			tabs = append(tabs, engine.FSTab{MountPoint: "/work", FS: dirfs})
+		}
+		return tabs
+	})
+	eng, err := engine.New(conf)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	engine.RegisterNativeModule("process", engine.Process)
-	engine.RegisterNativeModule("shell", shell.Module)
-	engine.RegisterNativeModule("machcli", mach.Module)
-	engine.RegisterNativeModule("readline", readline.Module)
-	engine.RegisterNativeModule("http", http.Module)
-	engine.RegisterNativeModule("ws", ws.Module)
-	engine.RegisterNativeModule("mqtt", mqtt.Module)
+	native.Enable(eng)
+	eng.RegisterNativeModule("@jsh/machcli", machcli.Module)
+	eng.RegisterNativeModule("@jsh/pretty", pretty.Module)
 
-	os.Exit(engine.Main())
+	os.Exit(eng.Main())
 }

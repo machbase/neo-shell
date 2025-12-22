@@ -1,8 +1,10 @@
 'use strict';
 
+const _machcli = require('@jsh/machcli');
+
 class Client {
     constructor(conf) {
-        this.db = _mach.NewDatabase(JSON.stringify(conf));
+        this.db = _machcli.NewDatabase(JSON.stringify(conf));
         this.ctx = this.db.ctx;
     }
     close() {
@@ -32,7 +34,7 @@ class Connection {
         let names = cols.names();
         let buffer = cols.makeBuffer();
         row.scan(...buffer);
-        let value = {_ROWNUM: 1};
+        let value = { _ROWNUM: 1 };
         for (let i = 0; i < names.length; i++) {
             value[names[i]] = buffer[i];
         }
@@ -66,6 +68,9 @@ class Rows {
     close() {
         this.rows.close();
     }
+    columnNames() {
+        return this.names;
+    }
     [Symbol.iterator]() {
         return {
             next: () => {
@@ -76,16 +81,38 @@ class Rows {
                 let buffer = this.cols.makeBuffer();
                 this.rows.scan(...buffer);
                 this.rownum += 1;
-                let value = {_ROWNUM: this.rownum};
-                for (let i = 0; i < this.names.length; i++) {
-                    value[this.names[i]] = buffer[i];
-                }
-                return { value: value, done: false };
+                let row = new Row(this.cols, buffer);
+                return { value: row, done: false };
             }
         };
     }
 }
 
+class Row {
+    constructor(cols, buffer) {
+        this.buffer = buffer;
+        this.names = cols.names();
+
+        for (let i = 0; i < this.names.length; i++) {
+            this[this.names[i]] = _machcli.Unbox(buffer[i]);
+        }
+    }
+    [Symbol.iterator]() {
+        let index = 0;
+        return {
+            next: () => {
+                if (index < this.names.length) {
+                    let key = this.names[index];
+                    let val = _machcli.Unbox(this.buffer[index]);
+                    index += 1;
+                    return { key: key, value: val, done: false };
+                } else {
+                    return { done: true };
+                }
+            }
+        };
+    }
+}
 module.exports = {
     Client
 };

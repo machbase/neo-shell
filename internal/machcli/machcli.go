@@ -1,8 +1,7 @@
-package mach
+package machcli
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 
 	"github.com/dop251/goja"
@@ -10,22 +9,11 @@ import (
 	"github.com/machbase/neo-server/v8/api/machcli"
 )
 
-//go:embed mach.js
-var machJS string
-
 func Module(rt *goja.Runtime, module *goja.Object) {
-	// Export native functions to embedded JS module
-	m := rt.NewObject()
-	m.Set("NewDatabase", NewDatabase)
-	rt.Set("_mach", m)
-
-	// Run the embedded JS module code
-	rt.Set("module", module)
-	_, err := rt.RunString("(()=>{" + machJS + "})()")
-	if err != nil {
-		panic(err)
-	}
-	rt.Set("module", goja.Undefined())
+	// Export native functions
+	exports := module.Get("exports").(*goja.Object)
+	exports.Set("NewDatabase", NewDatabase)
+	exports.Set("Unbox", api.Unbox)
 }
 
 type Config struct {
