@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/OutOfBedlam/jsh/engine"
-	"github.com/OutOfBedlam/jsh/native"
+	"github.com/OutOfBedlam/jsh/root"
 	"github.com/machbase/neo-server/v8/api/testsuite"
 )
 
@@ -38,8 +38,7 @@ func RunTest(t *testing.T, tc TestCase) {
 			Name: tc.name,
 			Code: tc.script,
 			FSTabs: []engine.FSTab{
-				native.RootFSTab(),
-				{MountPoint: "/test", Source: "../../test/"},
+				root.RootFSTab(),
 				{MountPoint: "/usr", Source: "../usr/"},
 			},
 			Env: map[string]any{
@@ -181,6 +180,31 @@ func TestDatabase(t *testing.T) {
 			output: []string{
 				fmt.Sprintf("NAME: jsh TIME: %s VALUE: 123", tick.Local().Format(time.DateTime)),
 				"Select successfully.",
+			},
+		},
+		{
+			name: "mach_explain",
+			script: `
+				const {Client} = require('/usr/lib/machcli');
+				const conf = require('process').env.get('conf');
+				try {
+					db = new Client(conf);
+					conn = db.connect();
+					result = conn.explain("SELECT * from TAG order by time limit 1");
+					console.println(result);
+				} catch(err) {
+					console.println("Error: ", err.message);
+				} finally {
+					conn && conn.close();
+				 	db && db.close();
+				}
+			`,
+			output: []string{
+				" PROJECT",
+				"  LIMIT SORT",
+				"   TAG READ (RAW)",
+				"    KEYVALUE FULL SCAN (_TAG_DATA_0)",
+				"    VOLATILE FULL SCAN (_TAG_META)",
 			},
 		},
 	}

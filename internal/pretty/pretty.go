@@ -1,6 +1,7 @@
 package pretty
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ func Module(rt *goja.Runtime, module *goja.Object) {
 }
 
 type TableOption struct {
+	Style      string `json:"style"`
 	Timeformat string `json:"timeformat"`
 	TZ         string `json:"tz"`
 	Precision  int    `json:"precision"`
@@ -35,7 +37,24 @@ func Table(opt TableOption) table.Writer {
 		tz:         time.Local,
 		precision:  opt.Precision,
 	}
-
+	switch strings.ToUpper(opt.Style) {
+	case "LIGHT":
+		ret.SetStyle(table.StyleLight)
+	case "DOUBLE":
+		ret.SetStyle(table.StyleDouble)
+	case "BOLD":
+		ret.SetStyle(table.StyleBold)
+	case "ROUNDED":
+		ret.SetStyle(table.StyleRounded)
+	case "COLORED-BRIGHT":
+		ret.SetStyle(table.StyleColoredBright)
+	case "COLORED-DARK":
+		ret.SetStyle(table.StyleColoredDark)
+	case "DEFAULT":
+		fallthrough
+	default:
+		ret.SetStyle(table.StyleDefault)
+	}
 	switch strings.ToUpper(opt.Timeformat) {
 	case "DEFAULT":
 		ret.timeformat = "2006-01-02 15:04:05.999"
@@ -73,6 +92,10 @@ func (tw *TableWriter) Row(values ...interface{}) table.Row {
 		switch val := value.(type) {
 		case time.Time:
 			values[i] = val.In(tw.tz).Format(tw.timeformat)
+		case float32:
+			values[i] = strconv.FormatFloat(float64(val), 'f', tw.precision, 32)
+		case float64:
+			values[i] = strconv.FormatFloat(val, 'f', tw.precision, 64)
 		default:
 			values[i] = value
 		}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/OutOfBedlam/jsh/engine"
 	"github.com/OutOfBedlam/jsh/native"
+	"github.com/OutOfBedlam/jsh/root"
 	"github.com/machbase/neo-jsh/internal/machcli"
 	"github.com/machbase/neo-jsh/internal/pretty"
 )
@@ -49,20 +50,17 @@ func main() {
 			"PWD":  "/work",
 		}
 	}
-	conf.AddFSTabHook(func(tabs engine.FSTabs) engine.FSTabs {
-		if !tabs.HasMountPoint("/") {
-			tabs = append([]engine.FSTab{native.RootFSTab()}, tabs...)
-		}
-		if !tabs.HasMountPoint("/usr") {
-			dirfs, _ := fs.Sub(usrFS, "internal/usr")
-			tabs = append(tabs, engine.FSTab{MountPoint: "/usr", FS: dirfs})
-		}
-		if !tabs.HasMountPoint("/work") {
-			dirfs, _ := engine.DirFS(".")
-			tabs = append(tabs, engine.FSTab{MountPoint: "/work", FS: dirfs})
-		}
-		return tabs
-	})
+	if !conf.FSTabs.HasMountPoint("/") {
+		conf.FSTabs = append([]engine.FSTab{root.RootFSTab()}, conf.FSTabs...)
+	}
+	if !conf.FSTabs.HasMountPoint("/usr") {
+		dirfs, _ := fs.Sub(usrFS, "internal/usr")
+		conf.FSTabs = append(conf.FSTabs, engine.FSTab{MountPoint: "/usr", FS: dirfs})
+	}
+	if !conf.FSTabs.HasMountPoint("/work") {
+		dirfs, _ := engine.DirFS(".")
+		conf.FSTabs = append(conf.FSTabs, engine.FSTab{MountPoint: "/work", FS: dirfs})
+	}
 	eng, err := engine.New(conf)
 	if err != nil {
 		fmt.Println(err.Error())

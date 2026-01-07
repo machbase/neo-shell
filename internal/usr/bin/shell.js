@@ -1,8 +1,8 @@
 'use strict';
 
-const { ReadLine } = require('/lib/readline');
-const process = require('/lib/process');
-const { splitFields } = require('/lib/util')
+const { ReadLine } = require('readline');
+const process = require('process');
+const { splitFields } = require('util')
 const env = process.env;
 
 const actor = {};
@@ -26,7 +26,7 @@ actor.prompt = (lineno) => {
 const SQL_VERBS = new Set([
     'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER',
     'TRUNCATE', 'GRANT', 'REVOKE', 'COMMIT', 'ROLLBACK', 'SAVEPOINT',
-    'SET', 'SHOW', 'DESCRIBE', 'EXPLAIN'
+    'SET', 'SHOW', 'DESCRIBE', 'DESC'
 ]);
 
 actor.submitOnEnterWhen = (lines, idx) => {
@@ -41,7 +41,7 @@ actor.submitOnEnterWhen = (lines, idx) => {
 };
 
 actor.process = (line) => {
-    const orgLine = line; // keep original line for error messages
+    const orgLine = line; // keep original line for history
 
     line = line.trim(); // trim whitespace
     line = line.replace(/;+\s*$/g, ''); // remove trailing semicolons
@@ -62,7 +62,7 @@ actor.process = (line) => {
         const fields = splitFields(line);
         if (SQL_VERBS.has(fields[0].toUpperCase())) {
             // handle SQL commands
-            process.exec("sql.js", "-f", "box", orgLine);
+            process.exec("sql.js", line);
         } else {
             // handle other commands
             if (fields[0] === '\\') {

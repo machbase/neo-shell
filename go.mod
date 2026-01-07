@@ -5,7 +5,7 @@ go 1.24.9
 toolchain go1.24.11
 
 require (
-	github.com/OutOfBedlam/jsh v0.0.0-20251222074710-9c12766c270c
+	github.com/OutOfBedlam/jsh v0.0.0-20260107072144-6937c57f3a44
 	github.com/dop251/goja v0.0.0-20251201205617-2bb4c724c0f9
 	github.com/jedib0t/go-pretty/v6 v6.5.8
 	github.com/machbase/neo-server/v8 v8.0.69

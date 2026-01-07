@@ -24,6 +24,10 @@ class Connection {
     close() {
         this.conn.close();
     }
+    explain() {
+        let plan = this.conn.explain(this.ctx, ...arguments);
+        return plan;
+    }
     query() {
         let rows = this.conn.query(this.ctx, ...arguments);
         return new Rows(this.ctx, rows);

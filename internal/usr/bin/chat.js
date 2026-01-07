@@ -1,8 +1,8 @@
 'use strict';
 
-const http = require('/lib/http');
-const { WebSocket } = require('/lib/ws');
-const { ReadLine } = require('/lib/readline');
+const http = require('http');
+const { WebSocket } = require('ws');
+const { ReadLine } = require('readline');
 const { Chat } = require('/usr/lib/chat');
 
 function question(chat, ws, msg) {
