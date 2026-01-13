@@ -1,113 +1,129 @@
 'use strict';
 
-const { ReadLine } = require('readline');
 const process = require('process');
-const { splitFields } = require('util')
-const env = process.env;
+const parseArgs = require('util/parseArgs');
+const neoapi = require('/usr/lib/neoapi');
+const pretty = require('/usr/lib/pretty');
 
-const actor = {};
-if (!actor.user) {
-    actor.user = env.get('NEOSHELL_USER');
-    if (!actor.user) {
-        actor.user = 'sys';
+const options = {
+    help: { type: 'boolean', short: 'h', description: 'Show this help message', default: false },
+    ...pretty.TableArgOptions,
+}
+const positionals = [
+    { name: 'command', type: 'string', description: 'Command to execute' },
+    { name: 'params', type: 'string', variadic: true, description: 'Arguments for the command' }
+];
+
+let showHelp = true;
+let config = {};
+let args = {};
+try {
+    const parsed = parseArgs(process.argv.slice(2), {
+        options,
+        allowPositionals: true,
+        allowNegative: true,
+        positionals: positionals
+    });
+    config = parsed.values;
+    args = parsed.namedPositionals;
+    showHelp = config.help
+}
+catch (err) {
+    console.println(err.message);
+}
+
+const commands = {
+    'list': {
+        syntax: 'list',
+        description: 'List all shells',
+        func: listShells
+    },
+    'add': {
+        syntax: 'add <name> <bin_path> [args...]',
+        description: 'Add a new shell with given name and binary path',
+        func: addShell
+    },
+    'del': {
+        syntax: 'del <id>',
+        description: 'Delete a shell by ID',
+        func: deleteShell
+    },
+}
+
+function printHelp() {
+    console.println(parseArgs.formatHelp({
+        usage: 'Usage: shell [options] <command> [params]',
+        options,
+        positionals: positionals
+    }));
+    console.println('\nAvailable commands:');
+    for (const [cmd, info] of Object.entries(commands)) {
+        console.println(`  ${info.syntax.padEnd(30)} ${info.description}`);
     }
 }
-if (!actor.password) {
-    actor.password = env.get('NEOSHELL_PASSWORD');
-    if (!actor.password) {
-        actor.password = 'manager';
-    }
+
+if (showHelp || (!args.command) || args.command.length === 0) {
+    printHelp();
+    process.exit(showHelp ? 0 : 1);
 }
 
-actor.prompt = (lineno) => {
-    return lineno == 0 ? "\x1b[33m" + `${actor.user}` + " \x1b[31mmachbase-neo»\x1b[0m " : "\x1b[31m>\x1b[0m  ";
-};
+args.command = args.command.toLowerCase();
 
-const SQL_VERBS = new Set([
-    'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER',
-    'TRUNCATE', 'GRANT', 'REVOKE', 'COMMIT', 'ROLLBACK', 'SAVEPOINT',
-    'SET', 'SHOW', 'DESCRIBE', 'DESC'
-]);
+// Validate that the provided command is in the allowed list
+if (!commands.hasOwnProperty(args.command)) {
+    console.println(`Error: Unknown command '${args.command}'\n`);
+    printHelp();
+    process.exit(1);
+}
 
-actor.submitOnEnterWhen = (lines, idx) => {
-    let maybe = lines.join('').trim().toLowerCase();
-    if (maybe === 'exit' || maybe === 'quit') {
-        return true;
-    }
-    if (lines.length == 1 && (maybe == "" || maybe.startsWith('\\'))) {
-        return true;
-    }
-    return lines[idx].endsWith(";");
-};
+// Dispatch to appropriate handler based on command type
+commands[args.command].func(config, args.params);
 
-actor.process = (line) => {
-    const orgLine = line; // keep original line for history
+function listShells(config, args) {
+    const client = new neoapi.Client(config);
+    client.getShellList()
+        .then((lst) => {
+            let box = pretty.Table(config);
+            box.appendHeader(['ID', 'NAME', 'COMMAND']);
+            for (const shell of lst) {
+                box.appendRow(box.row(shell.id, shell.label, shell.command));
+            }
+            console.println(box.render());
+        })
+        .catch((err) => {
+            console.println('Error:', err.message);
+        });
+}
 
-    line = line.trim(); // trim whitespace
-    line = line.replace(/;+\s*$/g, ''); // remove trailing semicolons
-    line = line.trim(); // trim whitespace
-    if (line.toLowerCase() === 'exit' || line.toLowerCase() === 'quit') {
-        process.exit(0);
-    }
-    else if (line.toLowerCase() === 'clear') {
-        console.print('\x1b[2J\x1b[H');
+function addShell(config, args) {
+     const client = new neoapi.Client(config);
+    if (args.length < 2) {
+        console.println('Error: Missing parameters. Usage: add <name> <bin_path> [args...]');
         return;
     }
+    const label = args[0];
+    const command = args.slice(1).join(' ');
+    client.addShell(label, command)
+        .then((res) => {
+            console.println(`Shell added with ID: ${res}`);
+        })
+        .catch((err) => {
+            console.println('Error:', err.message);
+        });
+}
 
-    if (actor.addHistory) {
-        actor.addHistory(orgLine);
+function deleteShell(config, args) {
+    const client = new neoapi.Client(config);
+    if (args.length < 1) {
+        console.println('Error: Missing parameter. Usage: del <id>');
+        return;
     }
-
-    try {
-        const fields = splitFields(line);
-        if (SQL_VERBS.has(fields[0].toUpperCase())) {
-            // handle SQL commands
-            process.exec("sql.js", line);
-        } else {
-            // handle other commands
-            if (fields[0] === '\\') {
-                // execute jsh shell
-                process.exec("/sbin/shell.js", ...fields);
-            } 
-            else if (fields[0].startsWith('\\')) {
-                // execute js command without tailing ';'
-                process.exec(fields[0].substring(1), ...fields.slice(1));
-            }
-            else {
-                // execute js that ends with ';'
-                process.exec(fields[0], ...fields.slice(1));
-            }
-        }
-    } catch (e) {
-        console.println("Process:", e.message);
-    }
-};
-
-const r = new ReadLine({
-    history: 'neo-shell-history',
-    prompt: actor.prompt,
-    submitOnEnterWhen: actor.submitOnEnterWhen,
-});
-
-actor.addHistory = (line) => {
-    try {
-        r.addHistory(line);
-    }catch (e) {
-        console.println("AddHistory:", e.message);
-    }
-};
-
-while (true) {
-    try {
-        let line = r.readLine();
-        if (line instanceof Error) {
-            throw line;
-        }
-        if (line === "" || line === null) {
-            continue;
-        }
-        actor.process(line);
-    } catch (e) {
-        console.println(e.message);
-    }
+    const id = args[0];
+    client.deleteShell(id)
+        .then((res) => {
+            console.println(`Shell deleted`);
+        })
+        .catch((err) => {
+            console.println('Error:', err.message);
+        });
 }

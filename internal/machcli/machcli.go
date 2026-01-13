@@ -3,6 +3,7 @@ package machcli
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/dop251/goja"
 	"github.com/machbase/neo-server/v8/api"
@@ -62,7 +63,7 @@ func NewDatabase(data string) (*Database, error) {
 		Ctx:      ctx,
 		Cancel:   cancel,
 		cli:      db,
-		user:     obj.User,
+		user:     strings.ToUpper(obj.User),
 		password: obj.Password,
 	}, nil
 }
@@ -79,4 +80,17 @@ func (db *Database) Connect() (*machcli.Conn, error) {
 		return nil, err
 	}
 	return conn.(*machcli.Conn), nil
+}
+
+func (db *Database) NormalizeTableName(tableName string) [3]string {
+	tableName = strings.ToUpper(tableName)
+	toks := strings.Split(tableName, ".")
+	if len(toks) == 1 {
+		return [3]string{"MACHBASEDB", db.user, toks[0]}
+	} else if len(toks) == 2 {
+		return [3]string{"MACHBASEDB", toks[0], toks[1]}
+	} else if len(toks) == 3 {
+		return [3]string{toks[0], toks[1], toks[2]}
+	}
+	return [3]string{"", "", tableName}
 }

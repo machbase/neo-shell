@@ -5,10 +5,12 @@ go 1.24.9
 toolchain go1.24.11
 
 require (
-	github.com/OutOfBedlam/jsh v0.0.0-20260107072144-6937c57f3a44
+	github.com/OutOfBedlam/jsh v0.0.0-20260109215858-c8c7ea8daa8e
 	github.com/dop251/goja v0.0.0-20251201205617-2bb4c724c0f9
 	github.com/jedib0t/go-pretty/v6 v6.5.8
 	github.com/machbase/neo-server/v8 v8.0.69
+	golang.org/x/term v0.38.0
+	golang.org/x/text v0.32.0
 )
 
 require (
@@ -59,7 +61,6 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251213004720-97cd9d5aeac2 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
