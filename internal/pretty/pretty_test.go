@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OutOfBedlam/jsh/engine"
-	"github.com/OutOfBedlam/jsh/root"
+	"github.com/machbase/jsh/engine"
+	"github.com/machbase/jsh/root"
 )
 
 type TestCase struct {

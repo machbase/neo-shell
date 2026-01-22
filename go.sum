@@ -1,7 +1,5 @@
 github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0rYXWg0=
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
-github.com/OutOfBedlam/jsh v0.0.0-20260122010509-ad1e23fc689e h1:6bkZT5w1icHiRtbnnbuou6VqhgvWpL0oM+GaBqSMIek=
-github.com/OutOfBedlam/jsh v0.0.0-20260122010509-ad1e23fc689e/go.mod h1:per5Y62hnwaQytPcNRtvzbtaQIXGFIzHROHrbiD7F4Q=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
 github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew1u1fNQOlOtuGxQY=
@@ -76,6 +74,8 @@ github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
 github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
 github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 h1:PwQumkgq4/acIiZhtifTV5OUqqiP82UAl0h87xj/l9k=
 github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3/go.mod h1:autxFIvghDt3jPTLoqZ9OZ7s9qTGNAWmYCjVFWPX/zg=
+github.com/machbase/jsh v0.0.0-20260122233440-4c6af42ee7b8 h1:XPPyIERMto1aC4bMvGmnq1cfNIl8XrNlyqc2h29Me7o=
+github.com/machbase/jsh v0.0.0-20260122233440-4c6af42ee7b8/go.mod h1:0kKheuFYLeG4vJMWHKKL52QsiJOYSD3KOs/3MtE7FO0=
 github.com/machbase/neo-engine/v8 v8.0.56 h1:47wfnJcBOjOCmDEXWoSC3Y691Zb9uJa2IIc3wXhKd7A=
 github.com/machbase/neo-engine/v8 v8.0.56/go.mod h1:Z2Ey5LqiXunFTTBsPBeeuoeQEJ/Rky92flsHyo6MkfA=
 github.com/machbase/neo-server/v8 v8.0.69 h1:tMXAXglnGRgvPsOjQ9wuSeFwmgW2/1+Y2NtuNb+Ok0o=

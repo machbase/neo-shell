@@ -8,9 +8,9 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/OutOfBedlam/jsh/engine"
-	"github.com/OutOfBedlam/jsh/native"
-	"github.com/OutOfBedlam/jsh/root"
+	"github.com/machbase/jsh/engine"
+	"github.com/machbase/jsh/native"
+	"github.com/machbase/jsh/root"
 	"github.com/machbase/neo-jsh/internal/machcli"
 	"github.com/machbase/neo-jsh/internal/pretty"
 	"github.com/machbase/neo-jsh/internal/session"

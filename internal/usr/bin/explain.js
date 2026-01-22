@@ -7,10 +7,6 @@ const { Client } = require('/usr/lib/machcli');
 const options = {
     help: { type: 'boolean', short: 'h', description: 'Show this help message', default: false },
     full: { type: 'boolean', short: 'f', description: 'Show full explain plan', default: false },
-    host: { type: 'string', short: 'H', description: 'Database host', default: '127.0.0.1' },
-    port: { type: 'integer', short: 'P', description: 'Database port', default: 5656 },
-    user: { type: 'string', description: 'Database user', default: 'sys' },
-    password: { type: 'string', description: 'Database password', default: 'manager' },
 }
 const positionals = [
     { name: 'sql', type: 'string', variadic: true, description: 'SQL query to explain' }
