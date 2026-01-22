@@ -2,7 +2,7 @@
 
 const process = require('process');
 const parseArgs = require('util/parseArgs');
-const { Client, ColumnType } = require('/usr/lib/machcli');
+const { Client } = require('/usr/lib/machcli');
 const pretty = require('/usr/lib/pretty');
 
 const options = {
@@ -53,7 +53,7 @@ try {
 
     let tick = process.now();
     let box = pretty.Table(config);
-    if (config.showTzInDatetime) {
+    if (config.showTz) {
         let columnLabels = [];
         for (let i = 0; i < rows.columnTypes.length; i++) {
             if (rows.columnTypes[i] == 'datetime') {
