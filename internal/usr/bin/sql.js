@@ -2,19 +2,15 @@
 
 const process = require('process');
 const parseArgs = require('util/parseArgs');
-const { splitFields } = require('util');
-const { Client } = require('/usr/lib/machcli');
+const { Client, ColumnType } = require('/usr/lib/machcli');
 const pretty = require('/usr/lib/pretty');
 
 const options = {
     help: { type: 'boolean', short: 'h', description: 'Show this help message', default: false },
-    host: { type: 'string', short: 'H', description: 'Database host', default: '127.0.0.1' },
-    port: { type: 'integer', short: 'P', description: 'Database port', default: 5656 },
-    user: { type: 'string', description: 'Database user', default: 'sys' },
-    password: { type: 'string', description: 'Database password', default: 'manager' },
     output: { type: 'string', short: 'o', description: "output file (default:'-' stdout)", default: '-' },
     compress: { type: 'string', description: "compression type (none, gzip)", default: 'none' },
     timing: { type: 'boolean', short: 'T', description: "print elapsed time", default: false },
+    showTz: { type: 'boolean', short: 'Z', description: "show time zone in datetime column header", default: false },
     ...pretty.TableArgOptions,
 }
 const positionals = [
@@ -55,28 +51,42 @@ try {
     conn = db.connect();
     rows = conn.query(sqlText);
 
+    let tick = process.now();
     let box = pretty.Table(config);
-    box.appendHeader(rows.columnNames());
+    if (config.showTzInDatetime) {
+        let columnLabels = [];
+        for (let i = 0; i < rows.columnTypes.length; i++) {
+            if (rows.columnTypes[i] == 'datetime') {
+                columnLabels.push(rows.columnNames[i] + `(${config.tz})`);
+            } else {
+                columnLabels.push(rows.columnNames[i])
+            }
+        }
+        box.appendHeader(columnLabels);
+    } else {
+        box.appendHeader(rows.columnNames);
+    }
+    box.setColumnTypes(rows.columnTypes);
 
-    let finalRender = true;
     for (const row of rows) {
         // spread row values
-        box.appendRow(box.row(...row));
+        box.append([...row]);
         if (box.requirePageRender()) {
             // render page
             console.println(box.render());
             // wait for user input to continue if pause is enabled
             if (!box.pauseAndWait()) {
-                finalRender = false;
                 break;
             }
         }
     }
     // set footer message
     box.setCaption(rows.message)
-    // render box
-    if (finalRender) {
-        console.println(box.render());
+    // render remaining rows
+    console.println(box.close());
+    // print elapsed time
+    if (config.timing) {
+        console.println(`Elapsed time: ${pretty.Durations(process.now().unixNano() - tick.unixNano())}`);
     }
 } catch (err) {
     console.println("Error: ", err.message);

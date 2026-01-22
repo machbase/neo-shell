@@ -13,6 +13,7 @@ import (
 	"github.com/OutOfBedlam/jsh/root"
 	"github.com/machbase/neo-jsh/internal/machcli"
 	"github.com/machbase/neo-jsh/internal/pretty"
+	"github.com/machbase/neo-jsh/internal/session"
 )
 
 //go:embed internal/usr/*
@@ -27,12 +28,14 @@ var usrFS embed.FS
 //     ex: jsh
 func main() {
 	var fstabs engine.FSTabs
+	var envVars engine.EnvVars = make(map[string]any)
 	var neoHost string
 	var neoUser string
 	var neoPassword string
 	src := flag.String("C", "", "command to execute")
 	scf := flag.String("S", "", "configured file to start from")
 	flag.Var(&fstabs, "v", "volume to mount (format: /mountpoint=source)")
+	flag.Var(&envVars, "e", "environment variable (format: name=value)")
 	flag.StringVar(&neoHost, "server", "127.0.0.1:5654", "machbase-neo host (default: 127.0.0.1:5654)")
 	flag.StringVar(&neoUser, "user", "sys", "user name (default: sys)")
 	flag.StringVar(&neoPassword, "password", "manager", "password (default: manager)")
@@ -64,6 +67,9 @@ func main() {
 			"desc":     "show table",
 		}
 	}
+	for k, v := range envVars {
+		conf.Env[k] = v
+	}
 	if !conf.FSTabs.HasMountPoint("/") {
 		conf.FSTabs = append([]engine.FSTab{root.RootFSTab()}, conf.FSTabs...)
 	}
@@ -75,6 +81,7 @@ func main() {
 		dirfs, _ := engine.DirFS(".")
 		conf.FSTabs = append(conf.FSTabs, engine.FSTab{MountPoint: "/work", FS: dirfs})
 	}
+	// setup ExecBuilder to enable re-execution
 	conf.ExecBuilder = func(code string, args []string, env map[string]any) (*exec.Cmd, error) {
 		self, err := os.Executable()
 		if err != nil {
@@ -99,8 +106,19 @@ func main() {
 		os.Exit(1)
 	}
 	native.Enable(eng)
+	eng.RegisterNativeModule("@jsh/session", session.Module)
 	eng.RegisterNativeModule("@jsh/machcli", machcli.Module)
 	eng.RegisterNativeModule("@jsh/pretty", pretty.Module)
+
+	// configure default session
+	if err := session.Configure(session.Config{
+		Server:   neoHost,
+		User:     neoUser,
+		Password: neoPassword,
+	}); err != nil {
+		fmt.Println("Error configuring session:", err.Error())
+		os.Exit(1)
+	}
 
 	os.Exit(eng.Main())
 }

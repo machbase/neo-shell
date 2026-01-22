@@ -1,10 +1,11 @@
 'use strict';
 
 const _machcli = require('@jsh/machcli');
+const {getMachCliConfig} = require('@jsh/session');
 
 class Client {
     constructor(conf) {
-        this.db = _machcli.NewDatabase(JSON.stringify(conf));
+        this.db = _machcli.NewDatabase(JSON.stringify({...getMachCliConfig(), ...conf}));
         this.ctx = this.db.ctx;
     }
     close() {
@@ -72,15 +73,13 @@ class Rows {
         this.ctx = ctx;
         this.rows = dbRows;
         this.cols = dbRows.columns();
-        this.names = this.cols.names();
+        this.columnNames = this.cols.names();
+        this.columnTypes = this.cols.dataTypes();
         this.rownum = 0;
         this.message = dbRows.message();
     }
     close() {
         this.rows.close();
-    }
-    columnNames() {
-        return this.names;
     }
     [Symbol.iterator]() {
         return {

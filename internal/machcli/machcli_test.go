@@ -10,6 +10,7 @@ import (
 
 	"github.com/OutOfBedlam/jsh/engine"
 	"github.com/OutOfBedlam/jsh/root"
+	"github.com/machbase/neo-jsh/internal/session"
 	"github.com/machbase/neo-server/v8/api/testsuite"
 )
 
@@ -54,6 +55,7 @@ func RunTest(t *testing.T, tc TestCase) {
 		}
 		jr.RegisterNativeModule("@jsh/process", jr.Process)
 		jr.RegisterNativeModule("@jsh/machcli", Module)
+		jr.RegisterNativeModule("@jsh/session", session.Module)
 
 		for k, v := range tc.vars {
 			jr.Env.Set(k, v)

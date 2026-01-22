@@ -1,17 +1,11 @@
 'use strict';
 
 const http = require('http');
+const { getHttpConfig, setHttpToken, getHttpAccessToken, getHttpRefreshToken } = require('@jsh/session');
 
 class _Client {
     constructor(options = {}) {
-        this.options = {
-            protocol: 'http:',
-            host: '127.0.0.1',
-            port: 5654,
-            user: 'sys',
-            password: 'manager'
-        };
-        this.options = { ...this.options, ...options }
+        this.options = { ...getHttpConfig(), ...options }
     }
     login() {
         return new Promise((resolve, reject) => {
@@ -31,8 +25,7 @@ class _Client {
                     reject(new Error('Login failed: ' + result.reason));
                     return;
                 }
-                this.accessToken = result.accessToken;
-                this.refreshToken = result.refreshToken;
+                setHttpToken(result.accessToken, result.refreshToken);
                 resolve(result.reason);
             });
             req.on('error', (err) => {
@@ -48,7 +41,7 @@ class _Client {
     }
     relogin() {
         return new Promise((resolve, reject) => {
-            if (!this.refreshToken) {
+            if (!getHttpRefreshToken()) {
                 reject(new Error('No refresh token available'));
                 return;
             }
@@ -68,15 +61,14 @@ class _Client {
                     reject(new Error('Relogin failed: ' + result.reason));
                     return;
                 }
-                this.accessToken = result.accessToken;
-                this.refreshToken = result.refreshToken;
+                setHttpToken(result.accessToken, result.refreshToken);
                 resolve(result.reason);
             });
             req.on('error', (err) => {
                 reject(err);
             });
             const body = JSON.stringify({
-                refreshToken: this.refreshToken
+                refreshToken: getHttpRefreshToken()
             });
             req.write(body);
             req.end();
@@ -105,7 +97,7 @@ class _Client {
         };
 
         // Attempt login if accessToken is not available
-        if (!this.accessToken) {
+        if (!getHttpAccessToken()) {
             return this.login().then(() => {
                 return executeRequest();
             }).catch((err) => {
@@ -132,13 +124,17 @@ class _Client {
                 path: '/web/api/rpc',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.accessToken}`
+                    'Authorization': `Bearer ${getHttpAccessToken()}`
                 }
             });
             req.on('response', (res) => {
                 // Mark rejection with special flag if 401 error
                 if (res.statusCode === 401) {
                     reject({ unauthorized: true });
+                    return;
+                }
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    reject(new Error(res.statusMessage));
                     return;
                 }
                 const result = res.json();
@@ -190,6 +186,25 @@ class Client extends _Client {
         return this._executeWithAuth(() => {
             return this._rpcRequest('getServerInfo', []);
         });
+    }
+    getMachbasePort(callback) {
+        this.getServicePorts('mach')
+            .then((data) => {
+                let ports = {};
+                for (const s of data) {
+                    if (ports[s.Service]) {
+                        ports[s.Service].push(s.Address);
+                    } else {
+                        ports[s.Service] = [s.Address];
+                    }
+                }
+                let host = ports['mach'][0];
+                host = host.replace('tcp://', '');
+                callback(host, null);
+            })
+            .catch((err) => {
+                callback(null, err);
+            });
     }
     getShellList() {
         return this._executeWithAuth(() => {

@@ -179,7 +179,7 @@ function showInfo(config, args) {
             box.appendRow(box.row('runtime.os', nfo.runtime.OS));
             box.appendRow(box.row('runtime.arch', nfo.runtime.arch));
             box.appendRow(box.row('runtime.pid', nfo.runtime.pid));
-            box.appendRow(box.row('runtime.uptime', pretty.Durations(nfo.runtime.uptimeInSecond * 1000000000)));
+            box.appendRow(box.row('runtime.uptime', pretty.Durations(nfo.runtime.uptimeInSecond * 1e9)));
             box.appendRow(box.row('runtime.processes', nfo.runtime.processes));
             box.appendRow(box.row('runtime.goroutines', nfo.runtime.goroutines));
 
@@ -1034,7 +1034,7 @@ function showRollupGap_prev_8_0_60(conn) {
                 row.SRC_END_RID,
                 row.ROLLUP_END_RID,
                 row.GAP,
-                pretty.Durations(row.LAST_ELAPSED * 1000000)
+                pretty.Durations(row.LAST_ELAPSED * 1e6)
             ]);
         }
         console.println(box.render());
@@ -1073,7 +1073,7 @@ function showRollupGap_since_8_0_60(conn) {
                 row.SRC_END_RID,
                 row.ROLLUP_END_RID,
                 row.GAP,
-                pretty.Durations(row.LAST_ELAPSED * 1000000)
+                pretty.Durations(row.LAST_ELAPSED * 1e6)
             ]);
         }
         console.println(box.render());
@@ -1134,6 +1134,7 @@ function showTags(config, args) {
         colsRows = null;
 
         let box = pretty.Table(config);
+        box.setStringEscape(true);
         if (hasSummarized) {
             box.appendHeader(["_ID", "NAME", "ROW_COUNT", "MIN_TIME", "MAX_TIME", "RECENT_ROW_TIME", "MIN_VALUE", "MIN_VALUE_TIME", "MAX_VALUE", "MAX_VALUE_TIME"]);
         } else {
@@ -1145,7 +1146,6 @@ function showTags(config, args) {
         } else {
             tagsRows = conn.query(`SELECT _ID, NAME FROM ${names[0]}.${names[1]}._${names[2]}_META`);
         }
-        let finalRender = true;
         for (const row of tagsRows) {
             try {
                 let stat = conn.queryRow(`SELECT
@@ -1187,19 +1187,20 @@ function showTags(config, args) {
             } catch (err) {
                 // in case of no stats available for the tag
                 // for example, the tag name is not a printable string, most likely broken data
-                box.append([row._ID, row.NAME, "-", "-", "-", "-", "-", "-", "-", "-"]);
+                box.append([row._ID, row.NAME, null, null, null, null, null, null, null, null]);
             }
             if (box.requirePageRender()) {
                 // render page
                 console.println(box.render());
                 // wait for user input to continue if pause is enabled
                 if (!box.pauseAndWait()) {
-                    finalRender = false;
                     break;
                 }
             }
         }
-        console.println(box.render());
+        if (box.length() > 0) {
+            console.println(box.render());
+        }
     } catch (err) {
         console.println("Error: ", err.message);
     } finally {

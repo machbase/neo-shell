@@ -86,7 +86,7 @@ function listShells(config, args) {
             let box = pretty.Table(config);
             box.appendHeader(['ID', 'NAME', 'COMMAND']);
             for (const shell of lst) {
-                box.appendRow(box.row(shell.id, shell.label, shell.command));
+                box.append([shell.id, shell.label, shell.command]);
             }
             console.println(box.render());
         })

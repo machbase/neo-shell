@@ -1,7 +1,7 @@
 github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0rYXWg0=
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
-github.com/OutOfBedlam/jsh v0.0.0-20260109215858-c8c7ea8daa8e h1:RDCchYfHRzOKoUqVYVrWN11c1TjT7c1rpe7ZDSeQ3bI=
-github.com/OutOfBedlam/jsh v0.0.0-20260109215858-c8c7ea8daa8e/go.mod h1:per5Y62hnwaQytPcNRtvzbtaQIXGFIzHROHrbiD7F4Q=
+github.com/OutOfBedlam/jsh v0.0.0-20260122010509-ad1e23fc689e h1:6bkZT5w1icHiRtbnnbuou6VqhgvWpL0oM+GaBqSMIek=
+github.com/OutOfBedlam/jsh v0.0.0-20260122010509-ad1e23fc689e/go.mod h1:per5Y62hnwaQytPcNRtvzbtaQIXGFIzHROHrbiD7F4Q=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
 github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew1u1fNQOlOtuGxQY=

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/dop251/goja"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -106,11 +107,36 @@ func Ints(v int64) string {
 
 func Durations(v time.Duration) string {
 	p := message.NewPrinter(defaultLang)
+	totalNanos := int64(v.Nanoseconds())
+
+	// Handle sub-second durations
+	if totalNanos < int64(time.Second) {
+		if totalNanos < int64(time.Microsecond) {
+			return p.Sprintf("%dns", totalNanos)
+		}
+		if totalNanos < int64(time.Millisecond) {
+			micros := totalNanos / int64(time.Microsecond)
+			nanos := totalNanos % int64(time.Microsecond)
+			if nanos > 0 {
+				return p.Sprintf("%dμs %dns", micros, nanos)
+			}
+			return p.Sprintf("%dμs", micros)
+		}
+		millis := totalNanos / int64(time.Millisecond)
+		micros := (totalNanos % int64(time.Millisecond)) / int64(time.Microsecond)
+		if micros > 0 {
+			return p.Sprintf("%dms %dμs", millis, micros)
+		}
+		return p.Sprintf("%dms", millis)
+	}
+
 	totalSeconds := int64(v.Seconds())
 	days := totalSeconds / 86400
 	hours := (totalSeconds % 86400) / 3600
 	minutes := (totalSeconds % 3600) / 60
 	seconds := totalSeconds % 60
+	millis := (totalNanos % int64(time.Second)) / int64(time.Millisecond)
+
 	parts := []string{}
 	if days > 0 {
 		parts = append(parts, p.Sprintf("%dd", days))
@@ -121,34 +147,45 @@ func Durations(v time.Duration) string {
 	if minutes > 0 || hours > 0 || days > 0 {
 		parts = append(parts, p.Sprintf("%dm", minutes))
 	}
-	parts = append(parts, p.Sprintf("%ds", seconds))
+	if millis > 0 {
+		parts = append(parts, p.Sprintf("%ds %dms", seconds, millis))
+	} else {
+		parts = append(parts, p.Sprintf("%ds", seconds))
+	}
 	return strings.Join(parts, " ")
 }
 
 type TableOption struct {
-	BoxStyle   string `json:"boxStyle"`
-	Timeformat string `json:"timeformat"`
-	Tz         string `json:"tz"`
-	Precision  int    `json:"precision"`
-	Format     string `json:"format"`
-	Header     bool   `json:"header"`
-	Footer     bool   `json:"footer"`
-	Pause      bool   `json:"pause"`
-	Rownum     bool   `json:"rownum"`
+	BoxStyle     string `json:"boxStyle"`
+	Timeformat   string `json:"timeformat"`
+	Tz           string `json:"tz"`
+	Precision    int    `json:"precision"`
+	Format       string `json:"format"`
+	Header       bool   `json:"header"`
+	Footer       bool   `json:"footer"`
+	Pause        bool   `json:"pause"`
+	Rownum       bool   `json:"rownum"`
+	NullValue    string `json:"nullValue"`
+	StringEscape bool   `json:"stringEscape"`
 }
 
 type TableWriter struct {
 	table.Writer
-	format     string
-	timeformat string
-	tz         *time.Location
-	precision  int
-	headerRow  table.Row
-	header     bool
-	footer     bool
-	pause      bool
-	rownum     bool
-	rowCount   int64
+	format       string
+	timeformat   string
+	tz           *time.Location
+	precision    int
+	headerRow    table.Row
+	header       bool
+	footer       bool
+	pause        bool
+	stringEscape bool
+	rownum       bool
+	rowCount     int64
+	nullValue    string
+	rawRows      []table.Row // to store raw rows for JSON, NDJSON rendering
+	columnTypes  []string    // to store column types for JSON rendering
+	renderCount  int         // count of render calls
 
 	nextPauseRow         int64
 	pageHeight           int
@@ -156,22 +193,28 @@ type TableWriter struct {
 	termSize             TermSize
 }
 
-func Table(opt TableOption) table.Writer {
+func Table(opt TableOption) (table.Writer, error) {
 	ret := &TableWriter{
-		Writer:    table.NewWriter(),
-		tz:        time.Local,
-		precision: opt.Precision,
-		format:    opt.Format,
-		header:    opt.Header,
-		footer:    opt.Footer,
-		pause:     opt.Pause,
-		rownum:    opt.Rownum,
+		Writer:       table.NewWriter(),
+		tz:           time.Local,
+		precision:    opt.Precision,
+		format:       strings.ToUpper(opt.Format),
+		header:       opt.Header,
+		footer:       opt.Footer,
+		pause:        opt.Pause,
+		rownum:       opt.Rownum,
+		nullValue:    opt.NullValue,
+		stringEscape: opt.StringEscape,
 	}
 	ret.SetBoxStyle(opt.BoxStyle)
+	ret.SetFormat(opt.Format)
 	ret.SetTimeformat(opt.Timeformat)
-	ret.SetTz(opt.Tz)
+	if err := ret.SetTz(opt.Tz); err != nil {
+		return nil, err
+	}
 	ret.SetAutoIndex(false)
 
+	// initialize terminal size and page height
 	if ret.pause && IsTerminal() {
 		if ts, err := GetTerminalSize(); err == nil {
 			ret.termSize = ts
@@ -185,7 +228,7 @@ func Table(opt TableOption) table.Writer {
 			ret.pause = false
 		}
 	}
-	return ret
+	return ret, nil
 }
 
 type BoxStyle struct {
@@ -225,7 +268,25 @@ var boxStyles = map[string]BoxStyle{
 	}},
 }
 
+func (tw *TableWriter) SetFormat(format string) {
+	tw.format = strings.ToUpper(format)
+	switch tw.format {
+	case "HTML", "JSON":
+		// force disable pause for HTML, JSON formats
+		tw.pause = false
+	case "NDJSON":
+		tw.pageHeightSpaceLines = 0
+	case "MD", "MARKDOWN":
+		tw.pageHeightSpaceLines = 2
+	case "CSV", "TSV":
+		tw.pageHeightSpaceLines = 1
+	}
+}
+
 func (tw *TableWriter) SetBoxStyle(style string) {
+	if tw.format != "BOX" {
+		return
+	}
 	styleUpper := strings.ToUpper(style)
 	if o, ok := boxStyles[styleUpper]; ok {
 		s := o.style
@@ -235,7 +296,7 @@ func (tw *TableWriter) SetBoxStyle(style string) {
 		tw.SetStyle(s)
 		tw.pageHeightSpaceLines = o.pageSpaceLines
 	} else {
-		tw.SetStyle(table.StyleDefault)
+		tw.SetStyle(table.StyleLight)
 		tw.pageHeightSpaceLines = 4
 	}
 }
@@ -271,7 +332,7 @@ func (tw *TableWriter) SetTimeformat(format string) {
 	}
 }
 
-func (tw *TableWriter) SetTz(tz string) {
+func (tw *TableWriter) SetTz(tz string) error {
 	switch strings.ToUpper(tz) {
 	case "", "LOCAL":
 		tw.tz = time.Local
@@ -281,14 +342,19 @@ func (tw *TableWriter) SetTz(tz string) {
 		if tz, err := time.LoadLocation(tz); err == nil {
 			tw.tz = tz
 		} else {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }
 
 func (tw *TableWriter) SetAutoIndex(autoIndex bool) {
 	// always disable auto index feature favored over the rownum option
 	tw.Writer.SetAutoIndex(false)
+}
+
+func (tw *TableWriter) SetStringEscape(escape bool) {
+	tw.stringEscape = escape
 }
 
 func (tw *TableWriter) AppendHeader(v table.Row, configs ...table.RowConfig) {
@@ -302,6 +368,10 @@ func (tw *TableWriter) AppendHeader(v table.Row, configs ...table.RowConfig) {
 	tw.Writer.AppendHeader(v, configs...)
 }
 
+func (tw *TableWriter) SetColumnTypes(colTypes []string) {
+	tw.columnTypes = colTypes
+}
+
 func (tw *TableWriter) SetCaption(format string, a ...interface{}) {
 	if !tw.footer {
 		return
@@ -309,26 +379,11 @@ func (tw *TableWriter) SetCaption(format string, a ...interface{}) {
 	tw.Writer.SetCaption(format, a...)
 }
 
-func (tw *TableWriter) Append(v any, configs ...table.RowConfig) {
-	switch v := v.(type) {
-	case table.Row:
-		tw.AppendRow(v, configs...)
-	case []table.Row:
-		tw.AppendRows(v, configs...)
-	case []interface{}:
-		row := tw.Row(v...)
-		tw.AppendRow(row, configs...)
-	default:
-		return
+func (tw *TableWriter) Close() string {
+	if tw.Writer.Length() > 0 {
+		return tw.Render()
 	}
-}
-
-func (tw *TableWriter) AppendRow(row table.Row, configs ...table.RowConfig) {
-	tw.rowCount++
-	if tw.rownum {
-		row = append(table.Row{tw.rowCount}, row...)
-	}
-	tw.Writer.AppendRow(row, configs...)
+	return ""
 }
 
 func (tw *TableWriter) RequirePageRender() bool {
@@ -356,14 +411,45 @@ func (tw *TableWriter) PauseAndWait() bool {
 	return continued
 }
 
+func (tw *TableWriter) Append(v any, configs ...table.RowConfig) {
+	switch v := v.(type) {
+	case table.Row:
+		tw.AppendRow(v, configs...)
+	case []table.Row:
+		tw.AppendRows(v, configs...)
+	case []interface{}:
+		tw.AppendRow(tw.Row(v...), configs...)
+	default:
+		return
+	}
+}
+
 func (tw *TableWriter) AppendRows(rows []table.Row, configs ...table.RowConfig) {
 	for _, row := range rows {
 		tw.AppendRow(row, configs...)
 	}
 }
 
+func (tw *TableWriter) AppendRow(row table.Row, configs ...table.RowConfig) {
+	tw.rowCount++
+	if tw.rownum {
+		row = append(table.Row{tw.rowCount}, row...)
+	}
+	tw.rawRows = append(tw.rawRows, row) // store raw row for NDJSON rendering
+	tw.Writer.AppendRow(row, configs...)
+}
+
+func (tw *TableWriter) ResetRows() {
+	tw.rawRows = []table.Row{}
+	tw.Writer.ResetRows()
+}
+
 func (tw *TableWriter) Row(values ...interface{}) table.Row {
 	for i, value := range values {
+		if value == nil {
+			values[i] = tw.nullValue
+			continue
+		}
 		switch val := value.(type) {
 		case time.Time:
 			values[i] = val.In(tw.tz).Format(tw.timeformat)
@@ -376,6 +462,20 @@ func (tw *TableWriter) Row(values ...interface{}) table.Row {
 			if tw.precision >= 0 {
 				factor := math.Pow(10, float64(tw.precision))
 				values[i] = math.Round(val*factor) / factor
+			}
+		case string:
+			if tw.stringEscape {
+				var result strings.Builder
+				for _, r := range val {
+					if unicode.IsPrint(r) {
+						result.WriteRune(r)
+					} else {
+						result.WriteString(fmt.Sprintf("\\u%04x", r))
+					}
+				}
+				values[i] = result.String()
+			} else {
+				values[i] = val
 			}
 		default:
 			values[i] = value
@@ -391,7 +491,8 @@ func MakeRow(size int) []table.Row {
 }
 
 func (tw *TableWriter) Render() string {
-	switch strings.ToUpper(tw.format) {
+	defer func() { tw.renderCount++ }()
+	switch tw.format {
 	case "CSV":
 		return tw.Writer.RenderCSV()
 	case "HTML":
@@ -400,7 +501,122 @@ func (tw *TableWriter) Render() string {
 		return tw.Writer.RenderMarkdown()
 	case "TSV":
 		return tw.Writer.RenderTSV()
+	case "NDJSON":
+		return tw.RenderNDJSON()
+	case "JSON":
+		return tw.RenderJSON()
 	default:
 		return tw.Writer.Render()
 	}
+}
+
+func (tw *TableWriter) RenderNDJSON() string {
+	var out strings.Builder
+	rows := tw.rawRows
+	headers := []string{}
+	if tw.rownum {
+		headers = append(headers, "ROWNUM")
+	}
+	if len(tw.headerRow) > 0 {
+		for _, h := range tw.headerRow {
+			headers = append(headers, fmt.Sprint(h))
+		}
+	} else if len(rows) > 0 {
+		for i := 0; i < len(rows[0]); i++ {
+			headers = append(headers, fmt.Sprintf("C%d", i+1))
+		}
+	}
+	for _, row := range rows {
+		out.WriteRune('{')
+		for i, col := range row {
+			if i > 0 {
+				out.WriteRune(',')
+			}
+			out.WriteString(fmt.Sprintf("\"%s\":", headers[i]))
+			switch v := col.(type) {
+			case string:
+				out.WriteString(fmt.Sprintf("\"%s\"", v))
+			default:
+				out.WriteString(fmt.Sprint(v))
+			}
+		}
+		out.WriteRune('}')
+		out.WriteRune('\n')
+	}
+	return out.String()
+}
+
+func renderRowsJSON(out *strings.Builder, rows []table.Row) {
+	for rIdx, row := range rows {
+		if rIdx > 0 {
+			out.WriteString(",")
+		}
+		out.WriteString("[")
+		for i, col := range row {
+			if i > 0 {
+				out.WriteRune(',')
+			}
+			switch v := col.(type) {
+			case string:
+				out.WriteString(fmt.Sprintf("\"%s\"", v))
+			default:
+				out.WriteString(fmt.Sprint(v))
+			}
+		}
+		out.WriteString("]")
+	}
+}
+
+func (tw *TableWriter) RenderJSON() string {
+	var out strings.Builder
+	rows := tw.rawRows
+
+	if tw.renderCount > 0 {
+		renderRowsJSON(&out, rows)
+		return out.String()
+	}
+
+	headers := []string{}
+	types := []string{}
+
+	if tw.rownum {
+		headers = append(headers, "ROWNUM")
+		types = append(types, "long")
+	}
+	if len(tw.headerRow) > 0 {
+		for _, h := range tw.headerRow {
+			headers = append(headers, fmt.Sprint(h))
+		}
+	} else if len(rows) > 0 {
+		for i := 0; i < len(rows[0]); i++ {
+			headers = append(headers, fmt.Sprintf("C%d", i+1))
+		}
+	}
+	for _, colType := range tw.columnTypes {
+		types = append(types, colType)
+	}
+	out.WriteString("{")
+	out.WriteString("\"columns\":[")
+	for i, h := range headers {
+		if i > 0 {
+			out.WriteString(",")
+		}
+		out.WriteString(fmt.Sprintf("\"%s\"", h))
+	}
+	out.WriteString("],")
+	if len(types) == len(headers) {
+		out.WriteString("\"types\":[")
+		for i, ct := range types {
+			if i > 0 {
+				out.WriteString(",")
+			}
+			out.WriteString(fmt.Sprintf("\"%s\"", ct))
+		}
+		out.WriteString("],")
+	}
+	out.WriteString("\"rows\":[")
+	renderRowsJSON(&out, rows)
+	out.WriteString("]")
+	out.WriteString("}\n")
+	return out.String()
 }

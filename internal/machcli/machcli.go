@@ -45,8 +45,10 @@ func NewDatabase(data string) (*Database, error) {
 		return nil, err
 	}
 	conf := &machcli.Config{
-		Host: obj.Host,
-		Port: obj.Port,
+		Host:         obj.Host,
+		Port:         obj.Port,
+		MaxOpenConn:  -1,
+		MaxOpenQuery: -1,
 	}
 	if obj.AlternativeHost != "" {
 		conf.AlternativeHost = obj.AlternativeHost
