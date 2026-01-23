@@ -10,8 +10,8 @@ import (
 
 	"github.com/machbase/jsh/engine"
 	"github.com/machbase/jsh/root"
-	"github.com/machbase/neo-jsh/internal/session"
 	"github.com/machbase/neo-server/v8/api/testsuite"
+	"github.com/machbase/neo-shell/internal/session"
 )
 
 var testServer *testsuite.Server

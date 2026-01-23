@@ -1,4 +1,4 @@
-module github.com/machbase/neo-jsh
+module github.com/machbase/neo-shell
 
 go 1.24.9
 

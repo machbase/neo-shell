@@ -11,9 +11,9 @@ import (
 	"github.com/machbase/jsh/engine"
 	"github.com/machbase/jsh/native"
 	"github.com/machbase/jsh/root"
-	"github.com/machbase/neo-jsh/internal/machcli"
-	"github.com/machbase/neo-jsh/internal/pretty"
-	"github.com/machbase/neo-jsh/internal/session"
+	"github.com/machbase/neo-shell/internal/machcli"
+	"github.com/machbase/neo-shell/internal/pretty"
+	"github.com/machbase/neo-shell/internal/session"
 )
 
 //go:embed internal/usr/*

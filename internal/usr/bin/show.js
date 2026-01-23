@@ -379,7 +379,12 @@ function describeTable(conn, names, showAll = false) {
 		AND j.DATABASE_ID = ?
 		AND j.NAME = ?`;
 
-    let row = conn.queryRow(describeSqlText, userName, dbId, tableName);
+    let row;
+    try {
+        row = conn.queryRow(describeSqlText, userName, dbId, tableName);
+    } catch {
+        row = null;
+    }
     if (!row || !row.TABLE_ID) {
         throw new Error(`Table '${tableName}' not found`);
     }
@@ -390,6 +395,7 @@ function describeTable(conn, names, showAll = false) {
     const tableColcount = row.TABLE_COLCOUNT;
     let rows;
 
+    console.println(`Table Name: ${tableId} (${machcli.stringTableDescription(tableType, tableFlag)}) - Columns: ${tableColcount})`);
     try {
         let box = pretty.Table(config);
         box.appendHeader(["NAME", "TYPE", "LENGTH", "FLAG", "INDEX"]);

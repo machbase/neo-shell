@@ -59,8 +59,15 @@ actor.process = (line) => {
     }
 
     try {
-        const fields = splitFields(line);
-        const firstField = fields[0];
+        let fields = splitFields(line);
+        let firstField = fields[0];
+
+        // Handle aliased commands
+        const aliasedCommand = env.alias(firstField);
+        if (aliasedCommand) {
+            firstField = aliasedCommand[0]
+            fields = [...aliasedCommand, ...fields.slice(1)];
+        }
 
         // Handle SQL commands
         if (SQL_VERBS.has(firstField.toUpperCase())) {
