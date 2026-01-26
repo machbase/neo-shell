@@ -353,6 +353,20 @@ func (tw *TableWriter) SetAutoIndex(autoIndex bool) {
 	tw.Writer.SetAutoIndex(false)
 }
 
+func (tw *TableWriter) SetColumnConfigs(configs []table.ColumnConfig) {
+	if tw.rownum {
+		// insert ROWNUM column config at the beginning
+		rc := table.ColumnConfig{
+			Name: "ROWNUM",
+		}
+		configs = append([]table.ColumnConfig{rc}, configs...)
+	}
+	for i := range configs {
+		configs[i].Number = i + 1
+	}
+	tw.Writer.SetColumnConfigs(configs)
+}
+
 func (tw *TableWriter) SetStringEscape(escape bool) {
 	tw.stringEscape = escape
 }
@@ -381,6 +395,11 @@ func (tw *TableWriter) SetCaption(format string, a ...interface{}) {
 
 func (tw *TableWriter) Close() string {
 	if tw.Writer.Length() > 0 {
+		// remaining rows to render
+		return tw.Render()
+	}
+	if tw.renderCount == 0 {
+		// no rows rendered yet, render empty table
 		return tw.Render()
 	}
 	return ""

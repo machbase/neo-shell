@@ -39,8 +39,17 @@ const TableArgOptions = {
     nullValue: { type: 'string', description: "string to represent null values", default: 'NULL' },
 }
 
+const Align = {
+    default: 0,
+    left: 1,
+    center: 2,
+    justify: 3,
+    right: 4,
+    auto: 5,
+}
 module.exports = {
     ..._pretty,
     Table,
     TableArgOptions,
+    Align,
 }

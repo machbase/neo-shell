@@ -221,6 +221,112 @@ class Client extends _Client {
             return this._rpcRequest('deleteShell', [id]);
         });
     }
+    getBridgeList() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('getBridgeList', []);
+        });
+    }
+    addBridge(name, type, conn) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('addBridge', [name, type, conn]);
+        });
+    }
+    deleteBridge(name) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('deleteBridge', [name]);
+        });
+    }
+    testBridge(name) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('testBridge', [name]);
+        });
+    }
+    statsBridge(name) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('statsBridge', [name]);
+        });
+    }
+    execBridge(name, command) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('execBridge', [name, command]);
+        });
+    }
+    queryBridge(name, query) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('queryBridge', [name, query]);
+        });
+    }
+    fetchResultBridge(handle) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('fetchResultBridge', [handle]);
+        });
+    }
+    closeResultBridge(handle) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('closeResultBridge', [handle]);
+        });
+    }
+    listSSHKeys() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('listSSHKeys', []);
+        });
+    }
+    addSSHKey(type, key, comment) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('addSSHKey', [type, key, comment]);
+        });
+    }
+    deleteSSHKey(key) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('deleteSSHKey', [key]);
+        });
+    }
+    listSchedules() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('listSchedules', []);
+        });
+    }
+    addSchedule(sch) {
+        const name = sch.name;
+        const type = sch.type.toUpperCase();
+        const spec = sch.spec;
+        const task = sch.task;
+        const bridge = sch.bridge;
+        const topic = sch.topic;
+        const autoStart = sch.autoStart || false;
+
+        return this._executeWithAuth(() => {
+            if (type === 'SUBSCRIBER') {
+                return this._rpcRequest('addSubscriberSchedule', 
+                    [name, bridge, topic, task, autoStart]);
+            } else if (type === 'TIMER') {
+                return this._rpcRequest('addTimerSchedule', 
+                    [name, spec, task, autoStart]);
+            } else {
+                throw new Error(`Unsupported schedule type: ${type}`);
+            }
+        });
+    }
+    deleteSchedule(name) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('deleteSchedule', [name]);
+        });
+    }
+    startSchedule(name) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('startSchedule', [name]);
+        });
+    }
+    stopSchedule(name) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('stopSchedule', [name]);
+        });
+    }
+    shutdownServer() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('shutdownServer', []);
+        });
+    }
 }
 
 module.exports = {

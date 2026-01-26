@@ -1,169 +1,280 @@
 'use strict';
 
 const process = require('process');
-const parseArgs = require('util/parseArgs');
 const neoapi = require('/usr/lib/neoapi');
 const pretty = require('/usr/lib/pretty');
+const { parseAndRun } = require('/usr/lib/opts');
 
-const options = {
-    help: { type: 'boolean', short: 'h', description: 'Show this help message', default: false },
-    all: { type: 'boolean', short: 'a', description: 'Show all hidden tables/columns', default: false },
-    ...pretty.TableArgOptions,
-}
-const positionals = [
-    { name: 'object', type: 'string', description: 'Object to show' },
-    { name: 'params', type: 'string', variadic: true, description: 'Arguments for the object' }
-];
+const optionHelp = { type: 'boolean', short: 'h', description: 'Show this help message', default: false }
 
-let showHelp = true;
-let config = {};
-let args = {};
-try {
-    const parsed = parseArgs(process.argv.slice(2), {
-        options,
-        allowPositionals: true,
-        allowNegative: true,
-        positionals: positionals
-    });
-    config = parsed.values;
-    args = parsed.namedPositionals;
-    showHelp = config.help
-}
-catch (err) {
-    console.println(err.message);
-}
-
-const objects = {
-    'info': {
-        syntax: 'info',
-        description: 'Display server information',
-        func: showInfo
-    },
-    'license': {
-        syntax: 'license',
-        description: 'Display license information',
-        func: showLicense
-    },
-    'ports': {
-        syntax: 'ports',
-        description: 'Display service ports configuration',
-        func: showPorts
-    },
-    'users': {
-        syntax: 'users',
-        description: 'List all database users',
-        func: showUsers
-    },
-    'tables': {
-        syntax: 'tables [-a]',
-        description: 'List tables (use -a to show hidden tables)',
-        func: showTables
-    },
-    'table': {
-        syntax: 'table [-a] <table>',
-        description: 'Show table schema and details',
-        func: showTable
-    },
-    'meta-tables': {
-        syntax: 'meta-tables',
-        description: 'List meta/system tables',
-        func: showMetaTables
-    },
-    'virtual-tables': {
-        syntax: 'virtual-tables',
-        description: 'List virtual tables',
-        func: showVirtualTables
-    },
-    'sessions': {
-        syntax: 'sessions',
-        description: 'List active database sessions',
-        func: showSessions
-    },
-    'statements': {
-        syntax: 'statements',
-        description: 'List currently running SQL statements',
-        func: showStatements
-    },
-    'indexes': {
-        syntax: 'indexes',
-        description: 'List all indexes',
-        func: showIndexes
-    },
-    'index': {
-        syntax: 'index <index>',
-        description: 'Show index structure and details',
-        func: showIndex
-    },
-    'storage': {
-        syntax: 'storage',
-        description: 'Display storage statistics',
-        func: showStorage
-    },
-    'table-usage': {
-        syntax: 'table-usage',
-        description: 'Show storage usage by table',
-        func: showTableUsage
-    },
-    'lsm': {
-        syntax: 'lsm',
-        description: 'Display LSM tree status',
-        func: showLsm
-    },
-    'indexgap': {
-        syntax: 'indexgap',
-        description: 'Show index gap information',
-        func: showIndexGap
-    },
-    'rollupgap': {
-        syntax: 'rollupgap',
-        description: 'Show rollup gap information',
-        func: showRollupGap
-    },
-    'tagindexgap': {
-        syntax: 'tagindexgap',
-        description: 'Show tag index gap information',
-        func: showTagIndexGap
-    },
-    'tags': {
-        syntax: 'tags <table> [tag...]',
-        description: 'List all/specific tags in the specified table',
-        func: showTags
-    },
-    'tagstat': {
-        syntax: 'tagstat <table> [tag...]',
-        description: 'Show statistics for the specific tags',
-        func: showTagStat
+const defaultConfig = {
+    usage: 'Usage: show <command> [options]',
+    options: {
+        help: optionHelp,
     }
 };
 
-function printHelp() {
-    console.println(parseArgs.formatHelp({
-        usage: 'Usage: show [options] <object> [args]',
-        options,
-        positionals: positionals
-    }));
-    console.println('\nAvailable objects:');
-    for (const [cmd, info] of Object.entries(objects)) {
-        console.println(`  ${info.syntax.padEnd(30)} ${info.description}`);
+const infoConfig = {
+    func: showInfo,
+    command: 'info',
+    usage: 'show info',
+    description: 'Display server information',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
     }
-}
+};
 
-if (showHelp || (!args.object) || args.object.length === 0) {
-    printHelp();
-    process.exit(showHelp ? 0 : 1);
-}
+const licenseConfig = {
+    func: showLicense,
+    command: 'license',
+    usage: 'show license',
+    description: 'Display license information',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    }
+};
 
-args.object = args.object.toLowerCase();
+const portsConfig = {
+    func: showPorts,
+    command: 'ports',
+    usage: 'show ports [service]',
+    description: 'Display service ports configuration',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+    positionals: [
+        { name: 'service', optional: true, description: 'Service name to filter' }
+    ],
+};
 
-// Validate that the provided object is in the allowed list
-if (!objects.hasOwnProperty(args.object)) {
-    console.println(`Error: Unknown object '${args.object}'\n`);
-    printHelp();
-    process.exit(1);
-}
+const usersConfig = {
+    func: showUsers,
+    command: 'users',
+    usage: 'show users',
+    description: 'List all database users',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
 
-// Dispatch to appropriate handler based on object type
-objects[args.object].func(config, args.params);
+const tablesConfig = {
+    func: showTables,
+    command: 'tables',
+    usage: 'show tables [-a]',
+    description: 'List tables',
+    options: {
+        help: optionHelp,
+        all: { type: 'boolean', short: 'a', description: 'Show all hidden tables', default: false },
+        ...pretty.TableArgOptions,
+    },
+};
+
+const tableConfig = {
+    func: showTable,
+    command: 'table',
+    usage: 'show table [-a] <table>',
+    description: 'Show table schema and details',
+    options: {
+        help: optionHelp,
+        all: { type: 'boolean', short: 'a', description: 'Show all hidden columns', default: false },
+        ...pretty.TableArgOptions,
+    },
+    positionals: [
+        { name: 'table', description: 'Table name' }
+    ],
+};
+
+const metaTablesConfig = {
+    func: showMetaTables,
+    command: 'meta-tables',
+    usage: 'show meta-tables',
+    description: 'List meta/system tables',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const virtualTablesConfig = {
+    func: showVirtualTables,
+    command: 'virtual-tables',
+    usage: 'show virtual-tables',
+    description: 'List virtual tables',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const sessionsConfig = {
+    func: showSessions,
+    command: 'sessions',
+    usage: 'show sessions',
+    description: 'List active database sessions',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const statementsConfig = {
+    func: showStatements,
+    command: 'statements',
+    usage: 'show statements',
+    description: 'List currently running SQL statements',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const indexesConfig = {
+    func: showIndexes,
+    command: 'indexes',
+    usage: 'show indexes',
+    description: 'List all indexes',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const indexConfig = {
+    func: showIndex,
+    command: 'index',
+    usage: 'show index <index>',
+    description: 'Show index structure and details',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+    positionals: [
+        { name: 'index', description: 'Index name' }
+    ],
+};
+
+const storageConfig = {
+    func: showStorage,
+    command: 'storage',
+    usage: 'show storage',
+    description: 'Display storage statistics',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const tableUsageConfig = {
+    func: showTableUsage,
+    command: 'table-usage',
+    usage: 'show table-usage',
+    description: 'Show storage usage by table',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const lsmConfig = {
+    func: showLsm,
+    command: 'lsm',
+    usage: 'show lsm',
+    description: 'Display LSM tree status',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const indexgapConfig = {
+    func: showIndexGap,
+    command: 'indexgap',
+    usage: 'show indexgap',
+    description: 'Show index gap information',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const rollupgapConfig = {
+    func: showRollupGap,
+    command: 'rollupgap',
+    usage: 'show rollupgap',
+    description: 'Show rollup gap information',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const tagindexgapConfig = {
+    func: showTagIndexGap,
+    command: 'tagindexgap',
+    usage: 'show tagindexgap',
+    description: 'Show tag index gap information',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+};
+
+const tagsConfig = {
+    func: showTags,
+    command: 'tags',
+    usage: 'show tags <table> [tag...]',
+    description: 'List all/specific tags in the specified table',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+    positionals: [
+        { name: 'table', description: 'Table name' },
+        { name: 'tag', variadic: true, optional: true, description: 'Tag names' }
+    ],
+};
+
+const tagstatConfig = {
+    func: showTagStat,
+    command: 'tagstat',
+    usage: 'show tagstat <table> [tag...]',
+    description: 'Show statistics for the specific tags',
+    options: {
+        help: optionHelp,
+        ...pretty.TableArgOptions,
+    },
+    positionals: [
+        { name: 'table', description: 'Table name' },
+        { name: 'tag', variadic: true, optional: true, description: 'Tag names' }
+    ],
+};
+
+parseAndRun(process.argv.slice(2), defaultConfig, [
+    infoConfig,
+    licenseConfig,
+    portsConfig,
+    usersConfig,
+    tablesConfig,
+    tableConfig,
+    metaTablesConfig,
+    virtualTablesConfig,
+    sessionsConfig,
+    statementsConfig,
+    indexesConfig,
+    indexConfig,
+    storageConfig,
+    tableUsageConfig,
+    lsmConfig,
+    indexgapConfig,
+    rollupgapConfig,
+    tagindexgapConfig,
+    tagsConfig,
+    tagstatConfig,
+]);
 
 function showInfo(config, args) {
     const client = new neoapi.Client(config);
@@ -202,7 +313,7 @@ function showInfo(config, args) {
 
 function showPorts(config, args) {
     const client = new neoapi.Client(config);
-    const service = args.length > 0 ? args[0] : '';
+    const service = args.service ? args.service : '';
     client.getServicePorts(service)
         .then((data) => {
             let box = pretty.Table(config);
@@ -324,11 +435,11 @@ ORDER BY
 }
 
 function showTable(config, args) {
-    const tableName = args && args.length > 0 ? args[0] : undefined;
-    if (!tableName) {
+    if (!args.table) {
         console.println('Error: table name is required');
         process.exit(1);
     }
+    const tableName = args.table;
     const machcli = require('/usr/lib/machcli');
     let db, conn;
     try {
@@ -337,19 +448,19 @@ function showTable(config, args) {
 
         let names = db.normalizeTableName(tableName)
         if (names[2].startsWith('V$') || names[2].startsWith('M$')) {
-            describeMVTable(conn, names, config.all);
+            describeMVTable(conn, names, config);
         } else {
-            describeTable(conn, names, config.all);
+            describeTable(conn, names, config);
         }
     } catch (err) {
-        console.println("Error: ", err.message);
+        console.println("Error: ", err.message, err.stack());
     } finally {
         conn && conn.close();
         db && db.close();
     }
 }
 
-function describeTable(conn, names, showAll = false) {
+function describeTable(conn, names, config) {
     const machcli = require('/usr/lib/machcli');
 
     const dbName = names[0];
@@ -395,7 +506,8 @@ function describeTable(conn, names, showAll = false) {
     const tableColcount = row.TABLE_COLCOUNT;
     let rows;
 
-    console.println(`Table Name: ${tableId} (${machcli.stringTableDescription(tableType, tableFlag)}) - Columns: ${tableColcount})`);
+    const tableTypeLabel = machcli.stringTableDescription(tableType, tableFlag);
+    console.println(`${tableName} (ID: ${tableId}, ${tableTypeLabel} Table)`);
     try {
         let box = pretty.Table(config);
         box.appendHeader(["NAME", "TYPE", "LENGTH", "FLAG", "INDEX"]);
@@ -405,7 +517,7 @@ function describeTable(conn, names, showAll = false) {
         rows = conn.query(`SELECT NAME, TYPE, LENGTH, ID, FLAG FROM M$SYS_COLUMNS WHERE TABLE_ID = ? AND DATABASE_ID = ? ORDER BY ID`, tableId, dbId);
         for (const col of rows) {
             let colName = col.NAME;
-            if (!showAll && colName.startsWith('_')) {
+            if (!config.all && colName.startsWith('_')) {
                 continue;
             }
             let colType = machcli.stringColumnType(col.TYPE);
@@ -428,7 +540,7 @@ function describeTable(conn, names, showAll = false) {
     }
 }
 
-function describeMVTable(conn, names, showAll = false) {
+function describeMVTable(conn, names, config) {
     const machcli = require('/usr/lib/machcli');
 
     const dbName = names[0];
@@ -449,13 +561,14 @@ function describeMVTable(conn, names, showAll = false) {
             throw new Error(`Table '${tableName}' not found`);
         }
 
+        console.println(`${tableName} (ID: ${r.ID}, ${machcli.stringTableDescription(r.TYPE, r.FLAG)} Table)`);
         let box = pretty.Table(config);
         box.appendHeader(["NAME", "TYPE", "LENGTH", "FLAG", "INDEX"]);
 
         rows = conn.query(`SELECT NAME, TYPE, LENGTH, ID FROM ${columnsTable} WHERE TABLE_ID = ? ORDER BY ID`, r.ID);
         for (const col of rows) {
             let colName = col.NAME;
-            if (!showAll && colName.startsWith('_')) {
+            if (!config.all && colName.startsWith('_')) {
                 continue;
             }
             let colType = machcli.stringColumnType(col.TYPE);
@@ -709,12 +822,11 @@ function showIndexes(config, args) {
 }
 
 function showIndex(config, args) {
-    const indexName = args && args.length > 0 ? args[0] : undefined;
-    if (!indexName) {
+    if (!args.index) {
         console.println('Error: index name is required');
         process.exit(1);
     }
-
+    const indexName = args.index;
     const machcli = require('/usr/lib/machcli');
     let db, conn, rows;
     try {
@@ -816,6 +928,11 @@ function showStorage(config, args) {
 
         let box = pretty.Table(config);
         box.appendHeader(["TABLE_NAME", "DATA_SIZE", "INDEX_SIZE", "TOTAL_SIZE"]);
+        box.setColumnConfigs([
+            { align: pretty.Align.left, alignHeader: pretty.Align.left },
+            { align: pretty.Align.right, alignHeader: pretty.Align.left },
+            { align: pretty.Align.right, alignHeader: pretty.Align.left },
+            { align: pretty.Align.right, alignHeader: pretty.Align.left }]);
         for (const row of rows) {
             box.append([
                 row.TABLE_NAME,
@@ -854,6 +971,10 @@ function showTableUsage(config, args) {
 
         let box = pretty.Table(config);
         box.appendHeader(["TABLE_NAME", "STORAGE_USAGE"]);
+        box.setColumnConfigs([
+            { align: pretty.Align.left, alignHeader: pretty.Align.left },
+            { align: pretty.Align.right, alignHeader: pretty.Align.left }]);
+
         for (const row of rows) {
             box.append([
                 row.TABLE_NAME,
@@ -966,12 +1087,18 @@ function showTagIndexGap(config, args) {
 
         let box = pretty.Table(config);
         box.appendHeader(["ID", "STATUS", "DISK_GAP", "MEMORY_GAP"]); // tag table
+        box.setColumnConfigs([
+            { align: pretty.Align.right, alignHeader: pretty.Align.left },
+            { align: pretty.Align.left, alignHeader: pretty.Align.left },
+            { align: pretty.Align.right, alignHeader: pretty.Align.left },
+            { align: pretty.Align.right, alignHeader: pretty.Align.left }]);
+
         for (const row of rows) {
             box.append([
                 row.ID,
                 row.STATUS,
-                row.DISK_GAP,
-                row.MEMORY_GAP
+                pretty.Ints(row.DISK_GAP),
+                pretty.Ints(row.MEMORY_GAP)
             ]);
         }
         console.println(box.render());
@@ -1002,9 +1129,9 @@ function showRollupGap(config, args) {
             AND c.NAME = 'DATABASE_ID'`)
         if (r.CNT === 0) {
             // neo version < 8.0.60 (19 Sep 2025) does not have DATABASE_ID column in V$ROLLUP
-            showRollupGap_prev_8_0_60(conn);
+            showRollupGap_prev_8_0_60(config, conn);
         } else {
-            showRollupGap_since_8_0_60(conn);
+            showRollupGap_since_8_0_60(config, conn);
         }
     } finally {
         conn && conn.close();
@@ -1012,7 +1139,7 @@ function showRollupGap(config, args) {
     }
 }
 
-function showRollupGap_prev_8_0_60(conn) {
+function showRollupGap_prev_8_0_60(config, conn) {
     let rows;
     try {
         rows = conn.query(`SELECT
@@ -1049,7 +1176,7 @@ function showRollupGap_prev_8_0_60(conn) {
     }
 }
 
-function showRollupGap_since_8_0_60(conn) {
+function showRollupGap_since_8_0_60(config, conn) {
     let rows;
     try {
         rows = conn.query(`SELECT
@@ -1093,12 +1220,12 @@ function showTagStat(config, args) {
 }
 
 function showTags(config, args) {
-    const tableName = args && args.length > 0 ? args[0] : undefined;
-    if (!tableName) {
+    if (!args || !args.table || args.table.trim() === '') {
         console.println('Error: table name is required');
         process.exit(1);
     }
-    const tags = args.length > 1 ? args.slice(1) : [];
+    const tableName = args.table;
+    const tags = args.tag && args.tag.length > 0 ? args.tag : [];
 
     const machcli = require('/usr/lib/machcli');
     let db, conn, colsRows, tagsRows;
