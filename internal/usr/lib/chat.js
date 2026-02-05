@@ -1,19 +1,14 @@
 'use strict';
 
 const EventEmitter = require('/lib/events');
+const { getHttpConfig, setHttpToken, getHttpAccessToken, getHttpRefreshToken } = require('@jsh/session');
 
 // events: "answer-start", "answer-stop"
 class Chat extends EventEmitter {
     constructor(options = {}) {
         super();
 
-        this.options = {
-            protocol: 'http:',
-            host: '127.0.0.1',
-            port: 5654,
-            user: 'sys',
-            password: 'manager'
-        };
+        this.options = getHttpConfig();
         this.options = { ...this.options, ...options }
     }
     login() {

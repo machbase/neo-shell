@@ -8,7 +8,7 @@ require (
 	github.com/dop251/goja v0.0.0-20251201205617-2bb4c724c0f9
 	github.com/jedib0t/go-pretty/v6 v6.5.8
 	github.com/machbase/jsh v0.0.0-20260205045627-592e24d5cae5
-	github.com/machbase/neo-server/v8 v8.0.69
+	github.com/machbase/neo-server/v8 v8.0.73-0.20260205071549-c92c4164420f
 	github.com/nyaosorg/go-readline-ny v1.14.1
 	golang.org/x/term v0.38.0
 	golang.org/x/text v0.32.0
@@ -34,7 +34,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
-	github.com/machbase/neo-engine/v8 v8.0.56 // indirect
+	github.com/machbase/neo-engine/v8 v8.0.61-0.20260205071248-fa4ebb047f27 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect

@@ -76,10 +76,10 @@ github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 h1:PwQumkgq4/acIi
 github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3/go.mod h1:autxFIvghDt3jPTLoqZ9OZ7s9qTGNAWmYCjVFWPX/zg=
 github.com/machbase/jsh v0.0.0-20260205045627-592e24d5cae5 h1:4TuXBn4MINN1TbaeJ1bHNirJl2WNuwqh5BXvVaqqJJU=
 github.com/machbase/jsh v0.0.0-20260205045627-592e24d5cae5/go.mod h1:x/MQ/CQRUUBb4ePvdJEx4vxT3S0O8f8aIMFqM2ojIDs=
-github.com/machbase/neo-engine/v8 v8.0.56 h1:47wfnJcBOjOCmDEXWoSC3Y691Zb9uJa2IIc3wXhKd7A=
-github.com/machbase/neo-engine/v8 v8.0.56/go.mod h1:Z2Ey5LqiXunFTTBsPBeeuoeQEJ/Rky92flsHyo6MkfA=
-github.com/machbase/neo-server/v8 v8.0.69 h1:tMXAXglnGRgvPsOjQ9wuSeFwmgW2/1+Y2NtuNb+Ok0o=
-github.com/machbase/neo-server/v8 v8.0.69/go.mod h1:d69pjMlG8mpArWOU8wNsRpRKk3BXlSfMtJJGAcbIDb8=
+github.com/machbase/neo-engine/v8 v8.0.61-0.20260205071248-fa4ebb047f27 h1:OwlSUv5Xz6qMDa36gOhlORq9eTYcO46jHXZUm5VO6Aw=
+github.com/machbase/neo-engine/v8 v8.0.61-0.20260205071248-fa4ebb047f27/go.mod h1:Z2Ey5LqiXunFTTBsPBeeuoeQEJ/Rky92flsHyo6MkfA=
+github.com/machbase/neo-server/v8 v8.0.73-0.20260205071549-c92c4164420f h1:kJhpsOvE5fY5BJh5H/Gujfj8gPCeYP7VNwcZJvsWofA=
+github.com/machbase/neo-server/v8 v8.0.73-0.20260205071549-c92c4164420f/go.mod h1:PEKrnOT/+jibbIeY2Dj58Cvkdb9orz3O49BjQWqxAHo=
 github.com/mattn/go-colorable v0.1.14 h1:9A9LHSqF/7dyVVX6g0U9cwm9pG3kP9gSzcuIPHPsaIE=
 github.com/mattn/go-colorable v0.1.14/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stgPZH1UqBm1s8=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=

@@ -116,8 +116,6 @@ try {
     }
     tracker && tracker.markAsDone();
 
-    // set footer message
-    box.setCaption(rows.message)
     // render remaining rows
     box.close();
     if (gzip) {
@@ -126,9 +124,17 @@ try {
     if (writer) {
         writer.end();
     }
+    // footer message
+    let footMessage = '';
+    if (config.footer) {
+        footMessage += rows.message;
+    }
     // print elapsed time
     if (config.timing) {
-        console.println(`Elapsed time: ${pretty.Durations(process.now().unixNano() - tick.unixNano())}`);
+        footMessage += ` ${pretty.Durations(process.now().unixNano() - tick.unixNano())} elapsed.`;
+    }
+    if (config.footer || config.timing) {
+        console.println(footMessage.trim());
     }
 } catch (err) {
     console.println("Error: ", err.message);

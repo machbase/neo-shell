@@ -181,7 +181,7 @@ func TestDatabase(t *testing.T) {
 			`,
 			output: []string{
 				fmt.Sprintf("NAME: jsh TIME: %s VALUE: 123", tick.Local().Format(time.DateTime)),
-				"Select successfully.",
+				"a row selected.",
 			},
 		},
 		{
