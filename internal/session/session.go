@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -103,6 +104,7 @@ func Configure(c Config) error {
 	if err := json.NewDecoder(rpcRsp.Body).Decode(&rpcRspData); err != nil {
 		return err
 	}
+	candidates := []HostPort{}
 	for _, portInfo := range rpcRspData.Result {
 		addr := portInfo["Address"]
 		if strings.HasPrefix(addr, "tcp://") {
@@ -115,13 +117,61 @@ func Configure(c Config) error {
 			if err != nil {
 				return err
 			}
-			c.machHost = host
-			c.machPort = port
-			break
+			candidates = append(candidates, HostPort{Host: host, Port: port})
 		}
 	}
+
+	slices.SortFunc(candidates, func(a, b HostPort) int {
+		// 1. Prioritize hosts matching c.httpHost
+		aIsHttpHost := a.Host == c.httpHost
+		bIsHttpHost := b.Host == c.httpHost
+		if aIsHttpHost != bIsHttpHost {
+			if aIsHttpHost {
+				return -1
+			}
+			return 1
+		}
+
+		// 2. Prioritize loopback addresses
+		aIsLoopback := isLoopback(a.Host)
+		bIsLoopback := isLoopback(b.Host)
+		if aIsLoopback != bIsLoopback {
+			if aIsLoopback {
+				return -1
+			}
+			return 1
+		}
+
+		// 3. Otherwise, compare hosts lexicographically
+		if a.Host < b.Host {
+			return -1
+		} else if a.Host > b.Host {
+			return 1
+		}
+		return 0
+	})
+	c.machHost = candidates[0].Host
+	c.machPort = candidates[0].Port
+
 	defaultSession = c
 	return nil
+}
+
+type HostPort struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+// isLoopback checks if a host is a loopback address
+func isLoopback(host string) bool {
+	if host == "localhost" || host == "localhost.localdomain" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
 }
 
 type HttpConfig struct {

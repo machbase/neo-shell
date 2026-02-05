@@ -7,8 +7,9 @@ toolchain go1.24.11
 require (
 	github.com/dop251/goja v0.0.0-20251201205617-2bb4c724c0f9
 	github.com/jedib0t/go-pretty/v6 v6.5.8
-	github.com/machbase/jsh v0.0.0-20260126072219-6aaf6ba4ffa8
+	github.com/machbase/jsh v0.0.0-20260205045627-592e24d5cae5
 	github.com/machbase/neo-server/v8 v8.0.69
+	github.com/nyaosorg/go-readline-ny v1.14.1
 	golang.org/x/term v0.38.0
 	golang.org/x/text v0.32.0
 )
@@ -29,7 +30,7 @@ require (
 	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/hcl/v2 v2.24.0 // indirect
-	github.com/hymkor/go-multiline-ny v0.22.3 // indirect
+	github.com/hymkor/go-multiline-ny v0.22.4 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
@@ -40,8 +41,7 @@ require (
 	github.com/mattn/go-tty v0.0.7 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/nyaosorg/go-box/v3 v3.0.0 // indirect
-	github.com/nyaosorg/go-readline-ny v1.13.0 // indirect
-	github.com/nyaosorg/go-ttyadapter v0.2.0 // indirect
+	github.com/nyaosorg/go-ttyadapter v0.3.0 // indirect
 	github.com/orcaman/concurrent-map/v2 v2.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect

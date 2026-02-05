@@ -102,7 +102,7 @@ function doList(config, args) {
                 if (timer.type !== 'TIMER') {
                     continue;
                 }
-                box.appendRow([
+                box.append([
                     timer.name,
                     timer.schedule,
                     timer.task,

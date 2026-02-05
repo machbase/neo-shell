@@ -281,6 +281,26 @@ class Client extends _Client {
             return this._rpcRequest('deleteSSHKey', [key]);
         });
     }
+    listKeys() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('listKeys', []);
+        });
+    }
+    genKey(id) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('genKey', [id]);
+        });
+    }
+    deleteKey(id) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('deleteKey', [id]);
+        });
+    }
+    getServerCertificate() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('getServerCertificate', []);
+        });
+    }
     listSchedules() {
         return this._executeWithAuth(() => {
             return this._rpcRequest('listSchedules', []);
@@ -297,10 +317,10 @@ class Client extends _Client {
 
         return this._executeWithAuth(() => {
             if (type === 'SUBSCRIBER') {
-                return this._rpcRequest('addSubscriberSchedule', 
+                return this._rpcRequest('addSubscriberSchedule',
                     [name, bridge, topic, task, autoStart]);
             } else if (type === 'TIMER') {
-                return this._rpcRequest('addTimerSchedule', 
+                return this._rpcRequest('addTimerSchedule',
                     [name, spec, task, autoStart]);
             } else {
                 throw new Error(`Unsupported schedule type: ${type}`);
@@ -322,9 +342,39 @@ class Client extends _Client {
             return this._rpcRequest('stopSchedule', [name]);
         });
     }
+    listSessions() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('listSessions', []);
+        });
+    }
+    killSession(id, force = false) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('killSession', [id, force]);
+        });
+    }
+    statSession(reset = false) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('statSession', [reset]);
+        });
+    }
+    getSessionLimit() {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('getSessionLimit', []);
+        });
+    }
+    setSessionLimit(limit = {}) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('setSessionLimit', [limit]);
+        });
+    }
     shutdownServer() {
         return this._executeWithAuth(() => {
             return this._rpcRequest('shutdownServer', []);
+        });
+    }
+    splitSqlStatements(sqlText) {
+        return this._executeWithAuth(() => {
+            return this._rpcRequest('splitSqlStatements', [sqlText]);
         });
     }
 }

@@ -1,11 +1,11 @@
 'use strict';
 
 const _machcli = require('@jsh/machcli');
-const {getMachCliConfig} = require('@jsh/session');
+const { getMachCliConfig } = require('@jsh/session');
 
 class Client {
     constructor(conf) {
-        this.db = _machcli.NewDatabase(JSON.stringify({...getMachCliConfig(), ...conf}));
+        this.db = _machcli.NewDatabase(JSON.stringify({ ...getMachCliConfig(), ...conf }));
         this.ctx = this.db.ctx;
     }
     close() {
@@ -17,6 +17,9 @@ class Client {
     }
     normalizeTableName(tableName) {
         return this.db.normalizeTableName(tableName);
+    }
+    user() {
+        return this.db.user();
     }
 }
 
@@ -81,18 +84,21 @@ class Rows {
     close() {
         this.rows.close();
     }
+    next() {
+        let hasNext = this.rows.next(this.ctx);
+        if (!hasNext) {
+            return { done: true };
+        }
+        let buffer = this.cols.makeBuffer();
+        this.rows.scan(...buffer);
+        this.rownum += 1;
+        let row = new Row(this.cols, buffer);
+        return { value: row, done: false };
+    }
     [Symbol.iterator]() {
         return {
             next: () => {
-                let hasNext = this.rows.next(this.ctx);
-                if (!hasNext) {
-                    return { done: true };
-                }
-                let buffer = this.cols.makeBuffer();
-                this.rows.scan(...buffer);
-                this.rownum += 1;
-                let row = new Row(this.cols, buffer);
-                return { value: row, done: false };
+                return this.next();
             }
         };
     }

@@ -102,11 +102,10 @@ function doList(config, args) {
             let box = pretty.Table(config);
             box.appendHeader(["NAME", "BRIDGE", "TOPIC", "DESTINATION", "AUTOSTART", "STATE"]);
             for (const subs of lst) {
-                console.println('Subscriber:', subs); // Debug line
                 if (subs.type !== 'SUBSCRIBER') {
                     continue;
                 }
-                box.appendRow([
+                box.append([
                     subs.name,
                     subs.bridge,
                     subs.topic,

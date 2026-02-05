@@ -11,6 +11,7 @@ const options = {
     compress: { type: 'string', description: "compression type (none, gzip)", default: 'none' },
     timing: { type: 'boolean', short: 'T', description: "print elapsed time", default: false },
     showTz: { type: 'boolean', short: 'Z', description: "show time zone in datetime column header", default: false },
+    progress: { type: 'integer', description: "the expected maximum progress value (0: unknown, -1: disable)", default: 0 },
     ...pretty.TableArgOptions,
 }
 const positionals = [
@@ -53,6 +54,37 @@ try {
 
     let tick = process.now();
     let box = pretty.Table(config);
+    let writer = null;
+    let gzip = null;
+    let nRows = 0;
+    let tracker = null;
+
+    if (config.output === '' || config.output === '-') {
+        box.setOutput(console);
+    } else {
+        const fs = require('fs');
+        const path = require('path');
+        const outputPath = path.resolve(config.output);
+        writer = fs.createWriteStream(outputPath, { encoding: 'utf8' });
+        if (config.compress === 'gzip') {
+            const zlib = require('zlib');
+            gzip = zlib.createGzip();
+            gzip.pipe(writer);
+            box.setOutput(gzip);
+        } else {
+            box.setOutput(writer);
+        }
+        if (config.progress >= 0) {
+            let pw = pretty.Progress({ showPercentage: config.progress > 0 });
+            tracker = pw.tracker({
+                total: config.progress,
+                message: `Writing to ${outputPath}`,
+            });
+        }
+        // disable pause for file output
+        box.setPause(false);
+    }
+
     if (config.showTz) {
         let columnLabels = [];
         for (let i = 0; i < rows.columnTypes.length; i++) {
@@ -69,21 +101,31 @@ try {
     box.setColumnTypes(rows.columnTypes);
 
     for (const row of rows) {
+        nRows += 1;
+        tracker && tracker.setValue(nRows);
         // spread row values
         box.append([...row]);
         if (box.requirePageRender()) {
             // render page
-            console.println(box.render());
+            box.render();
             // wait for user input to continue if pause is enabled
             if (!box.pauseAndWait()) {
                 break;
             }
         }
     }
+    tracker && tracker.markAsDone();
+
     // set footer message
     box.setCaption(rows.message)
     // render remaining rows
-    console.println(box.close());
+    box.close();
+    if (gzip) {
+        gzip.end();
+    }
+    if (writer) {
+        writer.end();
+    }
     // print elapsed time
     if (config.timing) {
         console.println(`Elapsed time: ${pretty.Durations(process.now().unixNano() - tick.unixNano())}`);

@@ -74,6 +74,10 @@ func (db *Database) Close() error {
 	return db.cli.Close()
 }
 
+func (db *Database) User() string {
+	return db.user
+}
+
 func (db *Database) Connect() (*machcli.Conn, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

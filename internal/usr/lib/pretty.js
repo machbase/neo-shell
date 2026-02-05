@@ -30,7 +30,7 @@ const TableArgOptions = {
     format: { type: 'string', short: 'f', description: "output format (box, csv, tsv, json, ndjson)", default: 'box' },
     boxStyle: { type: 'string', description: "box style (simple, bold, double, light, round, colored-bright, colored-dark)", default: 'light' },
     rownum: { type: 'boolean', description: "show row numbers", default: true },
-    timeformat: { type: 'string', short: 't', description: "time format [ns|ms|s|<timeformat>]", default: 'default' },
+    timeformat: { type: 'string', short: 't', description: "time format [ns|us|ms|s|<timeformat>]", default: 'default' },
     tz: { type: 'string', description: "time zone for handling datetime (default: time zone)", default: 'local' },
     precision: { type: 'integer', short: 'p', description: "set precision of float value to force round", default: -1 },
     header: { type: 'boolean', description: "print header", default: true },

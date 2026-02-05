@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 
@@ -14,6 +17,8 @@ import (
 	"github.com/machbase/neo-shell/internal/machcli"
 	"github.com/machbase/neo-shell/internal/pretty"
 	"github.com/machbase/neo-shell/internal/session"
+	"github.com/nyaosorg/go-readline-ny"
+	"golang.org/x/term"
 )
 
 //go:embed internal/usr/*
@@ -21,34 +26,90 @@ var usrFS embed.FS
 
 // JSH options:
 //  1. -C "script" : command to execute
-//     ex: jsh -C "console.println(require('process').argv[2])" helloworld
+//     ex: neo-shell -C "console.println(require('process').argv[2])" helloworld
 //  2. script file : execute script file
-//     ex: jsh script.js arg1 arg2
+//     ex: neo-shell script.js arg1 arg2
 //  3. no args : start interactive shell
-//     ex: jsh
+//     ex: neo-shell
 func main() {
 	var fstabs engine.FSTabs
 	var envVars engine.EnvVars = make(map[string]any)
 	var neoHost string
 	var neoUser string
 	var neoPassword string
+	var err error
+
 	src := flag.String("C", "", "command to execute")
 	scf := flag.String("S", "", "configured file to start from")
 	flag.Var(&fstabs, "v", "volume to mount (format: /mountpoint=source)")
 	flag.Var(&envVars, "e", "environment variable (format: name=value)")
-	flag.StringVar(&neoHost, "server", "127.0.0.1:5654", "machbase-neo host (default: 127.0.0.1:5654)")
-	flag.StringVar(&neoUser, "user", "sys", "user name (default: sys)")
-	flag.StringVar(&neoPassword, "password", "manager", "password (default: manager)")
+	flag.StringVar(&neoHost, "server", "", "machbase-neo host")
+	flag.StringVar(&neoUser, "user", "", "user name (default: sys)")
+	flag.StringVar(&neoPassword, "password", "", "password (default: manager)")
 	flag.Parse()
 
 	conf := engine.Config{}
 	if *scf != "" {
-		// when it starts with "-s", read secret box
+		// when it starts with "-S", read secret box
 		if err := engine.ReadSecretBox(*scf, &conf); err != nil {
 			fmt.Println("Error reading secret file:", err.Error())
 			os.Exit(1)
 		}
+		if host, ok := conf.Env["NEO_HOST"]; ok {
+			neoHost = host.(string)
+		}
+		if user, ok := conf.Env["NEO_USER"]; ok {
+			neoUser = user.(string)
+		}
+		if pass, ok := conf.Env["NEO_PASSWORD"]; ok {
+			neoPassword = pass.(engine.SecureString).Value()
+		}
+		if neoUser == "" {
+			neoUser, err = readLine("User", "SYS")
+			if err != nil {
+				fmt.Println("Error reading User:", err.Error())
+				os.Exit(1)
+			}
+			conf.Env["NEO_USER"] = neoUser
+		}
+		if neoPassword == "" {
+			neoPassword, err = readPassword("Password", "manager")
+			if err != nil {
+				fmt.Println("Error reading Password:", err.Error())
+				os.Exit(1)
+			}
+			conf.Env["NEO_PASSWORD"] = engine.SecureString(neoPassword)
+		}
 	} else {
+		if neoHost == "" {
+			neoHost, err = readLine("Server", "127.0.0.1:5654")
+			if err != nil {
+				fmt.Println("Error reading Server:", err.Error())
+				os.Exit(1)
+			}
+		}
+		if _, port, err := net.SplitHostPort(neoHost); err != nil {
+			port, err = readLine("Port", "5654")
+			if err != nil {
+				fmt.Println("Error reading Port:", err.Error())
+				os.Exit(1)
+			}
+			neoHost = net.JoinHostPort(neoHost, port)
+		}
+		if neoUser == "" {
+			neoUser, err = readLine("User", "SYS")
+			if err != nil {
+				fmt.Println("Error reading User:", err.Error())
+				os.Exit(1)
+			}
+		}
+		if neoPassword == "" {
+			neoPassword, err = readPassword("Password", "manager")
+			if err != nil {
+				fmt.Println("Error reading Password:", err.Error())
+				os.Exit(1)
+			}
+		}
 		// otherwise, use command args to build ExecPass
 		conf.Code = *src
 		conf.FSTabs = fstabs
@@ -121,4 +182,35 @@ func main() {
 	}
 
 	os.Exit(eng.Main())
+}
+
+func readPassword(prompt string, defaultValue string) (string, error) {
+	if defaultValue != "" {
+		prompt = fmt.Sprintf("%s [%s]", prompt, defaultValue)
+	}
+	fmt.Printf("%s: ", prompt)
+	b, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
+	if len(b) == 0 && defaultValue != "" {
+		return defaultValue, err
+	}
+	return string(b), err
+}
+
+func readLine(prompt string, defaultValue string) (string, error) {
+	var ctx = context.Background()
+	var editor = &readline.Editor{
+		PromptWriter: func(w io.Writer) (int, error) {
+			if defaultValue != "" {
+				return io.WriteString(w, fmt.Sprintf("%s [%s]: ", prompt, defaultValue))
+			} else {
+				return io.WriteString(w, fmt.Sprintf("%s: ", prompt))
+			}
+		},
+	}
+	text, err := editor.ReadLine(ctx)
+	if err == nil && text == "" {
+		text = defaultValue
+	}
+	return text, err
 }
