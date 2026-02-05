@@ -81,7 +81,8 @@ function runSqlStatements(statements) {
                 continue;
             }
             if (config.verbose) {
-                console.println(`[${i + 1}/${statements.length}] Line ${stmt.line}: ${stmt.text}`);
+                let sqlText = stmt.text.split('\n').map(line => line.trim()).filter(line => line.length > 0).join(' ');
+                console.println(`\n[${i + 1}/${statements.length}] Line ${stmt.beginLine}~${stmt.endLine}: ${sqlText}`);
             }
             process.exec('sql', stmt.text);
         }
