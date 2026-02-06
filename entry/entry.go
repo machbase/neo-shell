@@ -28,7 +28,7 @@ import (
 //     ex: neo-shell script.js arg1 arg2
 //  3. no args : start interactive shell
 //     ex: neo-shell
-func Main(flags *flag.FlagSet, args []string) {
+func Main(flags *flag.FlagSet, executable []string, args []string) {
 	var fstabs engine.FSTabs
 	var envVars engine.EnvVars = make(map[string]any)
 	var neoHost string
@@ -55,13 +55,13 @@ func Main(flags *flag.FlagSet, args []string) {
 			fmt.Println("Error reading secret file:", err.Error())
 			os.Exit(1)
 		}
-		if host, ok := conf.Env["NEO_HOST"]; ok {
+		if host, ok := conf.Env["NEOSHELL_HOST"]; ok {
 			neoHost = host.(string)
 		}
-		if user, ok := conf.Env["NEO_USER"]; ok {
+		if user, ok := conf.Env["NEOSHELL_USER"]; ok {
 			neoUser = user.(string)
 		}
-		if pass, ok := conf.Env["NEO_PASSWORD"]; ok {
+		if pass, ok := conf.Env["NEOSHELL_PASSWORD"]; ok {
 			neoPassword = pass.(engine.SecureString).Value()
 		}
 		if neoUser == "" {
@@ -70,7 +70,7 @@ func Main(flags *flag.FlagSet, args []string) {
 				fmt.Println("Error reading User:", err.Error())
 				os.Exit(1)
 			}
-			conf.Env["NEO_USER"] = neoUser
+			conf.Env["NEOSHELL_USER"] = neoUser
 		}
 		if neoPassword == "" {
 			neoPassword, err = readPassword("Password", "manager")
@@ -78,7 +78,7 @@ func Main(flags *flag.FlagSet, args []string) {
 				fmt.Println("Error reading Password:", err.Error())
 				os.Exit(1)
 			}
-			conf.Env["NEO_PASSWORD"] = engine.SecureString(neoPassword)
+			conf.Env["NEOSHELL_PASSWORD"] = engine.SecureString(neoPassword)
 		}
 	} else {
 		if neoHost == "" {
@@ -97,11 +97,17 @@ func Main(flags *flag.FlagSet, args []string) {
 			neoHost = net.JoinHostPort(neoHost, port)
 		}
 		if neoUser == "" {
+			neoUser = os.Getenv("NEOSHELL_USER")
+		}
+		if neoUser == "" {
 			neoUser, err = readLine("User", "SYS")
 			if err != nil {
 				fmt.Println("Error reading User:", err.Error())
 				os.Exit(1)
 			}
+		}
+		if neoPassword == "" {
+			neoPassword = os.Getenv("NEOSHELL_PASSWORD")
 		}
 		if neoPassword == "" {
 			neoPassword, err = readPassword("Password", "manager")
@@ -116,12 +122,12 @@ func Main(flags *flag.FlagSet, args []string) {
 		conf.Args = flags.Args()
 		conf.Default = "/usr/bin/neo-shell.js" // default script to run if no args
 		conf.Env = map[string]any{
-			"PATH":         "/usr/bin:/usr/lib:/sbin:/lib:/work",
-			"HOME":         "/work",
-			"PWD":          "/work",
-			"NEO_HOST":     neoHost,
-			"NEO_USER":     neoUser,
-			"NEO_PASSWORD": engine.SecureString(neoPassword),
+			"PATH":              "/usr/bin:/usr/lib:/sbin:/lib:/work",
+			"HOME":              "/work",
+			"PWD":               "/work",
+			"NEOSHELL_HOST":     neoHost,
+			"NEOSHELL_USER":     neoUser,
+			"NEOSHELL_PASSWORD": engine.SecureString(neoPassword),
 		}
 		conf.Aliases = map[string]string{
 			"describe": "show table",
@@ -144,10 +150,6 @@ func Main(flags *flag.FlagSet, args []string) {
 	}
 	// setup ExecBuilder to enable re-execution
 	conf.ExecBuilder = func(code string, args []string, env map[string]any) (*exec.Cmd, error) {
-		self, err := os.Executable()
-		if err != nil {
-			return nil, err
-		}
 		conf := engine.Config{
 			Code:   code,
 			Args:   args,
@@ -158,7 +160,11 @@ func Main(flags *flag.FlagSet, args []string) {
 		if err != nil {
 			return nil, err
 		}
-		execCmd := exec.Command(self, "-S", secretBox.FilePath(), args[0])
+		execArgs := []string{"-S", secretBox.FilePath(), args[0]}
+		if len(executable) > 1 {
+			execArgs = append(executable[1:], execArgs...)
+		}
+		execCmd := exec.Command(executable[0], execArgs...)
 		return execCmd, nil
 	}
 	eng, err := engine.New(conf)

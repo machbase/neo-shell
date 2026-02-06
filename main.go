@@ -8,5 +8,9 @@ import (
 )
 
 func main() {
-	entry.Main(flag.CommandLine, os.Args[1:])
+	self, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	entry.Main(flag.CommandLine, []string{self}, os.Args[1:])
 }
