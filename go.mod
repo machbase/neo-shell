@@ -7,7 +7,7 @@ toolchain go1.24.11
 require (
 	github.com/dop251/goja v0.0.0-20251201205617-2bb4c724c0f9
 	github.com/jedib0t/go-pretty/v6 v6.5.8
-	github.com/machbase/jsh v0.0.0-20260205045627-592e24d5cae5
+	github.com/machbase/jsh v0.0.0-20260206050449-84c5523557ad
 	github.com/machbase/neo-server/v8 v8.0.73-0.20260205071549-c92c4164420f
 	github.com/nyaosorg/go-readline-ny v1.14.1
 	golang.org/x/term v0.38.0
